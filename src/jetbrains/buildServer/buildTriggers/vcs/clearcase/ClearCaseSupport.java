@@ -681,16 +681,26 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private void createLabel(final String label, final VcsRoot root) throws VcsException {
     final boolean useGlobalLabel = "true".equals(root.getProperty(USE_GLOBAL_LABEL));
 
-    String[] command;
+    final List<String> parameters = new ArrayList<String>();
+    parameters.add("mklbtype");
+    if (useGlobalLabel) {
+      parameters.add("-global");
+    }
+    if (ClearCaseConnection.isLabelExists(getViewPath(root).getWholePath(), label)) {
+      parameters.add("-replace");
+    }
+    parameters.add("-c");
+    parameters.add("Label created by TeamCity");
     if (useGlobalLabel) {
       final String globalLabelsVob = root.getProperty(GLOBAL_LABELS_VOB);
-      command = new String[]{"mklbtype", "-global", "-replace", "-c", "Label created by TeamCity", label + "@" + globalLabelsVob};
-    } else {
-      command = new String[]{"mklbtype", "-replace", "-c", "Label created by TeamCity", label};
+      parameters.add(label + "@" + globalLabelsVob);
+    }
+    else {
+      parameters.add(label);
     }
 
-      try {
-        InputStream input = ClearCaseConnection.executeSimpleProcess(getViewPath(root).getWholePath(), command);
+    try {
+      final InputStream input = ClearCaseConnection.executeSimpleProcess(getViewPath(root).getWholePath(), (String[]) parameters.toArray());
       try {
         input.close();
       } catch (IOException e) {

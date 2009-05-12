@@ -873,6 +873,29 @@ public class ClearCaseConnection {
     }
   }
 
+  public static boolean isLabelExists(@NotNull final String viewPath, @NotNull final String label) throws VcsException {
+    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] {"lstype", "-kind", "lbtype", "-short"});
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+    String line;
+    try {
+      try {
+        while ((line = reader.readLine()) != null) {
+          if (line.equals(label)) {
+            return true;
+          }
+        }
+        return false;
+      }
+      finally {
+        reader.close();
+      }
+    }
+    catch (IOException e) {
+      throw new VcsException(e);
+    }
+  }
+
   public static class ClearCaseInteractiveProcess extends InteractiveProcess {
     private final Process myProcess;
 
