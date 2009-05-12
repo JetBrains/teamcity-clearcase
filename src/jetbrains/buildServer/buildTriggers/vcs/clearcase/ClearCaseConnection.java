@@ -59,6 +59,7 @@ public class ClearCaseConnection {
   private InteractiveProcessFacade myProcess;
   
   private final static int CC_LOG_FILE_SIZE_LIMIT = getLogSizeLimit();
+  private static final String UNIX_VIEW_PATH_PREFIX = "/view/";
 
   private static int getLogSizeLimit() {
     try {
@@ -807,7 +808,11 @@ public class ClearCaseConnection {
     try {
       final String viewRoot = reader.readLine();
       if (viewRoot == null || "".equals(viewRoot.trim())) {
-        final int sep = normalPath.indexOf(File.separatorChar);
+        int offset = 0;
+        if (normalPath.startsWith(UNIX_VIEW_PATH_PREFIX)) {
+          offset = UNIX_VIEW_PATH_PREFIX.length();
+        }
+        final int sep = normalPath.indexOf(File.separatorChar, offset);
         if (sep == -1) return normalPath;
         return normalPath.substring(0, sep);
       }
