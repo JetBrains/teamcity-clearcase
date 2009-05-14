@@ -700,7 +700,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
 
     try {
-      final InputStream input = ClearCaseConnection.executeSimpleProcess(getViewPath(root).getWholePath(), (String[]) parameters.toArray());
+      final InputStream input = ClearCaseConnection.executeSimpleProcess(getViewPath(root).getWholePath(), makeArray(parameters));
       try {
         input.close();
       } catch (IOException e) {
@@ -711,6 +711,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         throw e;
       }
     }
+  }
+
+  @NotNull
+  private String[] makeArray(@NotNull final List<String> parameters) {
+    final String[] array = new String[parameters.size()];
+    for (int i = 0; i < parameters.size(); i++) {
+      array[i] = parameters.get(i);
+    }
+    return array;
   }
 
   public boolean sourcesUpdatePossibleIfChangesNotFound(@NotNull final VcsRoot root) {
