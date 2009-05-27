@@ -621,7 +621,42 @@ public class ClearCaseConnection {
   }
 
   public static InputStream getConfigSpecInputStream(final String viewName) throws VcsException {
-    return executeSimpleProcess(viewName, new String[]{"catcs"});
+    try {
+      return executeSimpleProcess(viewName, new String[]{"catcs"});
+    } catch (VcsException e) {
+      final String tag = getViewTag(viewName);
+      if (tag != null) {
+        return executeSimpleProcess(viewName, new String[]{"catcs", "-tag", tag});
+      }
+      else throw e;
+    }
+  }
+
+  @Nullable
+  private static String getViewTag(final String viewName) throws VcsException {
+    final InputStream inputStream = executeSimpleProcess(viewName, new String[] {"lsview", "-cview"});
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+    try {
+      try {
+        String line = reader.readLine();
+        if (line != null) {
+          if (line.startsWith("*")) {
+            line = line.substring(1).trim();
+          }
+          int spacePos = line.indexOf(' '); 
+          if (spacePos != -1) {
+            line = line.substring(0, spacePos);
+          }
+        }
+        return line;
+      }
+      finally {
+        reader.close();
+      }
+    } catch (IOException e) {
+      throw new VcsException(e);
+    }
   }
 
   public void processAllVersions(final String version, final VersionProcessor versionProcessor, boolean processRoot, boolean useCache) throws VcsException {
