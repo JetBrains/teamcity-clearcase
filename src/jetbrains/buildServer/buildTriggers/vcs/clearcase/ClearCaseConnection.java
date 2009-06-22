@@ -626,9 +626,14 @@ public class ClearCaseConnection {
     } catch (VcsException e) {
       final String tag = getViewTag(viewName);
       if (tag != null) {
-        return executeSimpleProcess(viewName, new String[]{"catcs", "-tag", tag});
+        for (final File root : File.listRoots()) {
+          try {
+            return executeSimpleProcess(root.getAbsolutePath(), new String[]{"catcs", "-tag", tag});
+          }
+          catch (final Exception ignored) {}
+        }
       }
-      else throw e;
+      throw e;
     }
   }
 
