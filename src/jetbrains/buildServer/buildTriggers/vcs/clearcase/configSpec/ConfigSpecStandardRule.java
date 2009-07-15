@@ -23,12 +23,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.regex.Pattern;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ConfigSpecStandardRule {
@@ -202,7 +203,7 @@ public class ConfigSpecStandardRule {
     } else {
       myScopeType = ScopeType.ANY;
     }
-    myScopePattern = createPattern(scopePattern, false);
+    myScopePattern = createPattern(removeFirstSeparatorIfNeeded(scopePattern.trim()), false);
     if (versionSelectorWithOptions.startsWith("{")) {
       //todo
     }
@@ -215,6 +216,13 @@ public class ConfigSpecStandardRule {
     if (myVersion.startsWith("{")) {
       //todo
     }
+  }
+
+  private String removeFirstSeparatorIfNeeded(@NotNull final String scopePattern) {    
+    if (File.separatorChar == '\\' && (scopePattern.startsWith("\\") || scopePattern.startsWith("/"))) {
+      return scopePattern.substring(1);
+    }
+    return scopePattern;
   }
 
   @Nullable
