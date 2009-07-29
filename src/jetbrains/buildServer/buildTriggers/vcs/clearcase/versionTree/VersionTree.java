@@ -17,12 +17,13 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree;
 
 import com.intellij.openapi.util.Pair;
-import com.intellij.util.PatternUtil;
+import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.Nullable;
+
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import jetbrains.buildServer.vcs.VcsException;
-import org.jetbrains.annotations.Nullable;
 
 public class VersionTree {
   private final List<Branch> myTopBranches = new ArrayList<Branch>();
@@ -40,19 +41,19 @@ public class VersionTree {
     List<String> branches = new ArrayList<String>();
     int intVersion = -1;
 
-    final String[] versions = version.split(PatternUtil.convertToRegex(File.separator));
+    final List<String> versions = StringUtil.split(version, false, File.separatorChar);
 
-    if (versions.length == 0) return;
+    if (versions.size() == 0) return;
 
-    String lastVers = versions[versions.length - 1];
+    String lastVers = versions.get(versions.size() - 1);
 
     if (lastVers.startsWith("CHECKEDOUT view ")) {
       return;
     }
 
 
-    for (int i = 0; i < versions.length - 1; i++) {
-      String s = versions[i];
+    for (int i = 0; i < versions.size() - 1; i++) {
+      String s = versions.get(i);
       branches.add(s);
     }
 
@@ -158,15 +159,15 @@ public class VersionTree {
     List<String> branches = new ArrayList<String>();
     int intVersion;
 
-    final String[] versions = version.split(PatternUtil.convertToRegex(File.separator));
-    for (int i = 0; i < versions.length - 1; i++) {
-      String s = versions[i];
+    final List<String> versions = StringUtil.split(version, File.separator);
+    for (int i = 0; i < versions.size() - 1; i++) {
+      String s = versions.get(i);
       if (s.length() > 0) {
         branches.add(s);
       }
     }
 
-    String lastVers = versions[versions.length - 1];
+    String lastVers = versions.get(versions.size() - 1);
 
     if (lastVers.contains("(")) {
       lastVers = lastVers.substring(0, lastVers.indexOf('(')).trim();

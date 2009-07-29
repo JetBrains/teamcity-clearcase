@@ -16,15 +16,15 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import com.intellij.util.PatternUtil;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Stack;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 public class CCPathElement {
   private final String myPathElement;
@@ -89,8 +89,7 @@ public class CCPathElement {
   }
 
   private static List<String> createViewPathElementList(final String viewPath, final List<CCPathElement> pathElements) {
-    final String regex = PatternUtil.convertToRegex(File.separator);
-    final List<String> viewPathElements = new ArrayList<String>(Arrays.asList(viewPath.split(regex)));
+    final List<String> viewPathElements = StringUtil.split(viewPath, false, File.separatorChar);
 
     if (pathElements.size() > 0 && pathElements.get(0).getPathElement().length() == 0) {
       if (viewPathElements.size() > 0) {
@@ -112,8 +111,7 @@ public class CCPathElement {
   public static List<CCPathElement> splitIntoPathElements(final String objectName) {
     List<CCPathElement> result = new ArrayList<CCPathElement>();
 
-    final String regex = PatternUtil.convertToRegex(File.separator);
-    List<String> subNames = new ArrayList<String>(Arrays.asList(objectName.split(regex)));
+    List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
 
     boolean versionMode = false;
     for (int i = 0; i < subNames.size(); i++) {
