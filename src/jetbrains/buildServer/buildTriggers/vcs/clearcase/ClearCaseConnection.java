@@ -535,7 +535,7 @@ public class ClearCaseConnection {
   }
   
   public void updateCurrentView() throws VcsException {
-    //updateView(getViewWholePath());
+    updateView(getViewWholePath());
   }
 
   private boolean isViewIsDynamic() throws VcsException, IOException {
