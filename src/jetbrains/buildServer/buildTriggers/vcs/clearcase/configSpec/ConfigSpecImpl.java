@@ -19,11 +19,14 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Stack;
+
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.vcs.VcsException;
 import org.jetbrains.annotations.NotNull;
@@ -92,7 +95,12 @@ public class ConfigSpecImpl implements ConfigSpec {
       for (ConfigSpecStandardRule rule : myStandardRules) {
         if (!rule.matchesPath(normalizedFullFileName, isFile)) continue;
         final ConfigSpecStandardRule.ResultType result = rule.isVersionIsInsideView(version_copy);
-        if (ConfigSpecStandardRule.ResultType.BRANCH_HAS_BEEN_MADE.equals(result)) {
+        if (ConfigSpecStandardRule.ResultType.DOES_NOT_MATCH.equals(result)) {
+          if (rightVersionExists(rule, getRootBranch(version_copy))) {
+            return false;
+          }
+        }
+        else if (ConfigSpecStandardRule.ResultType.BRANCH_HAS_BEEN_MADE.equals(result)) {
           versionTreeHasBeenChanged = true;
           break;
         }
@@ -101,6 +109,35 @@ public class ConfigSpecImpl implements ConfigSpec {
         }
       }
     } while (versionTreeHasBeenChanged);
+
+    return false;
+  }
+
+  private Branch getRootBranch(final Version version) {
+    Branch branch = version.getParentBranch();
+    Version parentVersion = branch.getParentVersion();
+    while (parentVersion != null) {
+      branch = parentVersion.getParentBranch();
+      parentVersion = branch.getParentVersion();
+    }
+    return branch;
+  }
+
+  private boolean rightVersionExists(final ConfigSpecStandardRule rule, final Branch rootBranch) {
+    final Stack<Branch> stack = new Stack<Branch>();
+    stack.push(rootBranch);
+
+    while (!stack.isEmpty()) {
+      final Branch branch = stack.pop();
+      Version version = branch.getFirstVersion();
+      while (version != null) {
+        if (ConfigSpecStandardRule.ResultType.MATCHES.equals(rule.isVersionIsInsideView(version))) {
+          return true;
+        }
+        stack.addAll(version.getInheritedBranches());
+        version = version.getNextVersion();
+      }
+    }
 
     return false;
   }
