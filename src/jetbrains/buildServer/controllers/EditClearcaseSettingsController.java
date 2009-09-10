@@ -39,7 +39,7 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
         return oldViewPath != null && oldViewPath.trim().length() != 0;
       }
 
-      public void process(HttpServletRequest request, HttpServletResponse response, @Nullable Element ajaxResponse) {
+      public void process(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @Nullable Element ajaxResponse) {
         if (ajaxResponse == null) {
           Loggers.SERVER.debug("Error: ajaxResponse is null");
           return;
