@@ -969,7 +969,7 @@ public class ClearCaseConnection {
       if (matcher.matches()) {
         if (!"0".equals(matcher.group(2))) {
           String error = readError();
-          throw new IOException("Error executing " + StringUtil.join(params, " ") + ": " + error);
+          throw new IOException("Error executing " + StringUtil.join(" ", params) + ": " + error);
         }
         return true;
       }

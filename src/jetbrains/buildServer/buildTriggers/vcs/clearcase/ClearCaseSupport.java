@@ -519,6 +519,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
+  public Collection<VcsUrlInfo2TargetPath> getPossiblePathPrefixes(@NotNull final VcsRoot vcsRoot, @NotNull final IncludeRule includeRule)
+    throws VcsException {
+    // TODO
+    return Collections.emptyList();
+  }
+
   private String cutOffVobsDir(String serverViewRelativePath) {
     if (StringUtil.startsWithIgnoreCase(serverViewRelativePath, VOBS)) {
       serverViewRelativePath = serverViewRelativePath.substring(VOBS.length());
