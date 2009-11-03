@@ -16,7 +16,6 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import java.io.File;
 import java.io.IOException;
 import jetbrains.buildServer.vcs.VcsException;
 import org.jetbrains.annotations.Nullable;
@@ -155,8 +154,8 @@ public class HistoryElement {
     return CCParseUtil.getVersionInt(myObjectVersion);
   }
 
-  public String getPreviousVersion(final ClearCaseConnection connection) throws VcsException, IOException {
-    return connection.getPreviousVersion(this);    
+  public String getPreviousVersion(final ClearCaseConnection connection, final boolean isDirPath) throws VcsException, IOException {
+    return connection.getPreviousVersion(this, isDirPath);
   }
 
   public boolean versionIsInsideView(final ClearCaseConnection connection, final boolean isFile) throws IOException, VcsException {

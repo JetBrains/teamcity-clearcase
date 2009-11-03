@@ -137,7 +137,7 @@ public class CCParseUtil {
                                              ChangedStructureProcessor processor) throws IOException, VcsException {
 
     if (element.getObjectVersionInt() > 0) {
-      final String before = element.getObjectName() + CC_VERSION_SEPARATOR + element.getPreviousVersion(connection);
+      final String before = element.getObjectName() + CC_VERSION_SEPARATOR + element.getPreviousVersion(connection, true);
       final String after = element.getObjectName() + CC_VERSION_SEPARATOR + element.getObjectVersion();
 
       final List<DirectoryChildElement> elementsBefore = readDirectoryVersionContent(connection, before);

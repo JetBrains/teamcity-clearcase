@@ -170,7 +170,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           String pathWithoutVersion = connection.getParentRelativePathWithVersions(element.getObjectName(), true);
 
           final String versionAfterChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
-          final String versionBeforeChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getPreviousVersion(connection);
+          final String versionBeforeChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getPreviousVersion(connection, false);
 
           addChange(element, element.getObjectName(), connection, VcsChangeInfo.Type.CHANGED, versionBeforeChange, versionAfterChange, key2changes);
 
@@ -230,7 +230,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     key2changes.putValue(modificationKey, createChange(type, connection, beforeVersion, afterVersion, childFullPath));
     CCModificationKey realKey = findKey(modificationKey, key2changes);
     if (realKey != null) {
-      realKey.getCommentHolder().update(element.getActivity(), element.getComment(), connection.getVersionDescription(childFullPath));
+      realKey.getCommentHolder().update(element.getActivity(), element.getComment(), connection.getVersionDescription(childFullPath, !isFile(type)));
     }
   }
 
@@ -645,7 +645,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                   final boolean executable)
           throws VcsException {
             try {
-              clearCaseConnection.mklabel(version, fileFullPath, label);
+              clearCaseConnection.mklabel(version, fileFullPath, label, false);
             } catch (IOException e) {
               throw new VcsException(e);
             }
@@ -657,7 +657,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                        final String version, final ClearCaseConnection clearCaseConnection)
           throws VcsException {
             try {
-              clearCaseConnection.mklabel(version, fileFullPath, label);
+              clearCaseConnection.mklabel(version, fileFullPath, label, true);
             } catch (IOException e) {
               throw new VcsException(e);
             }

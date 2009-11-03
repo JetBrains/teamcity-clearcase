@@ -127,7 +127,7 @@ class WriteCorrectingVersionProcessor implements VersionProcessor {
         try {
           final String addedDirName = new File(addedElem.myRelativePath).getName();
           final String addedFileElementFullPath =
-            parentPathWithNewVersion + File.separator + addedDirName + addedElem.myVersion;
+            parentPathWithNewVersion + File.separator + addedDirName + CCParseUtil.CC_VERSION_SEPARATOR + addedElem.myVersion;
           processAddedElements(addedElem, writeProcessor, clearCaseConnection, addedFileElementFullPath);
         } finally {
           writeProcessor.writeDirClose();

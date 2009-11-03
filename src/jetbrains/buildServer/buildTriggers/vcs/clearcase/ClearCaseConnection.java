@@ -189,7 +189,8 @@ public class ClearCaseConnection {
 
     if (lastElementVersion != null) {
       return new DirectoryChildElement(type, extractElementPath(pathWithoutVersion), lastElementVersion.getVersion(),
-                                       pathWithoutVersion + lastElementVersion.getWholeName(), lastElementVersion.getWholeName(), pathWithoutVersion);
+                                       pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + lastElementVersion.getWholeName(),
+                                       lastElementVersion.getWholeName(), pathWithoutVersion);
     } else {
       Loggers.VCS.info("ClearCase: last element version not found for " + pathWithoutVersion);
       return null;
@@ -201,7 +202,7 @@ public class ClearCaseConnection {
     try {
       final VersionTree versionTree = new VersionTree();
 
-      readVersionTree(path, versionTree);
+      readVersionTree(path, versionTree, !isFile);
 
       return getLastVersion(path, versionTree, isFile);
     } catch (IOException e) {
@@ -229,7 +230,9 @@ public class ClearCaseConnection {
   }
 
   private static String extractElementPath(final String fullPath) {
-    String currentPath = fullPath;
+    final List<CCPathElement> elementList = CCPathElement.splitIntoPathElements(fullPath);
+    return CCPathElement.createPathWithoutVersions(elementList);
+    /*String currentPath = fullPath;
     String result = "";
     while (true) {
       final int fileSep = currentPath.lastIndexOf(File.separator);
@@ -248,11 +251,11 @@ public class ClearCaseConnection {
         break;
       }
     }
-    return result;
+    return result;*/
   }
 
-  private void readVersionTree(final String path, final VersionTree versionTree) throws IOException, VcsException {
-    final InputStream inputStream = executeAndReturnProcessInput(new String[]{"lsvtree", "-obs", "-all", insertDotAfterVOB(path)});
+  private void readVersionTree(final String path, final VersionTree versionTree, final boolean isDirPath) throws IOException, VcsException {
+    final InputStream inputStream = executeAndReturnProcessInput(new String[]{"lsvtree", "-obs", "-all", insertDots(path, isDirPath)});
 
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -296,11 +299,11 @@ public class ClearCaseConnection {
     return readFromProcessInput();
     */
 
-    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-all", "-since", since, "-fmt", FORMAT, insertDotAfterVOB(getViewWholePath())});
+    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-all", "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {
-    return executeAndReturnProcessInput(new String[]{"ls", "-long", insertDotAfterVOB(dirPath)});
+    return executeAndReturnProcessInput(new String[]{"ls", "-long", insertDots(dirPath, true)});
   }
 
   public void loadFileContent(final File tempFile, final String line)
@@ -336,10 +339,10 @@ public class ClearCaseConnection {
   }
 
   @Nullable
-  public Version findVersion(final String objectPath, final String objectVersion) throws IOException, VcsException {
+  public Version findVersion(final String objectPath, final String objectVersion, final boolean isDirPath) throws IOException, VcsException {
     final VersionTree versionTree = new VersionTree();
 
-    readVersionTree(objectPath, versionTree);
+    readVersionTree(objectPath, versionTree, isDirPath);
 
     final String normalizedVersion = objectVersion.startsWith(CCParseUtil.CC_VERSION_SEPARATOR)
                                      ? objectVersion.substring(CCParseUtil.CC_VERSION_SEPARATOR.length())
@@ -369,7 +372,7 @@ public class ClearCaseConnection {
       params = new String[]{"lsstream", "-long"};
     }
     else {
-      params = new String[]{"describe", insertDotAfterVOB(getViewWholePath())};
+      params = new String[]{"describe", insertDots(getViewWholePath(), true)};
     }
 
     final InputStream input = executeAndReturnProcessInput(params);
@@ -470,9 +473,9 @@ public class ClearCaseConnection {
     };
   }
 
-  public String getVersionDescription(final String fullPath) {
+  public String getVersionDescription(final String fullPath, final boolean isDirPath) {
     try {
-      String[] params = {"describe", "-fmt", "%c", "-pname", insertDotAfterVOB(fullPath)};
+      String[] params = {"describe", "-fmt", "%c", "-pname", insertDots(fullPath, isDirPath)};
       final InputStream input = executeAndReturnProcessInput(params);
       final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
       try {
@@ -706,7 +709,7 @@ public class ClearCaseConnection {
 
     for (DirectoryChildElement subfile : subfiles) {
       if (subfile.getStringVersion() != null) {
-        final String fileFullPath = subfile.getFullPath();
+        final String fileFullPath = CCPathElement.removeUnneededDots(subfile.getFullPath());
         String newRelPath = "./".equals(relativePath) ? CCParseUtil.getFileName(subfile.getPath()) : relativePath + File.separator + CCParseUtil.getFileName(subfile.getPath());
         String elemPath = getViewWholePath() + File.separator + newRelPath;
         if (subfile.getType() == DirectoryChildElement.Type.FILE) {
@@ -736,10 +739,10 @@ public class ClearCaseConnection {
     return viewLastVersion;
   }
 
-  public void mklabel(final String version, final String pname, final String label) throws VcsException, IOException {
+  public void mklabel(final String version, final String pname, final String label, final boolean isDirPath) throws VcsException, IOException {
     //    //cleartool mklabel -version main\lesya_testProject\1 test_label C:\ClearCaseTests\lesya_testProject\lesyaTestVOB\project_root\f1\f14@@\main\lesya_testProject\4\dir\main\lesya_testProject\6\newFileName.txt
     try {
-      InputStream inputStream = executeAndReturnProcessInput(new String[]{"mklabel", "-replace", "-version", version, label, insertDotAfterVOB(pname)});
+      InputStream inputStream = executeAndReturnProcessInput(new String[]{"mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath)});
       try {
         inputStream.close();
       } catch (IOException e) {
@@ -787,7 +790,7 @@ public class ClearCaseConnection {
 
   public ClearCaseFileAttr loadFileAttr(final String path) throws VcsException {
     try {
-      final InputStream input = executeAndReturnProcessInput(new String[]{"describe", insertDotAfterVOB(cutOffVersion(path))});
+      final InputStream input = executeAndReturnProcessInput(new String[]{"describe", insertDots(cutOffVersion(path), false)});
       try {
         return ClearCaseFileAttr.readFrom(input);
       } finally {
@@ -873,27 +876,26 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  private String insertDotAfterVOB(@NotNull final String fullPath) throws VcsException {
+  private String insertDots(@NotNull final String fullPath, final boolean isDirPath) throws VcsException {
     final List<CCPathElement> filePath = CCPathElement.splitIntoPathElements(CCPathElement.normalizePath(fullPath));
-    final List<CCPathElement> ccViewPath = CCPathElement.splitIntoPathElements(myViewPath.getClearCaseViewPath());
 
-    if (filePath.size() < ccViewPath.size() + 1) return fullPath;
+    final int lastIndex = filePath.size() - (isDirPath ? 1 : 2);
+    for (int i = lastIndex; i >= 0; i--) {
+      final CCPathElement element = filePath.get(i);
+      final String version = element.getVersion();
+      if (version == null) continue;
+      
+      final CCPathElement dotElement = new CCPathElement(".", false, true);
+      dotElement.setVersion(version);
+      element.setVersion(null);
 
-    final CCPathElement vobElement = filePath.get(ccViewPath.size());
-
-    if (vobElement.getVersion() == null) return fullPath;
-
-    final CCPathElement dotElement = new CCPathElement(".", false);
-
-    dotElement.setVersion(vobElement.getVersion());
-    vobElement.setVersion(null);
-
-    filePath.add(ccViewPath.size() + 1, dotElement);
+      filePath.add(i + 1, dotElement);
+    }
 
     return CCPathElement.createPath(filePath, filePath.size(), true);
   }
 
-  public String getPreviousVersion(final HistoryElement element) throws VcsException, IOException {
+  public String getPreviousVersion(final HistoryElement element, final boolean isDirPath) throws VcsException, IOException {
     String path = element.getObjectName().trim();
     if (path.endsWith(CCParseUtil.CC_VERSION_SEPARATOR)) {
       path = path + element.getObjectVersion();
@@ -902,7 +904,7 @@ public class ClearCaseConnection {
       path = path + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
     }
 
-    final InputStream inputStream = executeSimpleProcess(getViewWholePath(), new String[] {"describe", "-s", "-pre", insertDotAfterVOB(path)});
+    final InputStream inputStream = executeSimpleProcess(getViewWholePath(), new String[] {"describe", "-s", "-pre", insertDots(path, isDirPath)});
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -999,7 +1001,7 @@ public class ClearCaseConnection {
     }
 
     public void copyFileContentTo(final ClearCaseConnection connection, final String version, final File destFile) throws IOException, VcsException {
-      final InputStream input = executeAndReturnProcessInput(new String[]{"get", "-to", connection.insertDotAfterVOB(destFile.getAbsolutePath()), connection.insertDotAfterVOB(version)});
+      final InputStream input = executeAndReturnProcessInput(new String[]{"get", "-to", connection.insertDots(destFile.getAbsolutePath(), false), connection.insertDots(version, false)});
       input.close();      
     }
   }

@@ -32,14 +32,16 @@ public class CCPathElement {
 
   private boolean myIsFromViewPath;
 
-  private CCPathElement(final String pathElement, String fromViewPath) {
-    myPathElement = pathElement;
-    myIsFromViewPath = pathElement.equals(fromViewPath);
+  private CCPathElement(final String pathElement, String fromViewPath, final boolean hasVersion) {
+    this(pathElement, pathElement.equals(fromViewPath), hasVersion);
   }
 
-  public CCPathElement(final String pathElement, final boolean isFromViewPath) {
+  public CCPathElement(final String pathElement, final boolean isFromViewPath, final boolean hasVersion) {
     myPathElement = pathElement;
     myIsFromViewPath = isFromViewPath;
+    if (hasVersion) {
+      myVersion = CCParseUtil.CC_VERSION_SEPARATOR;
+    }
   }
 
   private void appendVersion(String version) {
@@ -113,7 +115,6 @@ public class CCPathElement {
 
     List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
 
-    boolean versionMode = false;
     for (int i = 0; i < subNames.size(); i++) {
 
       String currentViewPath = null;
@@ -121,15 +122,9 @@ public class CCPathElement {
       final String subName = subNames.get(i);
       final boolean beginOfVersion = subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR);
 
-      if (beginOfVersion || versionMode) {
-        final CCPathElement currentPair;
-        if (beginOfVersion) {
-          currentPair =
-            new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath);
-          versionMode = true;
-        } else {
-          currentPair = new CCPathElement(subName, currentViewPath);
-        }
+      if (beginOfVersion) {
+        final CCPathElement currentPair =
+          new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
 
         result.add(currentPair);
 
@@ -143,10 +138,28 @@ public class CCPathElement {
           }
         }
       } else {
-        result.add(new CCPathElement(subName, currentViewPath));
+        result.add(new CCPathElement(subName, currentViewPath, false));
       }
     }
+    return removeDots(result);
+  }
+
+  private static List<CCPathElement> removeDots(final List<CCPathElement> result) {
+    int i = 1;
+    while (i < result.size()) {
+      final CCPathElement curElement = result.get(i);
+      if (curElement.getPathElement().equals(".")) {
+        final CCPathElement prevElement = result.get(i - 1);
+        prevElement.setVersion(chooseVersion(prevElement.getVersion(), curElement.getVersion()));
+        result.remove(i);
+      }
+      else i++;
+    }
     return result;
+  }
+
+  private static String chooseVersion(final String version1, final String version2) {
+    return version1 == null ? version2 : version1;    
   }
 
   private static void setInViewAttributes(List<CCPathElement> pathElements, String viewPath, int skipAtBeginCount) {
@@ -295,5 +308,10 @@ public class CCPathElement {
 
   public static boolean areFilesEqual(@NotNull final File file1, @NotNull final File file2) throws VcsException {
     return normalizePath(file1.getAbsolutePath()).equals(normalizePath(file2.getAbsolutePath()));
+  }
+
+  public static String removeUnneededDots(final String fullPath) {
+    final List<CCPathElement> elementList = splitIntoPathElements(fullPath);
+    return createPath(elementList, elementList.size(), true);
   }
 }

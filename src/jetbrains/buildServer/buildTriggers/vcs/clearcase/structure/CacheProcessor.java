@@ -138,6 +138,7 @@ public class CacheProcessor {
       if (!isRoot(readDir.getName())) {
         result.append(File.separatorChar);
         result.append(readDir.getName());
+        result.append(CCParseUtil.CC_VERSION_SEPARATOR);
         result.append(readDir.getVersion());
       }
       else {

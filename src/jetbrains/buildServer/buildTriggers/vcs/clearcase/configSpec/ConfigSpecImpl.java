@@ -66,10 +66,11 @@ public class ConfigSpecImpl implements ConfigSpec {
 
       final String pathElementVersion = pathElement.getVersion();
       if (pathElementVersion != null) {
-        final Version version = connection.findVersion(CCPathElement.removeFirstSeparatorIfNeeded(objectPath), pathElementVersion);
+        final boolean elementIsFile = i == pathElements.size() - 1 && isFile;
+        final Version version = connection.findVersion(CCPathElement.removeFirstSeparatorIfNeeded(objectPath), pathElementVersion, !elementIsFile);
         if (version == null) return false;
         objectPath.append(pathElementVersion);
-        if (!doIsVersionIsInsideView(connection, CCPathElement.removeFirstSeparatorIfNeeded(filePath), version, i == pathElements.size() - 1 && isFile)) {
+        if (!doIsVersionIsInsideView(connection, CCPathElement.removeFirstSeparatorIfNeeded(filePath), version, elementIsFile)) {
           return false;
         }
       }
