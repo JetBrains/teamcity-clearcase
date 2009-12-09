@@ -632,50 +632,82 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   public String label(@NotNull final String label, @NotNull final String version, @NotNull final VcsRoot root, @NotNull final CheckoutRules checkoutRules) throws VcsException {
     createLabel(label, root);
+
+    final VersionProcessor labeler = getClearCaseLabeler(label);
+
+    final ConnectionProcessor childrenProcessor = getChildrenProcessor(version, labeler);
+    final ConnectionProcessor parentsProcessor = getParentsProcessor(version, labeler);
+
     for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
-      final ClearCaseConnection connection = createConnection(root, includeRule, null);
+      doWithConnection(root, includeRule, childrenProcessor);
+      doWithConnection(root, includeRule, parentsProcessor);
+    }
+
+    return label;
+  }
+
+  private ConnectionProcessor getParentsProcessor(final String version, final VersionProcessor labeler) {
+    return new ConnectionProcessor() {
+      public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
+        connection.processAllParents(version, labeler);
+      }
+    };
+  }
+
+  private ConnectionProcessor getChildrenProcessor(final String version, final VersionProcessor labeler) {
+    return new ConnectionProcessor() {
+      public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
+        connection.processAllVersions(version, labeler, true, true);
+      }
+    };
+  }
+
+  private void doWithConnection(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule, @NotNull final ConnectionProcessor processor) throws VcsException {
+    final ClearCaseConnection connection = createConnection(root, includeRule, null);
+    try {
+      processor.process(connection);
+    } finally {
       try {
-        connection.processAllVersions(version, new VersionProcessor() {
-          public void processFile(final String fileFullPath,
-                                  final String relPath,
-                                  final String pname,
-                                  final String version,
-                                  final ClearCaseConnection clearCaseConnection,
-                                  final boolean text,
-                                  final boolean executable)
-          throws VcsException {
-            try {
-              clearCaseConnection.mklabel(version, fileFullPath, label, false);
-            } catch (IOException e) {
-              throw new VcsException(e);
-            }
-          }
-
-          public void processDirectory(final String fileFullPath,
-                                       final String relPath,
-                                       final String pname,
-                                       final String version, final ClearCaseConnection clearCaseConnection)
-          throws VcsException {
-            try {
-              clearCaseConnection.mklabel(version, fileFullPath, label, true);
-            } catch (IOException e) {
-              throw new VcsException(e);
-            }
-          }
-
-          public void finishProcessingDirectory() {
-
-          }
-        }, true, true);
-      } finally {
-        try {
-          connection.dispose();
-        } catch (IOException e) {
-          //ignore
-        }
+        connection.dispose();
+      } catch (IOException e) {
+        //ignore
       }
     }
-    return label;
+  }
+
+  private VersionProcessor getClearCaseLabeler(@NotNull final String label) {
+    return new VersionProcessor() {
+      public void processFile(final String fileFullPath,
+                              final String relPath,
+                              final String pname,
+                              final String version,
+                              final ClearCaseConnection clearCaseConnection,
+                              final boolean text,
+                              final boolean executable)
+      throws VcsException {
+        try {
+          clearCaseConnection.mklabel(version, fileFullPath, label, false);
+        } catch (IOException e) {
+          throw new VcsException(e);
+        }
+      }
+
+      public void processDirectory(final String fileFullPath,
+                                   final String relPath,
+                                   final String pname,
+                                   final String version, final ClearCaseConnection clearCaseConnection)
+      throws VcsException {
+        try {
+          clearCaseConnection.mklabel(version, fileFullPath, label, true);
+        } catch (IOException e) {
+          throw new VcsException(e);
+        }
+      }
+
+      public void finishProcessingDirectory() {
+
+      }
+    };
   }
 
   private void createLabel(final String label, final VcsRoot root) throws VcsException {
@@ -764,5 +796,9 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @Override
   public TestConnectionSupport getTestConnectionSupport() {
     return this;
+  }
+
+  private static interface ConnectionProcessor {
+    void process(@NotNull final ClearCaseConnection connection) throws VcsException;
   }
 }

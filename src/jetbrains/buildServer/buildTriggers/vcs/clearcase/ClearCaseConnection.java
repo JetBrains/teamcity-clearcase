@@ -938,6 +938,32 @@ public class ClearCaseConnection {
     }
   }
 
+  public void processAllParents(@NotNull final String version, @NotNull final VersionProcessor versionProcessor) throws VcsException {
+    prepare(version);
+
+    final File viewPathFile = myViewPath.getClearCaseViewPathFile();
+    File currentPathFile = myViewPath.getWholePathFile().getParentFile();
+
+    while (currentPathFile != null && !currentPathFile.equals(viewPathFile)) {
+      final String pname = currentPathFile.getAbsolutePath();
+      final Version lastVersion = getLastVersion(pname, false);
+      if (lastVersion == null) {
+        LOG.warn("Cannot find last version for directory \"" + pname + "\"");
+        break;
+      }
+      final String directoryVersion = lastVersion.getWholeName();
+      final String fullPath = pname + CCParseUtil.CC_VERSION_SEPARATOR + directoryVersion;
+
+      try {
+        versionProcessor.processDirectory(fullPath, "", pname, directoryVersion, this);
+      } finally {
+        versionProcessor.finishProcessingDirectory();
+      }
+
+      currentPathFile = currentPathFile.getParentFile();
+    }
+  }
+
   public static class ClearCaseInteractiveProcess extends InteractiveProcess {
     private final Process myProcess;
 
