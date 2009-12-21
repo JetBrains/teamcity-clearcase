@@ -938,18 +938,20 @@ public class ClearCaseConnection {
     }
   }
 
-  public void processAllParents(@NotNull final String version, @NotNull final VersionProcessor versionProcessor) throws VcsException {
+  public void processAllParents(@NotNull final String version, @NotNull final VersionProcessor versionProcessor, @NotNull final String path) throws VcsException {
     prepare(version);
 
     final File viewPathFile = myViewPath.getClearCaseViewPathFile();
-    File currentPathFile = myViewPath.getWholePathFile().getParentFile();
+    final File vobsPathFile = new File(viewPathFile, ClearCaseSupport.VOBS_NAME_ONLY);
+    File currentPathFile = new File(path).getParentFile();
 
-    while (currentPathFile != null && !currentPathFile.equals(viewPathFile)) {
+    while (currentPathFile != null && !currentPathFile.equals(viewPathFile) && !currentPathFile.equals(vobsPathFile)) {
       final String pname = currentPathFile.getAbsolutePath();
       final Version lastVersion = getLastVersion(pname, false);
       if (lastVersion == null) {
-        LOG.warn("Cannot find last version for directory \"" + pname + "\"");
-        break;
+        final String message = "Cannot find last version for directory \"" + pname + "\"";
+        LOG.error(message);
+        throw new VcsException(message);
       }
       final String directoryVersion = lastVersion.getWholeName();
       final String fullPath = pname + CCParseUtil.CC_VERSION_SEPARATOR + directoryVersion;

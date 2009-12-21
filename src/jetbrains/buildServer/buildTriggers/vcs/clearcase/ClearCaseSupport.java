@@ -55,7 +55,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
   private static final boolean USE_CC_CACHE = !"true".equals(System.getProperty("clearcase.disable.caches"));
-  private static final String VOBS = "vobs/";
+  public static final String VOBS_NAME_ONLY = "vobs";
+  public static final String VOBS = "vobs/";
   private final @Nullable ClearCaseStructureCache myCache;
 
   public ClearCaseSupport(File baseDir) {
@@ -86,6 +87,25 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       return getViewPath(viewPath);
     }
     return new ViewPath(vcsRoot.getProperty(CC_VIEW_PATH), vcsRoot.getProperty(RELATIVE_PATH));
+  }
+
+  @NotNull
+  public static ViewPath getRootPath(@NotNull final VcsRoot vcsRoot) throws VcsException {
+    final ViewPath viewPath = getViewPath(vcsRoot);
+    final String vobRelativePath;
+    final String relativePath = viewPath.getRelativePathWithinTheView();
+    int pos = relativePath.indexOf(File.separatorChar);
+    if (pos < 0) {
+      pos = relativePath.length();
+    }
+    else {
+      if (relativePath.substring(0, pos).equals(VOBS_NAME_ONLY)) {
+        pos = relativePath.indexOf(File.separatorChar, pos + 1);
+        if (pos < 0) pos = relativePath.length();
+      }
+    }
+    vobRelativePath = relativePath.substring(0, pos);
+    return new ViewPath(viewPath.getClearCaseViewPath(), vobRelativePath);
   }
 
   @NotNull
@@ -138,16 +158,26 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private ClearCaseConnection doCreateConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
-    boolean isUCM = root.getProperty(TYPE, UCM).equals(UCM);
     final ViewPath viewPath = getViewPath(root);/*loadRule == null ? getViewPath(root) : getViewPath(root, loadRule);*/
     if (includeRule.getFrom().length() > 0) {
       viewPath.setIncludeRuleFrom(includeRule);
     }
+    return doCreateConnectionWithViewPath(root, checkCSChange, viewPath);
+  }
+
+  private ClearCaseConnection doCreateConnectionWithViewPath(final VcsRoot root,
+                                                             final boolean checkCSChange,
+                                                             final ViewPath viewPath) throws VcsException {
+    boolean isUCM = root.getProperty(TYPE, UCM).equals(UCM);
     try {
       return new ClearCaseConnection(viewPath, isUCM, myCache, root, checkCSChange);
     } catch (Exception e) {
       throw new VcsException(e);
     }
+  }
+
+  private ClearCaseConnection createRootConnection(final VcsRoot root) throws VcsException {
+    return doCreateConnectionWithViewPath(root, false, getRootPath(root));
   }
 
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes,
@@ -628,28 +658,32 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         //ignore
       }
     }
-  }
+  }                               
 
   public String label(@NotNull final String label, @NotNull final String version, @NotNull final VcsRoot root, @NotNull final CheckoutRules checkoutRules) throws VcsException {
     createLabel(label, root);
 
     final VersionProcessor labeler = getClearCaseLabeler(label);
-
     final ConnectionProcessor childrenProcessor = getChildrenProcessor(version, labeler);
-    final ConnectionProcessor parentsProcessor = getParentsProcessor(version, labeler);
 
     for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
       doWithConnection(root, includeRule, childrenProcessor);
-      doWithConnection(root, includeRule, parentsProcessor);
+      doWithRootConnection(root, getParentsProcessor(version, labeler, createPath(root, includeRule)));
     }
 
     return label;
   }
 
-  private ConnectionProcessor getParentsProcessor(final String version, final VersionProcessor labeler) {
+  private String createPath(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule) throws VcsException {
+    final ViewPath viewPath = getViewPath(root);
+    viewPath.setIncludeRuleFrom(includeRule);
+    return viewPath.getWholePath();
+  }
+
+  private ConnectionProcessor getParentsProcessor(final String version, final VersionProcessor labeler, final String path) {
     return new ConnectionProcessor() {
       public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
-        connection.processAllParents(version, labeler);
+        connection.processAllParents(version, labeler, path);
       }
     };
   }
@@ -664,6 +698,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private void doWithConnection(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule, @NotNull final ConnectionProcessor processor) throws VcsException {
     final ClearCaseConnection connection = createConnection(root, includeRule, null);
+    processConnection(processor, connection);
+  }
+
+  private void doWithRootConnection(@NotNull final VcsRoot root, @NotNull final ConnectionProcessor processor) throws VcsException {
+    final ClearCaseConnection connection = createRootConnection(root);
+    processConnection(processor, connection);
+  }
+
+  private void processConnection(final ConnectionProcessor processor, final ClearCaseConnection connection) throws VcsException {
     try {
       processor.process(connection);
     } finally {
