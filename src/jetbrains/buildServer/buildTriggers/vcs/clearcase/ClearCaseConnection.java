@@ -299,7 +299,7 @@ public class ClearCaseConnection {
     return readFromProcessInput();
     */
 
-    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-all", "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
+    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-recurse", "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {
