@@ -39,6 +39,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStru
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
@@ -62,11 +63,7 @@ public class ClearCaseConnection {
   private static final String UNIX_VIEW_PATH_PREFIX = "/view/";
 
   private static int getLogSizeLimit() {
-    try {
-      return Integer.parseInt(System.getProperty("cc.log.size.limit"));
-    } catch (Throwable e) {
-      return 10;
-    }
+    return TeamCityProperties.getInteger("cc.log.size.limit", 10);
   }
 
   private final static LoggerToFile ourLogger = new LoggerToFile(new File("ClearCase.log"), 1000 * 1000 * CC_LOG_FILE_SIZE_LIMIT );
@@ -88,7 +85,7 @@ public class ClearCaseConnection {
   private final MultiMap<String, HistoryElement> myChangesToIgnore = new MultiMap<String, HistoryElement>();
   private final MultiMap<String, HistoryElement> myDeletedVersions = new MultiMap<String, HistoryElement>();
   private static final Pattern END_OF_COMMAND_PATTERN = Pattern.compile("Command (.*) returned status (.*)");
-  private static final boolean LOG_COMMANDS = System.getProperty("cc.log.commands") != null;
+  private static final boolean LOG_COMMANDS = TeamCityProperties.getPropertyOrNull("cc.log.commands") != null;
 
   private final ConfigSpec myConfigSpec;
   private static final String UPDATE_LOG = "teamcity.clearcase.update.result.log";

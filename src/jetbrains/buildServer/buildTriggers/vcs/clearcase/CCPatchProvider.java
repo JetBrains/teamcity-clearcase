@@ -23,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsSupportUtil;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
@@ -32,7 +33,7 @@ public class CCPatchProvider {
 
   private File myTempFile;
   private final ClearCaseConnection myConnection;
-  private static final boolean CC_OPTIMIZE_CHECKOUT = "true".equals(System.getProperty("clearcase.optimize.initial.checkout"));
+  private static final boolean CC_OPTIMIZE_CHECKOUT = TeamCityProperties.getBoolean("clearcase.optimize.initial.checkout");
   private static final String EXECUTABLE_ATTR = "ugo+x";
   private final boolean myUseCCCache;
 

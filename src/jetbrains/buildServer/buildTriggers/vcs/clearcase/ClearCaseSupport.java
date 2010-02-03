@@ -54,7 +54,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
-  private static final boolean USE_CC_CACHE = !"true".equals(System.getProperty("clearcase.disable.caches"));
+  private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
   public static final String VOBS_NAME_ONLY = "vobs";
   public static final String VOBS = "vobs/";
   private final @Nullable ClearCaseStructureCache myCache;

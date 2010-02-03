@@ -19,19 +19,12 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vcs.VcsException;
 import java.io.*;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
   private final InputStream myInput;
   private final OutputStream myOutput;
-  private static final int ERROR_READING_SLEEP_MILLIS = readIntFromSystem("clearcase.error.reading.sleep", 100);
-
-  private static int readIntFromSystem(final String prop, final int def) {
-    try {
-      return Integer.parseInt(System.getProperty(prop));
-    } catch (Throwable e) {
-      return def;
-    }
-  }
+  private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
 
   public InteractiveProcess(final InputStream inputStream, final OutputStream outputStream) {
     myInput = inputStream;
@@ -46,8 +39,6 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     } finally {
       destroyOSProcess();
     }
-
-
   }
 
   protected abstract void destroyOSProcess();
