@@ -26,7 +26,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
@@ -321,7 +323,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private void buildPatchForConnection(PatchBuilder builder, String fromVersion, String toVersion, ClearCaseConnection connection) throws IOException, VcsException {
     try {
-      new CCPatchProvider(connection, USE_CC_CACHE).buildPatch(builder, fromVersion, toVersion);
+      final boolean useCache = USE_CC_CACHE && !connection.getConfigSpec().hasLabelBasedVersionSelector();
+      new CCPatchProvider(connection, useCache).buildPatch(builder, fromVersion, toVersion);
     } catch (ExecutionException e) {
       throw new VcsException(e);
     } catch (ParseException e) {
@@ -798,6 +801,20 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public boolean sourcesUpdatePossibleIfChangesNotFound(@NotNull final VcsRoot root) {
+    try {
+      final ViewPath path = getViewPath(root);
+      final ConfigSpec spec = ConfigSpecParseUtil.getConfigSpec(path);
+      if (spec != null && spec.hasLabelBasedVersionSelector()) {
+        // as far we still cannot detect label moving,
+        // have to use all resources set for the patch creation
+        return true;
+      }
+    } catch (VcsException e) {
+      LOG.error(e.getMessage(), e);
+
+    } catch (IOException e) {
+      LOG.error(e.getMessage(), e);
+    }
     return false;
   }
 

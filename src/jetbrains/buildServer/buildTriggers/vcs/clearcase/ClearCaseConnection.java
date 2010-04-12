@@ -179,6 +179,10 @@ public class ClearCaseConnection {
     return myViewPath.getWholePath();
   }
 
+  public ConfigSpec getConfigSpec() {
+    return myConfigSpec;
+  }
+
   @Nullable
   public DirectoryChildElement getLastVersionElement(final String pathWithoutVersion, final DirectoryChildElement.Type type)
     throws VcsException {

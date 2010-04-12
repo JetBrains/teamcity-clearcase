@@ -199,4 +199,13 @@ public class ConfigSpecImpl implements ConfigSpec {
     result = 31 * result + myStandardRules.hashCode();
     return result;
   }
+
+  public boolean hasLabelBasedVersionSelector() {
+    for (final ConfigSpecStandardRule rule : myStandardRules) {
+      if (rule.isLabelBasedVersionSelector()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

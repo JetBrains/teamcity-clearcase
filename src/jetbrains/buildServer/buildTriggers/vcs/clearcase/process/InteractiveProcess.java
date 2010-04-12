@@ -48,6 +48,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   }
 
   public InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
+  	cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
     execute(params);
     try {
       return readFromProcessInput(params);
@@ -116,6 +117,15 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
         FileUtil.delete(tempFile);
       }
     };
+  }
+
+  private void cleanStreams(InputStream ...streams) throws IOException {
+    final byte[] buffer = new byte[1024];
+    for (InputStream stream : streams) {
+      if (stream.available() > 0) {
+        while (stream.read(buffer) != -1) {}
+      }
+    }
   }
 
   protected abstract boolean isEndOfCommandOutput(final String line, final String[] params) throws IOException;

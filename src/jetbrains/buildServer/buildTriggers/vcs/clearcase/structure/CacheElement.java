@@ -16,28 +16,26 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 
-import com.intellij.execution.ExecutionException;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.*;
-
+import java.util.Date;
+import java.util.List;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.VersionProcessor;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.ModificationData;
+import org.apache.log4j.Logger;
 
 public class CacheElement {
+  private static final Logger LOG = Logger.getLogger(CacheElement.class);
+
   private final Date myVersion;
   private final String myVersionString;
   private final File myCacheFile;
@@ -66,8 +64,7 @@ public class CacheElement {
     myParentSupport = parentSupport;
     myRoot = root;
 
-    Loggers.VCS.debug("ClearCase cache " + cacheFile.getPath() + " created for " + path);
-    
+    LOG.debug("ClearCase cache " + cacheFile.getPath() + " created for " + path);
   }
 
   public void processAllVersions(
@@ -79,14 +76,12 @@ public class CacheElement {
       if (!myCacheFile.exists()) {
         CacheElement nearestCache = myOwner.getNearestExistingCache(myVersion, myPath, myIncludeRule, myRoot);
         if (nearestCache == null) {
-          Loggers.VCS.debug("ClearCase cache " + myCacheFile.getPath() + " loading all versions");
+          LOG.debug("ClearCase cache " + myCacheFile.getPath() + " loading all versions");
           loadAllRevisions(myVersionString, connection);
         } else {
           try {
-            Loggers.VCS.debug("ClearCase cache " + myCacheFile.getPath() + " loading differences from " + nearestCache.getVersionString());            
+            LOG.debug("ClearCase cache " + myCacheFile.getPath() + " loading differences from " + nearestCache.getVersionString());
             loadDifferences(nearestCache, connection);
-          } catch (ExecutionException e) {
-            throw new IOException(e.getLocalizedMessage());
           } catch (ParseException e) {
             throw new IOException(e.getLocalizedMessage());
           }
@@ -100,7 +95,8 @@ public class CacheElement {
 
   }
 
-  private void loadAllRevisions(String version, ClearCaseConnection connection) throws VcsException, IOException {
+  private void loadAllRevisions(String version, ClearCaseConnection connection) throws IOException {
+    //noinspection ResultOfMethodCallIgnored
     myCacheFile.getParentFile().mkdirs();
     final DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(myCacheFile));
     try {
@@ -114,7 +110,7 @@ public class CacheElement {
   }
 
   private void loadDifferences(final CacheElement nearestCache, final ClearCaseConnection connection)
-    throws IOException, VcsException, ExecutionException, ParseException {
+    throws IOException, VcsException, ParseException {
     final List<ChangedElementInfo> changedElements = loadChanges(nearestCache);
     
     
@@ -133,7 +129,7 @@ public class CacheElement {
   }
 
   private  List<ChangedElementInfo> loadChanges(final CacheElement nearestCache)
-    throws ParseException, ExecutionException, IOException, VcsException {
+    throws ParseException, IOException, VcsException {
 /*
     if (myParentSupport.isViewPathIsExactlyCCViewPath(myRoot, myIncludeRule)) {
       final List<ConfigSpecLoadRule> loadRules = ConfigSpecParseUtil.getConfigSpec(ClearCaseSupport.getViewPath(myRoot)).getLoadRules();

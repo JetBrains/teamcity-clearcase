@@ -23,6 +23,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.ParseException;
 
+import org.apache.log4j.Logger;
+
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsSupportUtil;
@@ -31,6 +33,8 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 
 public class CCPatchProvider {
 
+	private static final Logger LOG = Logger.getLogger(CCPatchProvider.class);	
+	
   private File myTempFile;
   private final ClearCaseConnection myConnection;
   private static final boolean CC_OPTIMIZE_CHECKOUT = TeamCityProperties.getBoolean("clearcase.optimize.initial.checkout");
@@ -52,7 +56,8 @@ public class CCPatchProvider {
         else {
           myConnection.processAllVersions(lastVersion, createFileProcessor(builder), false, myUseCCCache);
         }
-      } else if (!myConnection.isConfigSpecWasChanged()) {
+      }
+      else if (!myConnection.isConfigSpecWasChanged()) {
         myConnection.prepare(lastVersion);
         CCParseUtil.processChangedFiles(myConnection, fromVersion, lastVersion, new ChangedFilesProcessor() {
             public void processChangedFile(final HistoryElement element) throws VcsException {
@@ -89,7 +94,8 @@ public class CCPatchProvider {
             processChangedFile(element);
           }
         });
-      } else {
+      }
+      else {
         myConnection.processAllVersions(lastVersion, createFileProcessor(builder), false, myUseCCCache);
       }
     } finally {
@@ -168,8 +174,21 @@ public class CCPatchProvider {
       throw new VcsException(e);
     } catch (InterruptedException e) {
       throw new VcsException(e);
-    } catch (IOException e) {
-      throw new VcsException(e);
+    } catch (IOException primary) {
+      //TW-10811 hotfix: threat files that cannot get own context as "rmelem'ed"
+      if (primary.getMessage().contains("Operation \"get cleartext\" failed: not a ClearCase object.")) {
+        try {
+          LOG.warn(
+            String.format("Could not get content of \"%s\", perhaps element was \"rmelem\"'ed. 'll produce deletion. Original message: %s",
+                          line,
+                          primary.getMessage()));
+          builder.deleteFile(new File(relativePath), false);
+        } catch (IOException secondary) {
+          throw new VcsException(secondary.initCause(primary));//keep source exception as cause
+        }
+        return;
+      }
+      throw new VcsException(primary);
     }
   }
 

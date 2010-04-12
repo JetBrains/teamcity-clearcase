@@ -38,4 +38,9 @@ public interface ConfigSpec {
   boolean isUnderLoadRules(final String ccViewRoot, final String fullFileName) throws IOException, VcsException;
 
   void setViewIsDynamic(final boolean viewIsDynamic);
+  
+  /**
+   * @return true if Version Selector of any Rule refers to a Label 
+   */
+  boolean hasLabelBasedVersionSelector();
 }

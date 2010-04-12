@@ -38,6 +38,7 @@ public class ConfigSpecStandardRule {
   protected final Pattern myBranchPattern;
   protected final String myVersion;
   private final String myMkBranchOption;
+  private final boolean myIsLabelSelector;
 
   public ResultType isVersionIsInsideView(final Version version) {
     final String versionFullName = version.getWholeName();
@@ -216,9 +217,16 @@ public class ConfigSpecStandardRule {
     if (myVersion.startsWith("{")) {
       //todo
     }
+    myIsLabelSelector = isLabelBasedSelector();
   }
 
-  private String removeFirstSeparatorIfNeeded(@NotNull final String scopePattern) {    
+  private boolean isLabelBasedSelector() {
+    return !StringUtil.isNumber(myVersion)
+           && !ConfigSpecRuleTokens.CHECKEDOUT.equalsIgnoreCase(myVersion)
+           && !ConfigSpecRuleTokens.LATEST.equalsIgnoreCase(myVersion);
+  }
+
+  private String removeFirstSeparatorIfNeeded(@NotNull final String scopePattern) {
     if (File.separatorChar == '\\' && (scopePattern.startsWith("\\") || scopePattern.startsWith("/"))) {
       return scopePattern.substring(1);
     }
@@ -341,4 +349,11 @@ public class ConfigSpecStandardRule {
     BRANCH_HAS_BEEN_MADE,
     BRANCH_HAS_NOT_BEEN_MADE
   }
+
+  /**
+   * @return true if Version Selector refers to a Label 
+   */
+	public boolean isLabelBasedVersionSelector() {
+		return myIsLabelSelector;
+	}
 }
