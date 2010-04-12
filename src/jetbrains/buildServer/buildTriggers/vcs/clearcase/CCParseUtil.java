@@ -45,8 +45,6 @@ public class CCParseUtil {
       final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
       try {
         String line;
-
-
         while ((line = reader.readLine()) != null) {
           final DirectoryChildElement element = DirectoryChildElement.readFromLSFormat(line, connection);
           if (element != null) {
@@ -206,7 +204,7 @@ public class CCParseUtil {
       }
       else {
         //noinspection ConstantConditions
-        if (myFirstNextElement.getDate().after(mySecondNextElement.getDate())) {
+        if (myFirstNextElement.getEventID() > mySecondNextElement.getEventID()) {
            return getFirstNext();
         }
         else {

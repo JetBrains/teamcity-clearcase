@@ -35,10 +35,14 @@ public class HistoryElement {
   private final String myEvent;
   private final String myComment;
   private final String myActivity;
+  private final long myEventID;
+	
   private static final int EXPECTED_CHANGE_FIELD_COUNT = 9;
+  private static final String EVENT = "event ";
   private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
 
   public HistoryElement(
+                        final String eventId,
                         final String user,
                         final String date,
                         final String objectName,
@@ -49,6 +53,7 @@ public class HistoryElement {
                         final String comment,
                         final String activity
                         ) {
+  	myEventID = Long.parseLong(eventId);
     myUser = user;
     myDate = date;
     myObjectName = objectName;
@@ -60,7 +65,9 @@ public class HistoryElement {
     myActivity = activity;
   }
 
-  private static HistoryElement createHistoryElement(final String user,
+	private static HistoryElement createHistoryElement(
+                                              final String eventId,	
+                                              final String user,
                                               final String date,
                                               final String objectName,
                                               final String objectKind,
@@ -77,7 +84,7 @@ public class HistoryElement {
         version = extractedVersion;
       }
     }
-    return new HistoryElement(user, date, objectName, kind, version, operation, event, comment, activity);
+    return new HistoryElement(eventId, user, date, objectName, kind, version, operation, event, comment, activity);
 
   }
 
@@ -91,12 +98,21 @@ public class HistoryElement {
   }
 
   public static HistoryElement readFrom(final String line) {
-    final String[] strings = line.split(ClearCaseConnection.DELIMITER, EXPECTED_CHANGE_FIELD_COUNT);
+    if (!line.startsWith(EVENT)) {
+      return null;
+    }
+    final String[] parts = line.substring(EVENT.length()).split(":", 2);
+    if (parts.length < 2) {
+      return null;
+    }
+    final String eventId = parts[0].trim();
+    final String[] strings = parts[1].trim().split(ClearCaseConnection.DELIMITER, EXPECTED_CHANGE_FIELD_COUNT);
     if (strings.length < EXPECTED_CHANGE_FIELD_COUNT - 1) {
       return null;
     }
     else if (strings.length == EXPECTED_CHANGE_FIELD_COUNT - 1) {
-      return createHistoryElement(strings[0],
+      return createHistoryElement(eventId,
+                                  strings[0],
                                   strings[1],
                                   strings[2],
                                   strings[3],
@@ -108,7 +124,8 @@ public class HistoryElement {
                                   );
     }
     else {
-      return createHistoryElement(strings[0],
+      return createHistoryElement(eventId,
+                                  strings[0],
                                   strings[1],
                                   strings[2],
                                   strings[3],
@@ -162,6 +179,10 @@ public class HistoryElement {
     return CCParseUtil.getVersionInt(myObjectVersion);
   }
 
+  public long getEventID() {
+		return myEventID;
+	}
+
   public String getPreviousVersion(final ClearCaseConnection connection, final boolean isDirPath) throws VcsException, IOException {
     return connection.getPreviousVersion(this, isDirPath);
   }
@@ -177,4 +198,10 @@ public class HistoryElement {
   public String getLogRepresentation() {
     return "\"" + getObjectName() + "\", version \"" + getObjectVersion() + "\", date \"" + getDateString() + "\", operation \"" + getOperation() + "\", event \"" + getEvent() + "\"";
   }
+
+	@Override
+	public String toString() {
+		return String.format("%s: %s(%s)=>%s", getEventID(), getObjectName(), getOperation(), getEvent());
+	}
+  
 }
