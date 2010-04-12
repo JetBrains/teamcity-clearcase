@@ -35,10 +35,10 @@ import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.*;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.apache.log4j.Logger;
 
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport,
                                                                   LabelingSupport, VcsFileContentProvider,
@@ -256,7 +256,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                          final String beforeVersion,
                          final String afterVersion,
                          final MultiMap<CCModificationKey, VcsChange> key2changes) throws VcsException {
-    final CCModificationKey modificationKey = new CCModificationKey(element.getDate(), element.getUser());
+    final CCModificationKey modificationKey = new CCModificationKey(element.getDateString(), element.getUser());
     key2changes.putValue(modificationKey, createChange(type, connection, beforeVersion, afterVersion, childFullPath));
     CCModificationKey realKey = findKey(modificationKey, key2changes);
     if (realKey != null) {

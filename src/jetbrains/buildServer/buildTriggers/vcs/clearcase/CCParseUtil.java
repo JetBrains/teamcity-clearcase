@@ -23,12 +23,13 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import jetbrains.buildServer.vcs.VcsException;
 import org.jetbrains.annotations.NonNls;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 
 public class CCParseUtil {
   @NonNls private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
-  @NonNls static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
+  @NonNls public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
   @NonNls public static final String CC_VERSION_SEPARATOR = "@@";
   @NonNls private static final String LOAD = "load ";
 
@@ -66,59 +67,40 @@ public class CCParseUtil {
   public static void processChangedFiles(final ClearCaseConnection connection,
                                          final String fromVersion,
                                          final String currentVersion,
-                                         final ChangedFilesProcessor fileProcessor)
-    throws ParseException, IOException, VcsException {
+                                         final ChangedFilesProcessor fileProcessor) throws ParseException, IOException, VcsException {
     final @Nullable Date lastDate = currentVersion != null ? parseDate(currentVersion) : null;
 
+    final HistoryElementProvider recurseChangesProvider = new HistoryElementProvider(connection.getRecurseChanges(fromVersion));
+    final HistoryElementProvider directoryChangesProvider = new HistoryElementProvider(connection.getDirectoryChanges(fromVersion));
 
-    final InputStream inputStream = connection.getChanges(fromVersion);
-
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
+    final HistoryElementsMerger changesProvider = new HistoryElementsMerger(recurseChangesProvider, directoryChangesProvider);
 
     try {
-      String line = reader.readLine();
-      while (line != null) {
-        String nextLine = reader.readLine();
-        if (!line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-          while (nextLine != null && !line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-            line += '\n' + nextLine;
-            nextLine = reader.readLine();
-          }
-        }
-        if (line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-          line = line.substring(0, line.length() - ClearCaseConnection.LINE_END_DELIMITER.length());
-        }
-        HistoryElement element = HistoryElement.readFrom(line);
-        if (element != null) {
-          final Date date = new SimpleDateFormat(OUTPUT_DATE_FORMAT).parse(element.getDate());
-          if (connection.isInsideView(element.getObjectName())) {
-            if (lastDate == null || date.before(lastDate)) {
-              if ("checkin".equals(element.getOperation())) {
-                if ("create directory version".equals(element.getEvent())) {
-                  if (element.versionIsInsideView(connection, false)) {
-                    fileProcessor.processChangedDirectory(element);
-                  }
-                } else if ("create version".equals(element.getEvent())) {
-                  if (element.versionIsInsideView(connection, true)) {
-                    fileProcessor.processChangedFile(element);
-                  }
+      while (changesProvider.hasNext()) {
+        final HistoryElement element = changesProvider.next();
+        if (connection.isInsideView(element.getObjectName())) {
+          if (lastDate == null || element.getDate().before(lastDate)) {
+            if ("checkin".equals(element.getOperation())) {
+              if ("create directory version".equals(element.getEvent())) {
+                if (element.versionIsInsideView(connection, false)) {
+                  fileProcessor.processChangedDirectory(element);
                 }
-              } else if ("rmver".equals(element.getOperation())) {
-                if ("destroy version on branch".equals(element.getEvent())) {
-                  fileProcessor.processDestroyedFileVersion(element);
+              } else if ("create version".equals(element.getEvent())) {
+                if (element.versionIsInsideView(connection, true)) {
+                  fileProcessor.processChangedFile(element);
                 }
+              }
+            } else if ("rmver".equals(element.getOperation())) {
+              if ("destroy version on branch".equals(element.getEvent())) {
+                fileProcessor.processDestroyedFileVersion(element);
               }
             }
           }
         }
-
-        line = nextLine;
       }
-
-
-    } finally {
-      reader.close();
+    }
+    finally {
+      changesProvider.close();
     }
   }
 
@@ -127,8 +109,7 @@ public class CCParseUtil {
   }
   
   public static String formatDate(final Date date) {
-    return getDateFormat().format(date);
-    
+    return getDateFormat().format(date);    
   }
   
 
@@ -196,5 +177,140 @@ public class CCParseUtil {
   public static int getVersionInt(final String wholeVersion) {
     int versSeparator = wholeVersion.lastIndexOf(File.separator);
     return Integer.parseInt(wholeVersion.substring(versSeparator + 1));
+  }
+
+  private static class HistoryElementsMerger {
+    @NotNull private final HistoryElementProvider myFirstProvider;
+    @NotNull private final HistoryElementProvider mySecondProvider;
+    @Nullable private HistoryElement myFirstNextElement;
+    @Nullable private HistoryElement mySecondNextElement;
+
+    private HistoryElementsMerger(@NotNull final HistoryElementProvider firstProvider,
+                                  @NotNull final HistoryElementProvider secondProvider) throws IOException {
+      myFirstProvider = firstProvider;
+      mySecondProvider = secondProvider;
+      readFirstNext();
+      readSecondNext();
+    }
+
+    @NotNull
+    public HistoryElement next() throws IOException, ParseException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      if (myFirstNextElement == null) {
+        return getSecondNext();
+      }
+      else if (mySecondNextElement == null) {
+        return getFirstNext();
+      }
+      else {
+        //noinspection ConstantConditions
+        if (myFirstNextElement.getDate().after(mySecondNextElement.getDate())) {
+           return getFirstNext();
+        }
+        else {
+          return getSecondNext();
+        }
+      }
+    }
+
+    public boolean hasNext() {
+      return myFirstNextElement != null || mySecondNextElement != null;
+    }
+
+    public void close() throws IOException {
+      myFirstProvider.close();
+      mySecondProvider.close();
+    }
+
+    private HistoryElement getFirstNext() throws IOException {
+      try {
+        //noinspection ConstantConditions
+        return myFirstNextElement;
+      }
+      finally {
+        readFirstNext();
+      }
+    }
+
+    private HistoryElement getSecondNext() throws IOException {
+      try {
+        //noinspection ConstantConditions
+        return mySecondNextElement;
+      }
+      finally {
+        readSecondNext();
+      }
+    }
+
+    private void readFirstNext() throws IOException {
+      myFirstNextElement = readNext(myFirstProvider);
+    }
+
+    private void readSecondNext() throws IOException {
+      mySecondNextElement = readNext(mySecondProvider);
+    }
+
+    @Nullable
+    private HistoryElement readNext(@NotNull final HistoryElementProvider provider) throws IOException {
+      return provider.hasNext() ? provider.next() : null;
+    }
+  }
+
+  private static class HistoryElementProvider {
+    @NotNull private final BufferedReader myReader;
+    @Nullable private HistoryElement myNextElement;
+    @Nullable private String myNextLine;
+
+    private HistoryElementProvider(@NotNull final InputStream inputStream) throws IOException {
+      myReader = new BufferedReader(new InputStreamReader(inputStream));
+      myNextLine = myReader.readLine();
+      readNext();
+    }
+
+    @NotNull
+    public HistoryElement next() throws IOException {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      try {
+        //noinspection ConstantConditions
+        return myNextElement;
+      }
+      finally {
+        readNext();
+      }
+    }
+
+    public boolean hasNext() {
+      return myNextElement != null;
+    }
+
+    public void close() throws IOException {
+      myReader.close();
+    }
+
+    private void readNext() throws IOException {
+      String line = myNextLine;
+      while (line != null) {
+        myNextLine = myReader.readLine();
+        if (!line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
+          while (myNextLine != null && !line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
+            line += '\n' + myNextLine;
+            myNextLine = myReader.readLine();
+          }
+        }
+        if (line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
+          line = line.substring(0, line.length() - ClearCaseConnection.LINE_END_DELIMITER.length());
+        }
+        myNextElement = HistoryElement.readFrom(line);
+        if (myNextElement != null) {
+          return;
+        }
+        line = myNextLine;
+      }
+      myNextElement = null;
+    }
   }
 }

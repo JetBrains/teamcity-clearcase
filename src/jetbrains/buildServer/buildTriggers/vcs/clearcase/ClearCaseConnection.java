@@ -18,6 +18,7 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.io.FileUtil;
 import java.io.*;
 import java.text.ParseException;
@@ -38,7 +39,6 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.InteractiveProc
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
@@ -47,8 +47,8 @@ import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings({"SimplifiableIfStatement"})
 public class ClearCaseConnection {
@@ -189,7 +189,7 @@ public class ClearCaseConnection {
                                        pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + lastElementVersion.getWholeName(),
                                        lastElementVersion.getWholeName(), pathWithoutVersion);
     } else {
-      Loggers.VCS.info("ClearCase: last element version not found for " + pathWithoutVersion);
+      LOG.info("ClearCase: last element version not found for " + pathWithoutVersion);
       return null;
     }
   }
@@ -216,7 +216,7 @@ public class ClearCaseConnection {
       final List<HistoryElement> historyElements = myChangesToIgnore.get(elementPath);
       if (historyElements != null) {
         for (HistoryElement element : historyElements) {
-          Loggers.VCS.info("ClearCase: element " + elementPath + ", branch ignored: " + element.getObjectVersion());
+          LOG.info("ClearCase: element " + elementPath + ", branch ignored: " + element.getObjectVersion());
           versionTree.pruneBranch(element.getObjectVersion());
         }
       }
@@ -290,13 +290,16 @@ public class ClearCaseConnection {
     return version;
   }
 
-  public InputStream getChanges(String since) throws IOException, VcsException {
-    /*
-    execute(new String[]{"lshistory", "-all","-since", since, "-fmt",FORMAT,myViewName});
-    return readFromProcessInput();
-    */
+  public InputStream getRecurseChanges(final String since) throws IOException, VcsException {
+    return doGetChanges(since, "-recurse");
+  }
 
-    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-recurse", "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
+  public InputStream getDirectoryChanges(final String since) throws IOException, VcsException {
+    return doGetChanges(since, "-directory");
+  }
+
+  private InputStream doGetChanges(final String since, final String key) throws VcsException {
+    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {
@@ -348,7 +351,7 @@ public class ClearCaseConnection {
     final Version versionByPath = versionTree.findVersionByPath(normalizedVersion);
 
     if (versionByPath == null) {
-      Loggers.VCS.info("ClearCase: version by path not found for " + objectPath + " by " + normalizedVersion);
+      LOG.info("ClearCase: version by path not found for " + objectPath + " by " + normalizedVersion);
     }
 
     return versionByPath;
@@ -394,7 +397,7 @@ public class ClearCaseConnection {
     commandLine.addParameters(arguments);
 
     if (LOG_COMMANDS) {
-      Loggers.VCS.info("ClearCase executing " + commandLine.getCommandLineString());
+      LOG.info("ClearCase executing " + commandLine.getCommandLineString());
       ourLogger.log("\n" + commandLine.getCommandLineString());
     }
     LOG.info("simple execute: " + commandLine.getCommandLineString());
@@ -535,11 +538,15 @@ public class ClearCaseConnection {
   }
   
   public void updateCurrentView() throws VcsException {
-    updateView(getViewWholePath());
+    updateView(getViewWholePath(), true);
   }
 
   private boolean isViewIsDynamic() throws VcsException, IOException {
-    final InputStream inputStream = executeSimpleProcess(getViewWholePath(), new String[] {"lsview", "-cview", "-long"});
+    return isViewIsDynamic(getViewWholePath());
+  }
+
+  public static boolean isViewIsDynamic(@NotNull final String viewPath) throws VcsException, IOException {
+    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] {"lsview", "-cview", "-long"});
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -558,7 +565,7 @@ public class ClearCaseConnection {
     return true;
   }
 
-  public static void updateView(final String viewPath) throws VcsException {
+  public static void updateView(final String viewPath, final boolean writeLog) throws VcsException {
     Semaphore semaphore;
     synchronized (viewName2Semaphore) {
       semaphore = viewName2Semaphore.get(viewPath);
@@ -570,7 +577,8 @@ public class ClearCaseConnection {
 
     try {
       semaphore.acquire();
-      executeSimpleProcess(viewPath, new String[]{"update", "-force", "-rename", "-log", UPDATE_LOG}).close();
+      final String log = writeLog ? UPDATE_LOG : (SystemInfo.isWindows ? "NUL" : "/dev/null");
+      executeSimpleProcess(viewPath, new String[]{"update", "-force", "-rename", "-log", log}).close();
     } catch (VcsException e) {
       if (e.getLocalizedMessage().contains("is not a valid snapshot view path")) {
         //ignore, it is dynamic view
@@ -620,26 +628,33 @@ public class ClearCaseConnection {
     return myViewPath.getClearCaseViewPath();
   }
 
-  public static InputStream getConfigSpecInputStream(final String viewName) throws VcsException {
+  public static InputStream getConfigSpecInputStream(final String viewPath) throws VcsException {
     try {
-      return executeSimpleProcess(viewName, new String[]{"catcs"});
+      return executeSimpleProcess(viewPath, new String[]{"catcs"});
     } catch (VcsException e) {
-      final String tag = getViewTag(viewName);
+      final String tag = getViewTag(viewPath);
       if (tag != null) {
-        for (final File root : File.listRoots()) {
-          try {
-            return executeSimpleProcess(root.getAbsolutePath(), new String[]{"catcs", "-tag", tag});
-          }
-          catch (final Exception ignored) {}
-        }
+        final InputStream stream = executeSimpleProcessByTag(new String[]{"catcs", "-tag", tag});
+        if (stream != null) return stream;
       }
       throw e;
     }
   }
 
   @Nullable
-  private static String getViewTag(final String viewName) throws VcsException {
-    final InputStream inputStream = executeSimpleProcess(viewName, new String[] {"lsview", "-cview"});
+  public static InputStream executeSimpleProcessByTag(final String[] arguments) {
+    for (final File root : File.listRoots()) {
+      try {
+        return executeSimpleProcess(root.getAbsolutePath(), arguments);
+      }
+      catch (final Exception ignored) {}
+    }
+    return null;
+  }
+
+  @Nullable
+  public static String getViewTag(final String viewPath) throws VcsException {
+    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] {"lsview", "-cview"});
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -985,7 +1000,7 @@ public class ClearCaseConnection {
 
       }
       if (LOG_COMMANDS) {
-        Loggers.VCS.info("ClearCase executing " + commandLine.toString());
+        LOG.info("ClearCase executing " + commandLine.toString());
         ourLogger.log("\n" + commandLine.toString());
       }
       LOG.info("interactive execute: " + commandLine.toString());

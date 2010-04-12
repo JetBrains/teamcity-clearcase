@@ -17,6 +17,10 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import jetbrains.buildServer.vcs.VcsException;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +36,7 @@ public class HistoryElement {
   private final String myComment;
   private final String myActivity;
   private static final int EXPECTED_CHANGE_FIELD_COUNT = 9;
-
+  private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
 
   public HistoryElement(
                         final String user,
@@ -117,8 +121,12 @@ public class HistoryElement {
     }
   }
 
-  public String getDate() {
+  public String getDateString() {
     return myDate;
+  }
+
+  public Date getDate() throws ParseException {
+    return ourDateFormat.parse(myDate);
   }
 
   public String getObjectName() {
@@ -167,6 +175,6 @@ public class HistoryElement {
   }
 
   public String getLogRepresentation() {
-    return "\"" + getObjectName() + "\", version \"" + getObjectVersion() + "\", date \"" + getDate() + "\", operation \"" + getOperation() + "\", event \"" + getEvent() + "\"";
+    return "\"" + getObjectName() + "\", version \"" + getObjectVersion() + "\", date \"" + getDateString() + "\", operation \"" + getOperation() + "\", event \"" + getEvent() + "\"";
   }
 }
