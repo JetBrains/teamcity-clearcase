@@ -9,7 +9,7 @@
         <webroots>
           <root url="file://$MODULE_DIR$/resources/buildServerResources" relative="/plugins/clearcase" />
         </webroots>
-        <context-artifact name="web-deployment:web-deployment exploded" />
+        <context-artifact name="clearcase:clearcase exploded" />
       </configuration>
     </facet>
     <facet type="Spring" name="Spring">
