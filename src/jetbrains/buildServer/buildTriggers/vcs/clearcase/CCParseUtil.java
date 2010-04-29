@@ -73,6 +73,8 @@ public class CCParseUtil {
 
     final HistoryElementsMerger changesProvider = new HistoryElementsMerger(recurseChangesProvider, directoryChangesProvider);
 
+    final ChangesInverter inverter = new ChangesInverter(fileProcessor);
+
     try {
       while (changesProvider.hasNext()) {
         final HistoryElement element = changesProvider.next();
@@ -81,16 +83,16 @@ public class CCParseUtil {
             if ("checkin".equals(element.getOperation())) {
               if ("create directory version".equals(element.getEvent())) {
                 if (element.versionIsInsideView(connection, false)) {
-                  fileProcessor.processChangedDirectory(element);
+                  inverter.processChangedDirectory(element);
                 }
               } else if ("create version".equals(element.getEvent())) {
                 if (element.versionIsInsideView(connection, true)) {
-                  fileProcessor.processChangedFile(element);
+                  inverter.processChangedFile(element);
                 }
               }
             } else if ("rmver".equals(element.getOperation())) {
               if ("destroy version on branch".equals(element.getEvent())) {
-                fileProcessor.processDestroyedFileVersion(element);
+                inverter.processDestroyedFileVersion(element);
               }
             }
           }
@@ -100,6 +102,8 @@ public class CCParseUtil {
     finally {
       changesProvider.close();
     }
+
+    inverter.processCollectedChangesInInvertedOrder();
   }
 
   private static Date parseDate(final String currentVersion) throws ParseException {
