@@ -30,7 +30,6 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.MultiMap;
@@ -529,7 +528,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     try {
       viewPath = getViewPath(rootEntry.getVcsRoot());
     } catch (VcsException e) {
-      Loggers.VCS.debug("CC.MapFullPath: View path not defined: " + e.getLocalizedMessage());
+      LOG.debug("CC.MapFullPath: View path not defined: " + e.getLocalizedMessage());
       return Collections.emptySet();
     }
 
@@ -543,11 +542,11 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         result = result.substring(1);
       }
 
-      Loggers.VCS.debug("CC.MapFullPath: File " + normFullPath + " is under " + serverViewRelativePath + " result is " + result);
+      LOG.debug("CC.MapFullPath: File " + normFullPath + " is under " + serverViewRelativePath + " result is " + result);
       return Collections.singleton(result);
     }
     else {
-      Loggers.VCS.debug("CC.MapFullPath: File " + normFullPath + " is not under " + serverViewRelativePath);
+      LOG.debug("CC.MapFullPath: File " + normFullPath + " is not under " + serverViewRelativePath);
       return Collections.emptySet();
     }
   }

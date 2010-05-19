@@ -27,8 +27,8 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
-import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.vcs.VcsException;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +36,8 @@ public class ConfigSpecImpl implements ConfigSpec {
   private final List<ConfigSpecLoadRule> myLoadRules;
   private final List<ConfigSpecStandardRule> myStandardRules;
   private boolean myViewIsDynamic;
+
+  private static final Logger LOG = Logger.getLogger(ConfigSpecImpl.class);
 
   public ConfigSpecImpl(final List<ConfigSpecLoadRule> loadRules, final List<ConfigSpecStandardRule> standardRules) {
     myLoadRules = loadRules;
@@ -49,7 +51,7 @@ public class ConfigSpecImpl implements ConfigSpec {
     final Version version = doGetCurrentVersion(ccViewRoot, normalizedFullFileName, versionTree, isFile);
 
     if (version == null) {
-      Loggers.VCS.info("ClearCase: element \"" + fullFileName + "\" ignored, last version not found;");
+      LOG.info("ClearCase: element \"" + fullFileName + "\" ignored, last version not found;");
     }
 
     return version;
