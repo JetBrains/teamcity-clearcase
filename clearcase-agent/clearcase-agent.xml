@@ -54,8 +54,8 @@
 
     <target name="deploy" depends="build">
         <mkdir dir="${tmp.path}"/>
-        <mkdir dir="${tmp.path}/lib"/>    
-        <jar destfile="${tmp.path}/lib/${product.name}.jar">
+        <mkdir dir="${tmp.path}/${product.name}/lib"/>    
+        <jar destfile="${tmp.path}/${product.name}/lib/${product.name}.jar">
             <fileset dir="bin"/>
         </jar>
         <zip destfile="${dist}/${product.name}.zip">
