@@ -30,8 +30,15 @@
             <fileset dir="${clearcase-standalone.output.dir}"/>
         </jar>
     </target>
+    
+    <target name="dist-agent">
+        <ant antfile="clearcase-agent.xml" dir="clearcase-agent" inheritall="true" inheritrefs="true" target="deploy">
+            <property name="dist" location="${dist}"/>            
+            <property name="path.variable.teamcitydistribution" location="${path.variable.teamcitydistribution}"/>
+        </ant>
+    </target>
 
-    <target name="dist" depends="check,all,package"/>
+    <target name="dist" depends="check,all,package,dist-agent"/>
 
     <target name="check">
         <condition property="not.configured">

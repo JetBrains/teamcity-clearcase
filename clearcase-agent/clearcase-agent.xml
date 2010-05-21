@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright 2000-2010 JetBrains s.r.o.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project basedir="." default="deploy" name="clearcase-agent">
+
+    <property file="clearcase-agent.properties" />
+
+    <property environment="env" />
+    <property name="debuglevel" value="source,lines,vars" />
+    <property name="target" value="1.5" />
+    <property name="source" value="1.5" />
+    <path id="TC_AGENT_LIBS.userclasspath">
+        <fileset dir="${path.variable.teamcitydistribution}/buildAgent">
+            <include name="**/*.jar" />
+        </fileset>
+    </path>
+    <path id="TC_DISTR.userclasspath">
+        <fileset dir="${path.variable.teamcitydistribution}/webapps/ROOT/WEB-INF/lib">
+            <include name="**/*.jar" />
+        </fileset>
+    </path>
+    <path id="clearcase-agent.classpath">
+        <pathelement location="bin" />
+        <path refid="TC_AGENT_LIBS.userclasspath" />
+        <path refid="TC_DISTR.userclasspath" />
+    </path>
+    <target name="init">
+        <mkdir dir="bin" />
+        <copy includeemptydirs="false" todir="bin">
+            <fileset dir="java">
+                <exclude name="**/*.launch" />
+                <exclude name="**/*.java" />
+            </fileset>
+        </copy>
+    </target>
+    <target name="clean">
+        <delete dir="bin" />
+        <delete dir="${tmp.path}" />
+    </target>
+    <target depends="clean" name="cleanall" />
+
+    <target name="deploy" depends="build">
+        <mkdir dir="${tmp.path}"/>
+        <mkdir dir="${tmp.path}/lib"/>    
+        <jar destfile="${tmp.path}/lib/${product.name}.jar">
+            <fileset dir="bin"/>
+        </jar>
+        <zip destfile="${dist}/${product.name}.zip">
+            <fileset dir="${tmp.path}"/>
+        </zip>
+    </target>
+
+    <target depends="init" name="build">
+        <echo message="${ant.project.name}: ${ant.file}" />
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source}" target="${target}">
+            <src path="java" />
+            <classpath refid="clearcase-agent.classpath" />
+        </javac>
+    </target>
+                
+</project>
