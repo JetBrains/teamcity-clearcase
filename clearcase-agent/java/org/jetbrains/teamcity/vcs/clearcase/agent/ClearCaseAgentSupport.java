@@ -55,16 +55,6 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     return new CCViewUpdater(root, rule, version, checkoutRoot, logger);
   }
 
-  /**
-   * getUpdater::root: TYPE=BASE; cc-view-path=Z:\data\kdonskov_view_swiftteams; rel-path=swiftteams\tests; teamcity:vcsRootName=CC-root (1); vcs=clearcase;
-   * getUpdater::rule:
-   * getUpdater::version: 21-May-2010.16:01:22
-   * getUpdater::checkoutRoot: C:\BuildAgent-cc\work\checkout_directory
-   * process::rule: ->
-   * process::root: C:\BuildAgent-cc\work\checkout_directory
-   */
-  //use rel-path for update target
-  
   class CCViewUpdater implements IncludeRuleUpdater {
     
     private VcsRoot myVcsRoot;
