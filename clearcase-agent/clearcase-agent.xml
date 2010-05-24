@@ -32,10 +32,14 @@
             <include name="**/*.jar" />
         </fileset>
     </path>
+    <path id="SERVERSIDE.userclasspath">
+        <dirset dir="${clearcase-standalone.output.dir}"/>
+    </path>
     <path id="clearcase-agent.classpath">
         <pathelement location="bin" />
         <path refid="TC_AGENT_LIBS.userclasspath" />
         <path refid="TC_DISTR.userclasspath" />
+        <path refid="SERVERSIDE.userclasspath" />
     </path>
     <target name="init">
         <mkdir dir="bin" />

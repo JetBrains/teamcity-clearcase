@@ -491,7 +491,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public boolean isAgentSideCheckoutAvailable() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    return true;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @NotNull

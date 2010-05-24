@@ -21,7 +21,9 @@
 
     <import file="clearcase-standalone.xml"/>
 
-    <property name="dist" value="dist"/>
+    <!--property name="dist" value="../distr"/>
+    
+    <property name="path.variable.teamcitydistribution" value="../../TeamCity-distr/TeamCity"/-->
 
     <target name="package" depends="check">
         <delete file="${dist}" quiet="true"/>
@@ -33,8 +35,10 @@
     
     <target name="dist-agent">
         <ant antfile="clearcase-agent.xml" dir="clearcase-agent" inheritall="true" inheritrefs="true" target="deploy">
+            <!-- override these properties to get absolute paths -->
             <property name="dist" location="${dist}"/>            
             <property name="path.variable.teamcitydistribution" location="${path.variable.teamcitydistribution}"/>
+            <property name="clearcase-standalone.output.dir" location="${clearcase-standalone.output.dir}"/>
         </ant>
     </target>
 
