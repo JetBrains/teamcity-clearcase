@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
@@ -45,6 +46,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                                                   LabelingSupport, VcsFileContentProvider,
                                                                   CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport
 {
+  @NonNls public static final String VIEW_TAG = "view-tag";  
   @NonNls public static final String VIEW_PATH = "view-path";
   @NonNls public static final String CC_VIEW_PATH = "cc-view-path";
   @NonNls public static final String RELATIVE_PATH = "rel-path";
@@ -444,9 +446,20 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           }
 
           checkGlobalLabelsVOBProperty(properties, result);
+          
+          setupViewName(properties.get(ClearCaseSupport.CC_VIEW_PATH), properties, result);
         }
 
         return result;
+      }
+
+      private void setupViewName(final String viewPath, Map<String, String> properties, List<InvalidProperty> result) {
+        try{
+          final String viewTag = ClearCaseConnection.getViewTag(viewPath);
+          properties.put(VIEW_TAG, viewTag);
+        } catch (Exception e){
+          result.add(new InvalidProperty(VIEW_TAG, e.getLocalizedMessage()));
+        }
       }
 
       private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws VcsException, IOException {

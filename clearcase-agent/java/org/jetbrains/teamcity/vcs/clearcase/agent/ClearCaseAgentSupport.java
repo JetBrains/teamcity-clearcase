@@ -188,7 +188,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     }
 
     private String getSourceViewTag (VcsRoot root) {
-      return "kdonskov_view_swiftteams";//TODO: get view name from the "root"
+      return root.getProperty(ClearCaseSupport.VIEW_TAG);
     }
     
   }
