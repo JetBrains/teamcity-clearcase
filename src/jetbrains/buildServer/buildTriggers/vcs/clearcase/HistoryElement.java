@@ -179,6 +179,10 @@ public class HistoryElement {
     return CCParseUtil.getVersionInt(myObjectVersion);
   }
 
+  public String getObjectLastBranch() {
+    return CCParseUtil.getLastBranch(myObjectVersion);
+  }
+
   public long getEventID() {
 		return myEventID;
 	}

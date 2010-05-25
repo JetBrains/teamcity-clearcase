@@ -177,8 +177,14 @@ public class CCParseUtil {
   }
 
   public static int getVersionInt(final String wholeVersion) {
-    int versSeparator = wholeVersion.lastIndexOf(File.separator);
+    final int versSeparator = wholeVersion.lastIndexOf(File.separator);
     return Integer.parseInt(wholeVersion.substring(versSeparator + 1));
+  }
+
+  public static String getLastBranch(final String wholeVersion) {
+    final int lastSeparatorPos = wholeVersion.lastIndexOf(File.separator);
+    final int preLastSeparatorPos = wholeVersion.lastIndexOf(File.separator, lastSeparatorPos - 1);
+    return wholeVersion.substring(preLastSeparatorPos + 1, lastSeparatorPos);
   }
 
   private static class HistoryElementsMerger {

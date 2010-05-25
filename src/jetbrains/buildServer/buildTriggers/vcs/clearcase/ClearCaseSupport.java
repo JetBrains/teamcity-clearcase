@@ -60,6 +60,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
   public static final String VOBS_NAME_ONLY = "vobs";
   public static final String VOBS = "vobs/";
+  private static final String MAIN = "main";
   private final @Nullable ClearCaseStructureCache myCache;
 
   public ClearCaseSupport(File baseDir) {
@@ -197,9 +198,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
 
       public void processChangedFile(final HistoryElement element) throws VcsException, IOException {
-        if (element.getObjectVersionInt() > 1 && connection.fileExistsInParent(element)) {
-          //TODO lesya full path
-
+        if (element.getObjectVersionInt() > getMaxVersionToIgnore(element) && connection.fileExistsInParent(element)) {          
           String pathWithoutVersion = connection.getParentRelativePathWithVersions(element.getObjectName(), true);
 
           final String versionAfterChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
@@ -212,6 +211,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
 
     };
+  }
+
+  private int getMaxVersionToIgnore(final HistoryElement element) {
+    return MAIN.equals(element.getObjectLastBranch()) ? 1 : 0;
   }
 
   private ChangedStructureProcessor createChangedStructureProcessor(final HistoryElement element,
