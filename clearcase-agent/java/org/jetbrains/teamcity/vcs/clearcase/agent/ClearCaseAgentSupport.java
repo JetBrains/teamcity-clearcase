@@ -104,7 +104,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     }
     
     private CCSnapshotView getView (VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-      final String sourceViewTag = getSourceViewTag (root);
+      final String sourceViewTag = getOriginViewTag (root);
       //scan for exists
       final CCSnapshotView existingView = findView(sourceViewTag, checkoutRoot, logger);
       if(existingView != null){
@@ -187,7 +187,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
       }
     }
 
-    private String getSourceViewTag (VcsRoot root) {
+    private String getOriginViewTag (VcsRoot root) {
       return root.getProperty(ClearCaseSupport.VIEW_TAG);
     }
     
