@@ -10,7 +10,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 public class CTool {
+  
+  private static final Logger LOG = Logger.getLogger(CTool.class);  
   
   private static String ourSessionUser;
   private static String ourSessionPassword;
@@ -39,19 +43,6 @@ public class CTool {
       throw new IOException(String.format("The VOB \"%s\" already exists", tag));
     }
     final String command = String.format("cleartool mkvob -tag \\%s -c \"%s\" -stgloc -auto", tag, reason);
-    /**
-     *Selected Server Storage Location "ruspv-win2003_ccstg_c_vobs".
-     *Created versioned object base.
-     *Host-local path: ruspv-win2003:c:\ClearCase_Storage\VOBs\vob_for_testing.vbs
-     *Global path:     \\ruspv-win2003\ccstg_c\VOBs\vob_for_testing.vbs
-     *VOB ownership:
-     *  owner ***\***
-     *  group ***\***
-     *
-     *VOBs have special data backup considerations.  For more information on how to
-     *back up your VOB properly, see the documentation for administering ClearCase.
-     *If the backups aren't done properly, you are putting your data at risk!    
-     */
     return new VobObjectResult(Util.execAndWait(command));
   }
   
@@ -147,10 +138,12 @@ public class CTool {
     
   static void dropVob(String globalPath) throws IOException, InterruptedException {
     Util.execAndWait(String.format("cleartool rmvob -force %s", globalPath));
+    LOG.debug(String.format("The Vob \"%s\" has been dropt", globalPath));
   }
   
   static void dropView(String globalPath) throws IOException, InterruptedException {
     Util.execAndWait(String.format("cleartool rmview -force %s", globalPath));
+    LOG.debug(String.format("The View \"%s\" has been dropt", globalPath));
   }
   
   static VobObjectResult createSnapshotView(String tag, File path, String reason) throws IOException, InterruptedException {
@@ -286,17 +279,6 @@ public class CTool {
   
   }
   
-  /**
-   * C:\eclipse\eclipse-SDK-3.5-win32\eclipse>cleartool lsstgloc -vob -long
-   *Name: ruspv-win2003_ccstg_c_vobs
-   *Type: VOB
-   *Region: swiftteams
-   *Storage Location uuid: a4101b66.2af545d1.ba92.ef:60:e6:77:33:2c
-   *Global path: \\ruspv-win2003\ccstg_c\VOBs
-   *Server host: ruspv-win2003
-   *Server host path: c:\ClearCase_Storage\VOBs
-   *
-   */
   static class  StorageParser extends AbstractCCParser {
     static final String NAME_TOKEN = "Name: ";
     static final String TYPE_TOKEN = "Type: ";
@@ -341,22 +323,6 @@ public class CTool {
     
   }
   
-  /**
-   * Tag: \swiftteams
-   * Global path: \\ruspv-win2003\ccstg_c\VOBs\swiftteams.vbs
-   * Server host: ruspv-win2003
-   * Access: private
-   * Mount options: 
-   * Region: swiftteams
-   * Active: NO
-   * Vob tag replica uuid: e7103cb8.411e471d.a9cf.6f:fb:f3:f1:ab:13
-   * Vob on host: ruspv-win2003
-   * Vob server access path: c:\ClearCase_Storage\VOBs\swiftteams.vbs
-   * Vob family uuid:  dabdc7c3.11e44900.ac4f.ab:99:cf:75:b8:43
-   * Vob replica uuid: e7103cb8.411e471d.a9cf.6f:fb:f3:f1:ab:13
-   * Vob registry attributes: replicated   
-   * 
-   */
   static class  VobResultParser extends AbstractCCParser {
     
     static final String TAG_TOKEN = "Tag: ";
@@ -384,7 +350,8 @@ public class CTool {
       for (String line : stdout) {
         final String trim = line.trim();
         if (trim.startsWith(TAG_TOKEN)) {
-          myTag = getRest(trim, TAG_TOKEN);
+          final String[] split = trim.split(" +");
+          myTag = getRest(String.format("%s %s", split[0], split[1]), TAG_TOKEN);//as far cleartool put the comment next to the tag
         } else if (trim.startsWith(GLOBAL_PATH_TOKEN)) {
           myGlobalPath = getRest(trim, GLOBAL_PATH_TOKEN);
         } else if (trim.startsWith(SERVER_HOST_TOKEN)) {
@@ -419,20 +386,6 @@ public class CTool {
     
   }
   
-  /**
-   * C:\eclipse\eclipse-SDK-3.5-win32\eclipse>cleartool lsview -long
-   * Tag: kdonskov_view_swiftteams
-   *    Global path: \\ruspv-win2003\ccstg_c\views\SWIFTTEAMS\kdonskov\kdonskov_view_swiftteams.vws
-   * Server host: ruspv-win2003
-   * Region: swiftteams
-   * Active: NO
-   * View tag uuid:9ee06700.5bbf4d41.bb88.d0:5e:7c:29:e5:9b
-   * View on host: ruspv-win2003
-   * View server access path: c:\ClearCase_Storage\views\SWIFTTEAMS\kdonskov\kdonskov_view_swiftteams.vws
-   * View uuid: 9ee06700.5bbf4d41.bb88.d0:5e:7c:29:e5:9b
-   * View attributes: snapshot
-   * View owner: SWIFTTEAMS\kdonskov
-   */
   static class ViewParser extends VobResultParser {
 
     protected ViewParser(String[] stdout) {

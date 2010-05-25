@@ -130,9 +130,15 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
           if(sourceViewTag.equals(view.getTag())){
             LOG.debug(String.format("createNew::found tag: %s", view.getTag()));
             final String buildViewTag = getBuildViewTag(sourceViewTag);
-            final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, buildViewTag).getAbsolutePath());
+            //look for existing view with the same tag and drop it if found
+            final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
+            if(existingWithTheSameTag != null){
+              LOG.debug(String.format("createNew::there already is a view with the same tag: %s. drop it", existingWithTheSameTag));              
+              existingWithTheSameTag.drop();
+            }
+            //create new in the checkout directory
+            final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
             clone.create(String.format("Clone of the \"%s\" view", view.getTag()));
-            
             clone.setConfigSpec(view.getConfigSpec());
             return clone;
           }
@@ -151,14 +157,14 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     private CCSnapshotView findView(String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
       logger.targetStarted("Looking for existing view");
       try{
-        final String expectedViewName = getBuildViewTag(sourceViewTag);
-        LOG.debug(String.format("findView::expectedViewName: %s", expectedViewName));
+        LOG.debug(String.format("findView::expectedViewName: %s", sourceViewTag));
         for(File child : checkoutRoot.listFiles()){
           LOG.debug(String.format("findView::child: %s", child));
-          if(child.isDirectory() && child.getName().equals(expectedViewName)){//TODO: use agent name? check ConfigSpecs's changed?
-            Util.execAndWait("cleartool catcs", child);
-            LOG.debug(String.format("findView::found: %s", child));            
-            return new CCSnapshotView(expectedViewName, child.getAbsolutePath());
+          if(child.isDirectory() && child.getName().equals(sourceViewTag)){//TODO: use agent name? check ConfigSpecs's changed?
+            final CCSnapshotView existingView = new CCSnapshotView(getBuildViewTag(sourceViewTag), child.getAbsolutePath());
+            existingView.getConfigSpec();//test the view is alive
+            LOG.debug(String.format("Found view \"%s\" in %s", existingView.getTag(), checkoutRoot.getAbsolutePath()));
+            return existingView;
           }
         }
         LOG.debug(String.format("findView::found: %s", "no one suitable view found"));
@@ -174,7 +180,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
 
     private String getBuildViewTag(String sourceViewTag) throws CCException {
       try{
-        return String.format("%s_%s", InetAddress.getLocalHost().getHostName(), sourceViewTag);
+        return String.format("buildagent_%s_%s", InetAddress.getLocalHost().getHostName(), sourceViewTag);
 
       } catch (Exception e){
         throw new CCException(e);

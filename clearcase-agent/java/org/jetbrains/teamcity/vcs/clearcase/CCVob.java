@@ -42,7 +42,7 @@ public class CCVob {
   
   @Override
   public String toString () {
-    return String.format("{region=\"%s\", host=\"%s\", tag=\"%s\", global=\"%s\"}", getRegion(), getServerHost(), getTag(), getGlobalPath()); 
+    return String.format("{CCVob: region=\"%s\", host=\"%s\", tag=\"%s\", global=\"%s\"}", getRegion(), getServerHost(), getTag(), getGlobalPath()); 
   }
   
   public void create(final String reason) throws CCException {

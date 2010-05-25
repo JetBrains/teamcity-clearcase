@@ -35,6 +35,7 @@ public class CCSnapshotView {
     
     myTag = tag;
     myGlobalPath = glolbalPath;
+    isAvailable = true;
   }
   
   public CCSnapshotView (
@@ -186,5 +187,11 @@ public class CCSnapshotView {
   public boolean isAvailable() {
     return isAvailable;
   }
+  
+  @Override
+  public String toString () {
+    return String.format("{CCSnapshotView: tag=\"%s\", global=\"%s\"}", getTag(), getGlobalPath()); 
+  }
+  
   
 }

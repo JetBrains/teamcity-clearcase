@@ -68,4 +68,20 @@ public class Util {
   static String createLoadRuleForVob(final CCVob vob) {
     return String.format("load \\%s", vob.getTag());
   }
+  
+  public static class Finder {
+    
+    public static CCSnapshotView findView(CCRegion region, String viewTag) throws CCException {
+      for(CCSnapshotView view : region.getViews()){
+        if(view.getTag().equals(viewTag)){
+          return view;
+        }
+      }
+      return null;
+    }
+    
+  }
+  
+  
+  
 }
