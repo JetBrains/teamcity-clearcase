@@ -3,6 +3,7 @@ package org.jetbrains.teamcity.vcs.clearcase.agent;
 import java.io.File;
 import java.net.InetAddress;
 import java.util.Date;
+import java.util.List;
 
 import jetbrains.buildServer.TextLogger;
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
@@ -79,9 +80,16 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
       LOG.debug(String.format("process::rule: %s->%s", includeRule.getFrom(), includeRule.getTo()));
       LOG.debug(String.format("process::root: %s", root));
       
-      myLogger.progressStarted("Updating from ClearCase repository");  
+      myLogger.targetStarted("Updating from ClearCase repository...");  
       try {
-        final CCSnapshotView ccview = getView(myVcsRoot, myVersion, myCheckoutRoot, myLogger);
+        //check origin exists
+        final String originTag = getOriginViewTag(myVcsRoot);
+        final CCSnapshotView originView = Util.Finder.findView(new CCRegion(), originTag);
+        if(originView == null){
+          throw new CCException(String.format("Could not find \"\" view.", originTag));
+        }
+        //obtain cloned origin view
+        final CCSnapshotView ccview = getView(originView, myVcsRoot, myVersion, myCheckoutRoot, myLogger);
         ccview.update(new File(ccview.getLocalPath(), myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH)), getDate(myVersion));
         
       } catch (CCException e) {
@@ -89,7 +97,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
         throw new VcsException(e);
         
       } finally {
-        myLogger.progressFinished();
+        myLogger.targetFinished("Updating from ClearCase repository...");
       }
       
     }
@@ -103,15 +111,14 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
       
     }
     
-    private CCSnapshotView getView (VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-      final String sourceViewTag = getOriginViewTag (root);
+    private CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
       //scan for exists
-      final CCSnapshotView existingView = findView(sourceViewTag, checkoutRoot, logger);
+      final CCSnapshotView existingView = findView(originView, checkoutRoot, logger);
       if(existingView != null){
         
         return existingView;
       }
-      return createNew(sourceViewTag, checkoutRoot, logger);
+      return createNew(originView.getTag(), checkoutRoot, logger);
     }
 
     /**
@@ -122,49 +129,48 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
      * @return
      */
     private CCSnapshotView createNew(String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-      logger.targetStarted("Create new Snapshot View for building");
-      try{
-        final CCRegion region = new CCRegion();
-        for(CCSnapshotView view : region.getViews()){
-          LOG.debug(String.format("createNew::view: %s", view.getTag()));
-          if(sourceViewTag.equals(view.getTag())){
-            LOG.debug(String.format("createNew::found tag: %s", view.getTag()));
-            final String buildViewTag = getBuildViewTag(sourceViewTag);
-            //look for existing view with the same tag and drop it if found
-            final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
-            if(existingWithTheSameTag != null){
-              LOG.debug(String.format("createNew::there already is a view with the same tag: %s. drop it", existingWithTheSameTag));              
-              existingWithTheSameTag.drop();
-            }
-            //create new in the checkout directory
-            final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
-            clone.create(String.format("Clone of the \"%s\" view", view.getTag()));
-            clone.setConfigSpec(view.getConfigSpec());
-            return clone;
+      final CCRegion region = new CCRegion();
+      for(CCSnapshotView view : region.getViews()){
+        LOG.debug(String.format("createNew::view: %s", view.getTag()));
+        if(sourceViewTag.equals(view.getTag())){
+          LOG.debug(String.format("createNew::found tag: %s", view.getTag()));
+          final String buildViewTag = getBuildViewTag(sourceViewTag);
+          //look for existing view with the same tag and drop it if found
+          final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
+          if(existingWithTheSameTag != null){
+            LOG.debug(String.format("createNew::there already is a view with the same tag: %s. drop it", existingWithTheSameTag));              
+            existingWithTheSameTag.drop();
           }
+          //create new in the checkout directory
+          final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
+          clone.create(String.format("Clone of the \"%s\" view", view.getTag()));
+          clone.setConfigSpec(view.getConfigSpec());
+          return clone;
         }
-        throw new CCException(String.format("Could not find the \"%s\" view", sourceViewTag));
-        
-      } finally {
-        logger.targetFinished("Create new Snapshot View for building");
       }
+      throw new CCException(String.format("Could not find the \"%s\" view", sourceViewTag));
     }
 
     /**
      * looks for "sourceViewTag" in the "checkoutRoot" directory
      * @throws CCException 
      */
-    private CCSnapshotView findView(String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-      logger.targetStarted("Looking for existing view");
+    private CCSnapshotView findView(CCSnapshotView originView, File checkoutRoot, BuildProgressLogger logger) throws CCException {
       try{
-        LOG.debug(String.format("findView::expectedViewName: %s", sourceViewTag));
+        LOG.debug(String.format("findView::expectedViewName: %s", originView));
+        final List<String> originSpecs = originView.getConfigSpec();
+        //iterate through root directory and try find required view
         for(File child : checkoutRoot.listFiles()){
           LOG.debug(String.format("findView::child: %s", child));
-          if(child.isDirectory() && child.getName().equals(sourceViewTag)){//TODO: use agent name? check ConfigSpecs's changed?
-            final CCSnapshotView existingView = new CCSnapshotView(getBuildViewTag(sourceViewTag), child.getAbsolutePath());
-            existingView.getConfigSpec();//test the view is alive
-            LOG.debug(String.format("Found view \"%s\" in %s", existingView.getTag(), checkoutRoot.getAbsolutePath()));
-            return existingView;
+          if(child.isDirectory() && child.getName().equals(originView.getTag())){//TODO: use agent name? check ConfigSpecs's changed?
+            final CCSnapshotView clonedView = new CCSnapshotView(getBuildViewTag(originView.getTag()), child.getAbsolutePath());
+            final List<String> clonedSpecs = clonedView.getConfigSpec();//test the view is alive also
+            LOG.debug(String.format("Found view \"%s\" in %s", clonedView.getTag(), checkoutRoot.getAbsolutePath()));
+            //check configspecs are equal and update cloned if it's not so 
+            if(!isEquals(originSpecs, clonedSpecs)){
+              clonedView.setConfigSpec(originSpecs);
+            }
+            return clonedView;
           }
         }
         LOG.debug(String.format("findView::found: %s", "no one suitable view found"));
@@ -172,10 +178,11 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
         
       } catch (Exception e) {
         throw new CCException(e);
-        
-      } finally {
-        logger.targetFinished("Looking for existing view");
       }
+    }
+
+    private boolean isEquals(List<String> originSpecs, List<String> clonedSpecs) {
+      return true;
     }
 
     private String getBuildViewTag(String sourceViewTag) throws CCException {
