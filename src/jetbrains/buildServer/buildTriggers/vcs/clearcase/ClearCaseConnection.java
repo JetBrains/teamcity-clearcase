@@ -303,7 +303,21 @@ public class ClearCaseConnection {
   }
 
   private InputStream doGetChanges(final String since, final String key) throws VcsException {
-    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-eventid", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
+    int attempt = 1;
+    while (true) {
+      LOG.debug("lshistory " + key + " -since " + since + " attempt: " + attempt);
+      try {
+        return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-eventid", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
+      }
+      catch (final VcsException e) {
+        LOG.debug("attempt " + attempt + " failed: ", e);
+        if (attempt >= 10) throw e;
+        try {
+          Thread.sleep(10 * 1000);
+        } catch (InterruptedException ignore) {}
+        attempt++;
+      }
+    }
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {
