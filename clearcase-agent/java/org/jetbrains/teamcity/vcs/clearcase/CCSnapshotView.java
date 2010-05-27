@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.jetbrains.teamcity.vcs.clearcase.CTool.ChangeParser;
 import org.jetbrains.teamcity.vcs.clearcase.CTool.VobObjectResult;
 
 
@@ -149,14 +150,18 @@ public class CCSnapshotView {
   }
   
   
-  public void update(File file) throws CCException {
-    update(file, new Date());
+  public CCDelta[] update(File file) throws CCException {
+    return update(file, new Date());
   }
   
-  public void update(File file, final Date to) throws CCException {
+  public CCDelta[] update(File file, final Date to) throws CCException {
     try{
-      CTool.update(file, to);
-      
+      final ChangeParser[] rawChanges = CTool.update(file, to);
+      final ArrayList<CCDelta> out = new ArrayList<CCDelta>(rawChanges.length);
+      for(final ChangeParser change : rawChanges){
+        out.add(new CCDelta(this, change.isAddition(), change.isChange(), change.isDeletion(), change.getLocalPath(), change.getRevisionBefor(), change.getRevisionAfter()));
+      }
+      return out.toArray(new CCDelta[out.size()]);
     } catch (Exception e){
       throw new CCException(e);
     }

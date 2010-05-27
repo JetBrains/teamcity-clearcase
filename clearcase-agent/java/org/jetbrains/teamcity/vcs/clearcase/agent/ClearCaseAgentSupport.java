@@ -20,6 +20,7 @@ import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
 import org.jetbrains.teamcity.vcs.clearcase.CCException;
 import org.jetbrains.teamcity.vcs.clearcase.CCRegion;
 import org.jetbrains.teamcity.vcs.clearcase.CCSnapshotView;
@@ -28,7 +29,12 @@ import org.jetbrains.teamcity.vcs.clearcase.Util;
 
 public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIncludeRules, AgentVcsSupportCore {
   
-  private static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);
+  static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);
+  private BuildAgentConfiguration myAgentConfig;
+  
+  public ClearCaseAgentSupport(final BuildAgentConfiguration config){
+    myAgentConfig = config;
+  }
   
   public String getName() {
     return "clearcase"; // TODO: move to common constants
@@ -89,10 +95,13 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
           throw new CCException(String.format("Could not find \"\" view.", originTag));
         }
         //obtain cloned origin view
+        final String pathWithinView = myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH);
         final CCSnapshotView ccview = getView(originView, myVcsRoot, myVersion, myCheckoutRoot, myLogger);
-        ccview.update(new File(ccview.getLocalPath(), myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH)), getDate(myVersion));
+        final CCDelta[] changes = ccview.update(new File(ccview.getLocalPath(), pathWithinView), getDate(myVersion));
         
-      } catch (CCException e) {
+        getPublisher().publish(ccview, changes, root, pathWithinView, myLogger);
+        
+      } catch (Exception e) {
         myLogger.buildFailureDescription("Updating from ClearCase repository failed.");
         throw new VcsException(e);
         
@@ -108,33 +117,36 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
 
     public void dispose() throws VcsException {
       // TODO Auto-generated method stub
-      
     }
     
     private CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+      //use tmp for build
+      checkoutRoot = new File(myAgentConfig.getTempDirectory(), "snapshots");
+      checkoutRoot.mkdirs();
       //scan for exists
-      final CCSnapshotView existingView = findView(originView, checkoutRoot, logger);
+      final CCSnapshotView existingView = findView(root, originView, checkoutRoot, logger);
       if(existingView != null){
         
         return existingView;
       }
-      return createNew(originView.getTag(), checkoutRoot, logger);
+      return createNew(root, originView.getTag(), checkoutRoot, logger);
     }
 
     /**
      * creates new View's clone in the "checkoutRoot"  
+     * @param root 
      * @param sourceViewTag
      * @param checkoutRoot
      * @param logger
      * @return
      */
-    private CCSnapshotView createNew(String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+    private CCSnapshotView createNew(VcsRoot root, String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
       final CCRegion region = new CCRegion();
       for(CCSnapshotView view : region.getViews()){
         LOG.debug(String.format("createNew::view: %s", view.getTag()));
         if(sourceViewTag.equals(view.getTag())){
           LOG.debug(String.format("createNew::found tag: %s", view.getTag()));
-          final String buildViewTag = getBuildViewTag(sourceViewTag);
+          final String buildViewTag = getBuildViewTag(root, sourceViewTag);
           //look for existing view with the same tag and drop it if found
           final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
           if(existingWithTheSameTag != null){
@@ -153,9 +165,10 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
 
     /**
      * looks for "sourceViewTag" in the "checkoutRoot" directory
+     * @param root 
      * @throws CCException 
      */
-    private CCSnapshotView findView(CCSnapshotView originView, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+    private CCSnapshotView findView(VcsRoot root, CCSnapshotView originView, File checkoutRoot, BuildProgressLogger logger) throws CCException {
       try{
         LOG.debug(String.format("findView::expectedViewName: %s", originView));
         final List<String> originSpecs = originView.getConfigSpec();
@@ -163,7 +176,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
         for(File child : checkoutRoot.listFiles()){
           LOG.debug(String.format("findView::child: %s", child));
           if(child.isDirectory() && child.getName().equals(originView.getTag())){//TODO: use agent name? check ConfigSpecs's changed?
-            final CCSnapshotView clonedView = new CCSnapshotView(getBuildViewTag(originView.getTag()), child.getAbsolutePath());
+            final CCSnapshotView clonedView = new CCSnapshotView(getBuildViewTag(root, originView.getTag()), child.getAbsolutePath());
             final List<String> clonedSpecs = clonedView.getConfigSpec();//test the view is alive also
             LOG.debug(String.format("Found view \"%s\" in %s", clonedView.getTag(), checkoutRoot.getAbsolutePath()));
             //check configspecs are equal and update cloned if it's not so 
@@ -185,9 +198,9 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
       return true;
     }
 
-    private String getBuildViewTag(String sourceViewTag) throws CCException {
+    private String getBuildViewTag(VcsRoot root, String sourceViewTag) throws CCException {
       try{
-        return String.format("buildagent_%s_%s", InetAddress.getLocalHost().getHostName(), sourceViewTag);
+        return String.format("buildagent_%s_vcsroot_%s_%s", InetAddress.getLocalHost().getHostName(), root.getId(), sourceViewTag);
 
       } catch (Exception e){
         throw new CCException(e);
@@ -199,5 +212,10 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     }
     
   }
+  
+  IChangePublisher getPublisher() {
+    return new LinkBasedPublisher();
+  }
+  
 
 }

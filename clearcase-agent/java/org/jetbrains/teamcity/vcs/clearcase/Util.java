@@ -69,6 +69,10 @@ public class Util {
     return String.format("load \\%s", vob.getTag());
   }
   
+  public static File createTempFile() throws IOException {
+    return File.createTempFile("clearcase-agent", "tmp");
+  }
+  
   public static class Finder {
     
     public static CCSnapshotView findView(CCRegion region, String viewTag) throws CCException {
@@ -79,7 +83,6 @@ public class Util {
       }
       return null;
     }
-    
   }
   
   

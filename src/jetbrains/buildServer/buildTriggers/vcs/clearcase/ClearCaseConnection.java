@@ -677,7 +677,7 @@ public class ClearCaseConnection {
 
     try {
       try {
-        String line = reader.readLine();
+        String line = reader.readLine().trim();
         if (line != null) {
           if (line.startsWith("*")) {
             line = line.substring(1).trim();

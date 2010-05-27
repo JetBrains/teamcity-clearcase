@@ -1,8 +1,12 @@
 package org.jetbrains.teamcity.vcs.clearcase;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -152,9 +156,55 @@ public class CTool {
     return new VobObjectResult(Util.execAndWait(command));
   }
   
-  static void update(final File path, final Date to) throws IOException, InterruptedException {
-    Util.execAndWait("cleartool update -force -overwrite", getFullEnvp(new String[] { "CCASE_NO_LOG=true" }), path);
+  static ChangeParser[] update(final File path, final Date to) throws IOException, InterruptedException {
+    final File file = Util.createTempFile();
+    try{
+      final String command = String.format("cleartool update -force -overwrite -log \"%s\"", file.getAbsolutePath());
+      Util.execAndWait(command, path);
+      return parseUpdateOut(new FileInputStream(file));
+      //    return parseUpdateOut(/*Util.execAndWait("cleartool update -force -overwrite",*/ 
+      //        getFullEnvp(new String[] { "CCASE_NO_LOG=true" }), 
+      //        path));
+    } finally {
+      file.delete();
+    }
   }
+  
+  static ChangeParser[] lsChange(File path) throws IOException, InterruptedException {
+    final File file = Util.createTempFile();
+    try{
+      final String command = String.format("cleartool update -print -log \"%s\"", file.getAbsolutePath());
+      Util.execAndWait(command, path);
+      return parseUpdateOut(new FileInputStream(file));
+    } finally {
+      file.delete();
+    }
+
+  }
+  
+  /**
+   * Updated:                 swiftteams\tests\src\all\Changed.txt \main\1 \main\2
+   * New:                     swiftteams\tests\src\all\Added.txt \main\1
+   * New:                     "swiftteams\tests\src\all\new folder\new in new folder\new file in new folder.txt" \main\1
+   * UnloadDeleted:           swiftteams\tests\src\all\Deleted.txt
+   * @throws IOException 
+   */
+  private static ChangeParser[] parseUpdateOut(InputStream stream) throws IOException {
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+    try{
+      final ArrayList<ChangeParser> out = new ArrayList<ChangeParser>();
+      String line;
+      while ((line = reader.readLine()) != null) {
+        if(ChangeParser.accept(line)){
+          out.add(new ChangeParser(line));
+        }
+      }
+      return out.toArray(new ChangeParser[out.size()]);      
+    } finally {
+      reader.close();
+    }
+  }
+  
   
   private static String[] getFullEnvp(String[] extraEnvp) {
     final ArrayList<String> out = new ArrayList<String>();
@@ -277,6 +327,106 @@ public class CTool {
       return trim.substring(tagToken.length(), trim.length()).trim();
     }
   
+  }
+  
+  static class ChangeParser {
+    
+    static final String UPDATED_TOKEN = "Updated:";
+    static final String NEW_TOKEN = "New:";
+    static final String UNLOADED_DELETED_TOKEN = "UnloadDeleted:";
+    
+    private boolean isDeletion;
+
+    private boolean isChange;
+    
+    private boolean isAddition;    
+
+    private String myLocalPath;
+    
+    private String myVersionBefor;
+    
+    private String myVersionAfter;    
+    
+    static boolean accept(String line){
+      line = line.trim();
+      if(line.startsWith(UPDATED_TOKEN) || line.startsWith(NEW_TOKEN) || line.startsWith(UNLOADED_DELETED_TOKEN)){
+        return true;
+      }
+      return false;
+    }
+
+    protected ChangeParser(String line) {
+      int tokenLength = 0;
+      //detect change kind
+      if (line.startsWith(UPDATED_TOKEN)) {
+        tokenLength = UPDATED_TOKEN.length();
+        isChange = true;
+      } else if (line.startsWith(NEW_TOKEN)) {
+        tokenLength = NEW_TOKEN.length();
+        isAddition = true;
+      } else if (line.startsWith(UNLOADED_DELETED_TOKEN)) {
+        tokenLength = UNLOADED_DELETED_TOKEN.length();
+        isDeletion = true;
+      }
+      //extract token
+      line = line.substring(tokenLength, line.length()).trim();
+      //get local path
+      int versionBeforStartIdx = 0;
+      if(line.startsWith("\"")){
+        versionBeforStartIdx = line.indexOf("\"", 1);
+        myLocalPath = line.substring(1, versionBeforStartIdx);
+      } else {
+        versionBeforStartIdx = line.indexOf(" ");
+        if(versionBeforStartIdx != -1){
+          myLocalPath = line.substring(0, versionBeforStartIdx);  
+        } else {
+          myLocalPath = line.trim();
+        }
+
+      }
+      //discover version part if exists
+      if(versionBeforStartIdx != -1){
+        String versionsPart = line.substring(versionBeforStartIdx + 1, line.length()).trim();
+        final String[] versions = versionsPart.split("[ +]");
+        if(versions.length > 0){
+          myVersionAfter = versions[0];
+        }
+        if(versions.length > 1){
+          myVersionBefor = myVersionAfter; 
+          myVersionAfter = versions[1];
+        }
+      }
+    }
+
+    public boolean isDeletion() {
+      return isDeletion;
+    }
+
+    public boolean isChange() {
+      return isChange;
+    }
+    
+    public boolean isAddition() {
+      return isAddition;
+    }
+
+    public String getLocalPath() {
+      return myLocalPath;
+    }
+    
+    public String getRevisionBefor() {
+      return myVersionBefor;
+    }
+    
+    public String getRevisionAfter() {
+      return myVersionAfter;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("{ChangeParser: added=%s, changed=%s, deleted=%s, path=\"%s\", befor=%s, after=%s}", isAddition(), isChange(), isDeletion(), getLocalPath(), getRevisionBefor(), getRevisionAfter());
+    }
+
   }
   
   static class  StorageParser extends AbstractCCParser {
@@ -439,6 +589,13 @@ public class CTool {
   static void rmname (File root, File file, String reason) throws IOException, InterruptedException {
     Util.execAndWait(String.format("cleartool rmname -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
   }
+  
+  public static void main(String[] args) throws Exception {
+    ChangeParser[] out = parseUpdateOut(new FileInputStream(new File("C:\\BuildAgent-cc\\work\\snapshots\\kdonskov_view_swiftteams\\preview.2010-05-26T145513+04.updt")));
+    System.err.println(Arrays.asList(out));
+  }
 
+  
+    
   
 }
