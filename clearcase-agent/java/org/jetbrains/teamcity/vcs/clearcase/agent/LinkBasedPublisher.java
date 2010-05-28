@@ -55,7 +55,7 @@ class LinkBasedPublisher implements IChangePublisher {
   }
 
   private void ln(File file, File publishTo) throws IOException, InterruptedException {
-    LOG.debug(String.format("Link \"%s\" to \"%s\"", file, publishTo));      
+    LOG.debug(String.format("Creating link from \"%s\" to \"%s\"", file, publishTo));      
     final String command;
     if(isWindows()){
       if(file.isDirectory()){

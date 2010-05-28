@@ -1,7 +1,6 @@
 package org.jetbrains.teamcity.vcs.clearcase.agent;
 
 import java.io.File;
-import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
 
@@ -199,12 +198,7 @@ public class ClearCaseAgentSupport implements AgentVcsSupportContext, UpdateByIn
     }
 
     private String getBuildViewTag(VcsRoot root, String sourceViewTag) throws CCException {
-      try{
-        return String.format("buildagent_%s_vcsroot_%s_%s", InetAddress.getLocalHost().getHostName(), root.getId(), sourceViewTag);
-
-      } catch (Exception e){
-        throw new CCException(e);
-      }
+      return String.format("buildagent_%s_vcsroot_%s_%s", myAgentConfig.getName(), root.getId(), sourceViewTag);
     }
 
     private String getOriginViewTag (VcsRoot root) {
