@@ -4,8 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.util.FileUtil;
+import jetbrains.buildServer.vcs.CheckoutRules;
+import jetbrains.buildServer.vcs.VcsRoot;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
@@ -15,9 +18,20 @@ import ch.fhnw.filecopier.CopyJob;
 import ch.fhnw.filecopier.FileCopier;
 import ch.fhnw.filecopier.Source;
 
-class CopyBasedPublisher implements IChangePublisher {
+class CopyBasedSourceProvider extends AbstractSourceProvider {
   
-  static final Logger LOG = Logger.getLogger(LinkBasedPublisher.class);  
+  static final Logger LOG = Logger.getLogger(LinkBasedSourceProvider.class);
+  
+  CopyBasedSourceProvider(BuildAgentConfiguration config, VcsRoot root, CheckoutRules rule, String version, File checkoutRoot, BuildProgressLogger logger){
+    super(config, root, rule, version, checkoutRoot, logger);
+  }
+  
+  protected File getCCRootDirectory (File checkoutRoot) {
+    final File ccCheckoutRoot = new File(myAgentConfig.getTempDirectory(), "snapshots");
+    ccCheckoutRoot.mkdirs();
+    return ccCheckoutRoot;
+  }
+  
 
   public void publish(CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws IOException {
     ifCreated(ccview, publishTo, pathWithinView, logger);
@@ -34,7 +48,7 @@ class CopyBasedPublisher implements IChangePublisher {
           final String targetParentPath = new File(targetPath).getParent();
           final String sourceFilePath = new File(ccview.getLocalPath().getAbsolutePath(), change.getPath()).getAbsolutePath();
           jobs.add(new CopyJob(new Source[]{new Source(sourceFilePath)}, new String[] {targetParentPath}));
-          ClearCaseAgentSupport.LOG.debug(String.format("Schedule copying of \"%s\" to \"%s\"", sourceFilePath, targetParentPath));
+          LOG.debug(String.format("Schedule copying of \"%s\" to \"%s\"", sourceFilePath, targetParentPath));
           
         } else if (CCDelta.Kind.DELETION == change.getKind()){
           final File fileForDeletion = new File(publishTo, targetPath);

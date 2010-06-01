@@ -5,11 +5,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CTool.ChangeParser;
 import org.jetbrains.teamcity.vcs.clearcase.CTool.VobObjectResult;
 
-
 public class CCSnapshotView {
+  
+  private static final Logger LOG = Logger.getLogger(CTool.class);  
 
   private ArrayList<String> myConfigSpecs = new ArrayList<String>();
   private File myLocalPath;
@@ -178,6 +181,16 @@ public class CCSnapshotView {
     return false;
   }
   
+  public boolean isAlive() throws CCException {
+    try{
+      CTool.lsView(getLocalPath());
+      return true;
+    } catch (Exception e) {
+      LOG.debug(e);
+      return false;  
+    }
+  }
+  
   public void drop() throws CCException {
     try {
       if(isAvailable()){
@@ -197,6 +210,5 @@ public class CCSnapshotView {
   public String toString () {
     return String.format("{CCSnapshotView: tag=\"%s\", global=\"%s\"}", getTag(), getGlobalPath()); 
   }
-  
   
 }

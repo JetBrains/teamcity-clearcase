@@ -3,25 +3,35 @@ package org.jetbrains.teamcity.vcs.clearcase.agent;
 import java.io.File;
 import java.io.IOException;
 
+import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.BuildProgressLogger;
+import jetbrains.buildServer.vcs.CheckoutRules;
+import jetbrains.buildServer.vcs.VcsRoot;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
 import org.jetbrains.teamcity.vcs.clearcase.CCSnapshotView;
 import org.jetbrains.teamcity.vcs.clearcase.Util;
 
-class LinkBasedPublisher implements IChangePublisher {
+class LinkBasedSourceProvider extends AbstractSourceProvider {
   
-  static final Logger LOG = Logger.getLogger(LinkBasedPublisher.class);  
+  static final Logger LOG = Logger.getLogger(LinkBasedSourceProvider.class);  
   
   private boolean isWindows;
 
-  LinkBasedPublisher(){
+  LinkBasedSourceProvider(BuildAgentConfiguration config, VcsRoot root, CheckoutRules rule, String version, File checkoutRoot, BuildProgressLogger logger){
+    super(config, root, rule, version, checkoutRoot, logger);
     isWindows = System.getProperty("os.name").toLowerCase().contains("windows");
   }
   
   private boolean isWindows(){
     return isWindows;
+  }
+  
+  protected File getCCRootDirectory (File checkoutRoot) {
+    final File ccCheckoutRoot = new File(myAgentConfig.getTempDirectory(), "snapshots");
+    ccCheckoutRoot.mkdirs();
+    return ccCheckoutRoot;
   }
 
   public void publish(CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws IOException, InterruptedException {

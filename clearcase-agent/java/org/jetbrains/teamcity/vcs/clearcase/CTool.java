@@ -271,6 +271,11 @@ public class CTool {
     return out.toArray(new ViewParser[out.size()]);
   }
   
+  static ViewParser lsView(File root) throws IOException, InterruptedException {
+    final String command = "cleartool lsview -cview -long"; 
+    return new ViewParser(Util.execAndWait(command, root));
+  }
+  
   interface ICCOutputParser {
     String[] getStdout();
   }
