@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.vcs.clearcase.agent;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.BuildProgressLogger;
@@ -42,20 +41,15 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   }
   
   @Override
-  protected CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-    //use tmp for build
+  protected CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+    //use temporary for build
     final File ccCheckoutRoot = getCCRootDirectory(checkoutRoot);
     //scan for exists
     final CCSnapshotView existingView = findView(root, originView, ccCheckoutRoot, logger);
     if(existingView != null){
-      final List<String> originSpecs = originView.getConfigSpec();
       if(existingView.isAlive()){
-        final List<String> clonedSpecs = existingView.getConfigSpec();
-        //check configspecs are equal and update cloned if it's not so 
-        if(!isEquals(originSpecs, clonedSpecs)){
-          LOG.debug("getView:: ConfigSpec will be reseted");          
-          existingView.setConfigSpec(originSpecs);
-        }
+        return existingView;
+        
       } else{
         //it means the local folder is exists but created outside CC support - by build system(perhaps already filled with other VCS roots data)
         //let's create new temporary view and then copy system info
@@ -64,9 +58,8 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
         //move all from the empty view to checkout root(it means all CC system data will be moved to appropriate place and expected view becomes alive)
         move(emptyView.getLocalPath().getAbsoluteFile(), ccCheckoutRoot.getAbsoluteFile());
         //try lookup again
-        return getView(originView, root, version, ccCheckoutRoot, logger);
+        return getView(originView, root, ccCheckoutRoot, logger);
       }
-      return existingView;
     }
     return createNew(root, originView.getTag(), ccCheckoutRoot, logger);
   }
@@ -104,28 +97,16 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 
   @Override
   public void process(IncludeRule includeRule, File root) throws VcsException {
+    // have to check the checkout directory fit to CC view structure
     final int ccRootPrefixLength = myAgentConfig.getWorkDirectory().getAbsolutePath().length();
     final String configRelativePath = FileUtil.normalizeRelativePath(root.getAbsolutePath().substring(ccRootPrefixLength, root.getAbsolutePath().length()));
     final String vcsRootRelativePath = FileUtil.normalizeRelativePath(new File(getOriginViewTag(myVcsRoot), myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH)).getPath());
     LOG.debug(String.format("configRelativePath=\"%s\"", configRelativePath));
     LOG.debug(String.format("vcsRootRelativePath=\"%s\"", vcsRootRelativePath));
-    if(!new File(configRelativePath).equals(new File(vcsRootRelativePath))){
-      throw new VcsException(String.format("Could not update sources of \"%s\" on the Agent. You have to specify checkout directory as \"%s\"", 
-          myVcsRoot.getName(), 
-          vcsRootRelativePath.replace("/", File.separator)));
+    if (!new File(configRelativePath).equals(new File(vcsRootRelativePath))) {
+      throw new VcsException(String.format("Could not update sources of \"%s\" on the Agent. You have to specify checkout directory as \"%s\"", myVcsRoot.getName(), vcsRootRelativePath.replace("/", File.separator)));
     }
-    /**
-     * home=C:\BuildAgent-cc 
-     * buildTmp=C:\BuildAgent-cc\temp\buildTmp
-     * tmp=C:\BuildAgent-cc\temp 
-     * work=C:\BuildAgent-cc\work
-     */
     super.process(includeRule, root);
   }
   
-  public static void main(String[] args) {
-    System.err.println("aaa/bbb/ccc".replace("/", File.separator));
-    System.err.println("aaa\\bbb\\ccc".replace("/", File.separator));    
-  }
-
 }

@@ -1,6 +1,7 @@
 package org.jetbrains.teamcity.vcs.clearcase.agent;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -12,7 +13,6 @@ import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
 import org.jetbrains.teamcity.vcs.clearcase.CCException;
@@ -60,9 +60,8 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       }
       //obtain cloned origin view
       final String pathWithinView = myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH);
-      final CCSnapshotView ccview = getView(originView, myVcsRoot, myVersion, myCheckoutRoot, myLogger);
-      final CCDelta[] changes = ccview.update(new File(ccview.getLocalPath(), pathWithinView), getDate(myVersion));
-      
+      final CCSnapshotView ccview = getView(originView, myVcsRoot, myCheckoutRoot, myLogger);
+      final CCDelta[] changes = setupConfigSpec(ccview, originView.getConfigSpec(), myVersion);
       publish(ccview, changes, root, pathWithinView, myLogger);
       
     } catch (Exception e) {
@@ -77,19 +76,12 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   
   protected abstract File getCCRootDirectory (File checkoutRoot);
   
-  protected CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, String version, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+  protected CCSnapshotView getView (CCSnapshotView originView, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
     //use tmp for build
     final File ccCheckoutRoot = getCCRootDirectory(checkoutRoot);
     //scan for exists
     final CCSnapshotView existingView = findView(root, originView, ccCheckoutRoot, logger);
     if(existingView != null){
-      final List<String> originSpecs = originView.getConfigSpec();
-      final List<String> clonedSpecs = existingView.getConfigSpec();//test the view is alive also
-      //check configspecs are equal and update cloned if it's not so 
-      if(!isEquals(originSpecs, clonedSpecs)){
-        LOG.debug("getView:: ConfigSpec will be reseted");
-        existingView.setConfigSpec(originSpecs);
-      }
       return existingView;
     }
     return createNew(root, originView.getTag(), ccCheckoutRoot, logger);
@@ -148,31 +140,6 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     }
   }
 
-  protected boolean isEquals(List<String> originSpecs, List<String> clonedSpecs) {
-    if(originSpecs != null && clonedSpecs != null){
-      final StringBuffer origin = new StringBuffer();
-      for(String spec : originSpecs){
-        if(spec.trim().length() != 0){
-          origin.append(spec.trim());
-        }
-      }
-      final StringBuffer clone = new StringBuffer();
-      for(String spec : clonedSpecs){
-        if(spec.trim().length() != 0){
-          clone.append(spec.trim());
-        }
-      }
-      final String originSpecStr = origin.toString();
-      final String originMD5 = DigestUtils.md5Hex(originSpecStr);
-      LOG.debug(String.format("isEquals:: origin=%s md5=%s", originSpecStr, originMD5));
-      final String cloneSpecStr = clone.toString();
-      final String cloneMD5 = DigestUtils.md5Hex(cloneSpecStr);
-      LOG.debug(String.format("isEquals:: clone=%s md5=%s", cloneSpecStr, cloneMD5));
-      return originMD5.equals(cloneMD5);
-    }
-    return false;//TODO: compare lines !!!
-  }
-
   protected String getBuildViewTag(VcsRoot root, String sourceViewTag) throws CCException {
     return String.format("buildagent_%s_vcsroot_%s_%s", myAgentConfig.getName(), root.getId(), sourceViewTag);
   }
@@ -192,6 +159,16 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
   protected String dumpConfig(){
     return String.format("home=%s\nbuildTmp=%s\ntmp=%s\nwork=%s", myAgentConfig.getAgentHomeDirectory(), myAgentConfig.getBuildTempDirectory(), myAgentConfig.getTempDirectory(), myAgentConfig.getWorkDirectory());
+  }
+  
+  protected CCDelta[] setupConfigSpec(CCSnapshotView targetView, List<String> sourceSpecs, String toDate) throws CCException {
+    final ArrayList<String> timedSpesc = new ArrayList<String>(sourceSpecs.size() + 2);
+    timedSpesc.add(String.format("time %s", toDate));
+    for(String spec : sourceSpecs){
+      timedSpesc.add(spec);
+    }
+    timedSpesc.add("end time");    
+    return targetView.setConfigSpec(timedSpesc);
   }
   
   

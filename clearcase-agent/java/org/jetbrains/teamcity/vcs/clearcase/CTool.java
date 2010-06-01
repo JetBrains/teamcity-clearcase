@@ -550,25 +550,42 @@ public class CTool {
     
   }
   
-  static void setConfigSpecs(File myLocalPath, ArrayList<String> configSpecs) throws IOException, InterruptedException {
+  static ChangeParser[] setConfigSpecs(File myLocalPath, ArrayList<String> configSpecs) throws IOException, InterruptedException {
     final File cffile = new File(String.format("config_specs_%s", System.currentTimeMillis()));
     try {
       final FileWriter writer = new FileWriter(cffile);
-      for(String spec: configSpecs){
+      for (String spec : configSpecs) {
         writer.write(spec);
         writer.write("\n");
       }
       writer.flush();
       writer.close();
       /**
-       * set 
-       * NOTE: must be executed under root hierarchy of Snapshot View
+       * set NOTE: must be executed under root hierarchy of Snapshot View
        */
-      Util.execAndWait(String.format("cleartool setcs \"%s\"", cffile.getAbsolutePath()), getFullEnvp(new String[] { "CCASE_NO_LOG=true" }), myLocalPath);
-      
+      final String command = String.format("cleartool setcs -overwrite \"%s\"", cffile.getAbsolutePath());
+      try {
+        Util.execAndWait(command, myLocalPath);
+        return new ChangeParser[0];// should not reach there
+
+      } catch (Exception e) {
+        // as far setcs writes log file name to stderr have to catch the issue
+        String message = e.getMessage().trim();
+        if (message.startsWith("Log has been written to")) {
+          int firstQuotaIdx = message.indexOf("\"");
+          int secondQuotaIdx = message.indexOf("\"", firstQuotaIdx + 1);
+          final String absolutePath = message.substring(firstQuotaIdx + 1, secondQuotaIdx);
+          LOG.debug(String.format("Got update's log file: %s", absolutePath));
+          return parseUpdateOut(new FileInputStream(absolutePath));
+
+        } else {
+          throw new IOException(e.getMessage());
+
+        }
+      }
+
     } finally {
       cffile.delete();
-      
     }
 
   }
