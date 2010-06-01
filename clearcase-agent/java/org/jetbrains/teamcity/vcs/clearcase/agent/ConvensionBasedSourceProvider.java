@@ -110,7 +110,9 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
     LOG.debug(String.format("configRelativePath=\"%s\"", configRelativePath));
     LOG.debug(String.format("vcsRootRelativePath=\"%s\"", vcsRootRelativePath));
     if(!new File(configRelativePath).equals(new File(vcsRootRelativePath))){
-      throw new VcsException(String.format("Could not update sources of \"%s\" on the Agent. You have to specify checkout directory as \"%s\"", myVcsRoot.getName(), vcsRootRelativePath.replaceAll("/", File.separator)));
+      throw new VcsException(String.format("Could not update sources of \"%s\" on the Agent. You have to specify checkout directory as \"%s\"", 
+          myVcsRoot.getName(), 
+          vcsRootRelativePath.replace("/", File.separator)));
     }
     /**
      * home=C:\BuildAgent-cc 
@@ -119,6 +121,11 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
      * work=C:\BuildAgent-cc\work
      */
     super.process(includeRule, root);
+  }
+  
+  public static void main(String[] args) {
+    System.err.println("aaa/bbb/ccc".replace("/", File.separator));
+    System.err.println("aaa\\bbb\\ccc".replace("/", File.separator));    
   }
 
 }
