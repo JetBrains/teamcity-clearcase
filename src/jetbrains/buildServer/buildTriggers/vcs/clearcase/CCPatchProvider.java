@@ -30,6 +30,7 @@ import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsSupportUtil;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
+import org.jetbrains.annotations.NotNull;
 
 public class CCPatchProvider {
 
@@ -64,28 +65,34 @@ public class CCPatchProvider {
                 final String path = element.getObjectName();
                 final Version version = myConnection.getLastVersion(path, true);
                 final String elementLastVersion = version == null ? null : version.getWholeName();
-                if (elementLastVersion != null && myConnection.fileExistsInParent(element)) {
+                if (elementLastVersion != null) {
                     loadFile(path + CCParseUtil.CC_VERSION_SEPARATOR + elementLastVersion, builder, getRelativePath(path));
                 }
             }
 
             public void processChangedDirectory(final HistoryElement element) throws IOException, VcsException {
             CCParseUtil.processChangedDirectory(element, myConnection, new ChangedStructureProcessor() {
-              public void fileAdded(DirectoryChildElement child) throws VcsException {
-                loadFile(child.getFullPath(), builder, getRelativePath(child.getPath()));
+              public void fileAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException {
+                final DirectoryChildElement child = simpleChild.createFullElement(myConnection);
+                if (child != null) {
+                  loadFile(child.getFullPath(), builder, getRelativePath(child.getPath()));
+                }
               }
 
-              public void fileDeleted(DirectoryChildElement child) throws IOException {
-                builder.deleteFile(new File(getRelativePath(child.getPath())), false);
+              public void fileDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) throws IOException {
+                builder.deleteFile(new File(getRelativePath(simpleChild)), false);
               }
 
-              public void directoryDeleted(DirectoryChildElement child) throws IOException {
-                builder.deleteDirectory(new File(getRelativePath(child.getPath())), false);
+              public void directoryDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) throws IOException {
+                builder.deleteDirectory(new File(getRelativePath(simpleChild)), false);
               }
 
-              public void directoryAdded(DirectoryChildElement child) throws VcsException, IOException {
-                builder.createDirectory(new File(getRelativePath(child.getPath())));
-                myConnection.processAllVersions(child.getFullPath(), getRelativePath(child.getPath()),createFileProcessor(builder));
+              public void directoryAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
+                final DirectoryChildElement child = simpleChild.createFullElement(myConnection);
+                if (child != null) {
+                  builder.createDirectory(new File(getRelativePath(child.getPath())));
+                  myConnection.processAllVersions(child.getFullPath(), getRelativePath(child.getPath()),createFileProcessor(builder));
+                }
               }
             });
           }
@@ -103,6 +110,11 @@ public class CCPatchProvider {
         FileUtil.delete(myTempFile);
       }
     }
+  }
+
+  @NotNull
+  private String getRelativePath(@NotNull final SimpleDirectoryChildElement simpleChild) {
+    return myConnection.getRelativePath(simpleChild);
   }
 
   private VersionProcessor createFileProcessor(final PatchBuilder builder) {

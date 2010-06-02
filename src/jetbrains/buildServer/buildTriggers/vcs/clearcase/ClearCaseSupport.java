@@ -194,11 +194,11 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         CCParseUtil.processChangedDirectory(element, connection, createChangedStructureProcessor(element, key2changes, connection));
       }
 
-      public void processDestroyedFileVersion(final HistoryElement element) throws VcsException {        
+      public void processDestroyedFileVersion(final HistoryElement element) {
       }
 
       public void processChangedFile(final HistoryElement element) throws VcsException, IOException {
-        if (element.getObjectVersionInt() > getMaxVersionToIgnore(element) && connection.fileExistsInParent(element)) {          
+        if (element.getObjectVersionInt() > getMaxVersionToIgnore(element)) {
           String pathWithoutVersion = connection.getParentRelativePathWithVersions(element.getObjectName(), true);
 
           final String versionAfterChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
@@ -221,29 +221,33 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                                                     final MultiMap<CCModificationKey, VcsChange> key2changes,
                                                                     final ClearCaseConnection connection) {
     return new ChangedStructureProcessor() {
-      public void fileAdded(DirectoryChildElement child) throws VcsException, IOException {
-        if (connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), true)) {
+      public void fileAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
+        final DirectoryChildElement child = simpleChild.createFullElement(connection);
+        if (child != null && connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), true)) {
           addChange(element, child.getFullPath(), connection, VcsChangeInfo.Type.ADDED, null, getVersion(child, connection), key2changes);
           LOG.debug("Change was detected: added file \"" + child.getFullPath() + "\"");
         }
       }
 
-      public void fileDeleted(DirectoryChildElement child) throws VcsException, IOException {
-        if (connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), true)) {
+      public void fileDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
+        final DirectoryChildElement child = simpleChild.createFullElement(connection);
+        if (child != null && connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), true)) {
           addChange(element, child.getFullPath(), connection, VcsChangeInfo.Type.REMOVED, getVersion(child, connection), null, key2changes);
           LOG.debug("Change was detected: deleted file \"" + child.getFullPath() + "\"");
         }
       }
 
-      public void directoryDeleted(DirectoryChildElement child) throws VcsException, IOException {
-        if (connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), false)) {
+      public void directoryDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
+        final DirectoryChildElement child = simpleChild.createFullElement(connection);
+        if (child != null && connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), false)) {
           addChange(element, child.getFullPath(), connection, VcsChangeInfo.Type.DIRECTORY_REMOVED, getVersion(child, connection), null, key2changes);
           LOG.debug("Change was detected: deleted directory \"" + child.getFullPath() + "\"");
         }
       }
 
-      public void directoryAdded(DirectoryChildElement child) throws VcsException, IOException {
-        if (connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), false)) {
+      public void directoryAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
+        final DirectoryChildElement child = simpleChild.createFullElement(connection);
+        if (child != null && connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), false)) {
           addChange(element, child.getFullPath(), connection, VcsChangeInfo.Type.DIRECTORY_ADDED, null, getVersion(child, connection), key2changes);
           LOG.debug("Change was detected: added directory \"" + child.getFullPath() + "\"");
         }
@@ -430,9 +434,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           if (result.size() == countBefore) {
             try {
               checkClearCaseView(ClearCaseSupport.CC_VIEW_PATH, properties.get(ClearCaseSupport.CC_VIEW_PATH), result);
-            } catch (VcsException e) {
-              result.add(new InvalidProperty(ClearCaseSupport.CC_VIEW_PATH, e.getLocalizedMessage()));
-            } catch (IOException e) {
+            } catch (final IOException e) {
               result.add(new InvalidProperty(ClearCaseSupport.CC_VIEW_PATH, e.getLocalizedMessage()));
             }
           }
@@ -465,7 +467,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         }
       }
 
-      private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws VcsException, IOException {
+      private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws IOException {
         if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
           result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view"));
         }
@@ -492,6 +494,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return CCParseUtil.formatDate(new Date());
   }
 
+  @Override
   public boolean isCurrentVersionExpensive() {
     return false;
   }
@@ -506,6 +509,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return new VcsSupportUtil.DateVersionComparator(CCParseUtil.getDateFormat());
   }
 
+  @Override
   public boolean isAgentSideCheckoutAvailable() {
     return true;  //To change body of implemented methods use File | Settings | File Templates.
   }
@@ -578,15 +582,18 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return sRelPath.equalsIgnoreCase(relPath) || StringUtil.startsWithIgnoreCase(relPath, sRelPath + "/");
   }
 
+  @Override
   @NotNull
   public VcsSupportCore getCore() {
     return this;
   }
 
+  @Override
   public VcsPersonalSupport getPersonalSupport() {
     return this;
   }
 
+  @Override
   public LabelingSupport getLabelingSupport() {
     return this;
   }

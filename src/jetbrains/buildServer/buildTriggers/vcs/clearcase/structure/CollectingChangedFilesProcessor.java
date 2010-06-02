@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.*;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.NotNull;
 
 
 class CollectingChangedFilesProcessor implements ChangedFilesProcessor {
@@ -34,11 +36,12 @@ class CollectingChangedFilesProcessor implements ChangedFilesProcessor {
 
   public void processChangedFile(final HistoryElement element) throws VcsException {
     final String path = element.getObjectName();
-    final String elementLastVersion = myConnection.getLastVersion(path, true).getWholeName();
-
-    if (elementLastVersion != null && myConnection.fileExistsInParent(element)) {
-      myChangedElements.add(new ChangedElementInfo(getRelativePath(path), elementLastVersion,
-                                                   ChangedElementInfo.ChangeType.CHANGED_FILE));
+    final Version lastVersion = myConnection.getLastVersion(path, true);
+    if (lastVersion != null) {
+      final String lastVersionString = lastVersion.getWholeName();
+      if (lastVersionString != null) {
+        myChangedElements.add(new ChangedElementInfo(getRelativePath(path), lastVersionString, ChangedElementInfo.ChangeType.CHANGED_FILE));
+      }
     }
   }
 
@@ -56,31 +59,37 @@ class CollectingChangedFilesProcessor implements ChangedFilesProcessor {
       new ChangedElementInfo(getRelativePath(path), elementVersion, ChangedElementInfo.ChangeType.CHANGED_DIR);
     myChangedElements.add(parentChangedDir);
     CCParseUtil.processChangedDirectory(element, myConnection, new ChangedStructureProcessor() {
-      public void fileAdded(DirectoryChildElement child) throws VcsException {
-        parentChangedDir.addAddedElement(new ChangedElementInfo(getRelativePath(child.getPath()),
-                                                                child.getStringVersion(),
-                                                                ChangedElementInfo.ChangeType.ADDED_FILE));
+      public void fileAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException {
+        final DirectoryChildElement child = simpleChild.createFullElement(myConnection);
+        if (child != null) {
+          parentChangedDir.addAddedElement(new ChangedElementInfo(getRelativePath(child.getPath()),
+                                                                  child.getStringVersion(),
+                                                                  ChangedElementInfo.ChangeType.ADDED_FILE));
+        }
       }
 
-      public void fileDeleted(DirectoryChildElement child) throws IOException {
-        String path = child.getPath();
-        myChangedElements.add(new ChangedElementInfo(getRelativePath(path), null,
-                                                     ChangedElementInfo.ChangeType.DELETED_FILE));
+      public void fileDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) {
+        myChangedElements.add(new ChangedElementInfo(getRelativePath(simpleChild), null, ChangedElementInfo.ChangeType.DELETED_FILE));
       }
 
-      public void directoryDeleted(DirectoryChildElement child) throws IOException {
-        myChangedElements.add(new ChangedElementInfo(getRelativePath(child.getPath()), null,
-                                                     ChangedElementInfo.ChangeType.DELETED_DIR));
+      public void directoryDeleted(@NotNull final SimpleDirectoryChildElement simpleChild) {
+        myChangedElements.add(new ChangedElementInfo(getRelativePath(simpleChild), null, ChangedElementInfo.ChangeType.DELETED_DIR));
       }
 
-      public void directoryAdded(DirectoryChildElement child) throws VcsException, IOException {
-        String relPath = getRelativePath(child.getPath());
-        CorrectingAddedDirectoryVersionProcessor.processAddedDirectory(relPath, child.getFullPath(), child.getStringVersion(), myConnection,
-                                                                       parentChangedDir);
-
+      public void directoryAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException {
+        final DirectoryChildElement child = simpleChild.createFullElement(myConnection);
+        if (child != null) {
+          final String relPath = getRelativePath(child.getPath());
+          CorrectingAddedDirectoryVersionProcessor.processAddedDirectory(relPath, child.getFullPath(), child.getStringVersion(), myConnection,
+                                                                         parentChangedDir);
+        }
       }
     });
+  }
 
+  @NotNull
+  private String getRelativePath(@NotNull final SimpleDirectoryChildElement simpleChild) {
+    return myConnection.getRelativePath(simpleChild);
   }
 
   private String getRelativePath(final String path) {

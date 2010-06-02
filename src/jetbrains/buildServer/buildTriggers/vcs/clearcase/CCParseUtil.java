@@ -16,7 +16,6 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import com.intellij.execution.ExecutionException;
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -28,38 +27,26 @@ import org.jetbrains.annotations.Nullable;
 
 
 public class CCParseUtil {
-  @NonNls private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
-  @NonNls public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
   @NonNls public static final String CC_VERSION_SEPARATOR = "@@";
-  @NonNls private static final String LOAD = "load ";
+  @NonNls public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
+  @NonNls private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
+  @NonNls private static final String DIRECTORY_ELEMENT = "directory element";
+  @NonNls private static final String FILE_ELEMENT = "file element";
+  @NonNls private static final String NOT_LOADED = "[not loaded]";
 
-  private CCParseUtil() {
-  }
+  private CCParseUtil() {}
 
-  public static List<DirectoryChildElement> readDirectoryVersionContent(ClearCaseConnection connection, final String dirPath)
-    throws VcsException {
-    List<DirectoryChildElement> subfiles = new ArrayList<DirectoryChildElement>();
-
-    try {
-      final InputStream inputStream = connection.listDirectoryContent(dirPath);
-      final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-      try {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          final DirectoryChildElement element = DirectoryChildElement.readFromLSFormat(line, connection);
-          if (element != null) {
-            subfiles.add(element);
-          }
-        }
-      } finally {
-        reader.close();
+  @NotNull
+  public static List<DirectoryChildElement> readDirectoryVersionContent(@NotNull final ClearCaseConnection connection, @NotNull final String dirPathWithVersion) throws VcsException {
+    final List<SimpleDirectoryChildElement> simpleChildren = connection.getChildren(dirPathWithVersion);
+    final List<DirectoryChildElement> children = new ArrayList<DirectoryChildElement>(simpleChildren.size());
+    for (SimpleDirectoryChildElement simpleChild : simpleChildren) {
+      final DirectoryChildElement child = simpleChild.createFullElement(connection);
+      if (child != null) {
+        children.add(child);
       }
-    } catch (ExecutionException e) {
-      throw new VcsException(e);
-    } catch (IOException e) {
-      throw new VcsException(e);
     }
-    return subfiles;
+    return children;
   }
 
   public static void processChangedFiles(final ClearCaseConnection connection,
@@ -82,16 +69,16 @@ public class CCParseUtil {
           if (lastDate == null || element.getDate().before(lastDate)) {
             if ("checkin".equals(element.getOperation())) {
               if ("create directory version".equals(element.getEvent())) {
-                if (element.versionIsInsideView(connection, false)) {
+                if (element.versionIsInsideView(connection, false) && connection.fileExistsInParents(element, false)) {
                   inverter.processChangedDirectory(element);
                 }
-              } else if ("create version".equals(element.getEvent())) {
+              } else if ("create version".equals(element.getEvent()) && connection.fileExistsInParents(element, true)) {
                 if (element.versionIsInsideView(connection, true)) {
                   inverter.processChangedFile(element);
                 }
               }
             } else if ("rmver".equals(element.getOperation())) {
-              if ("destroy version on branch".equals(element.getEvent())) {
+              if ("destroy version on branch".equals(element.getEvent()) && connection.fileExistsInParents(element, true)) {
                 inverter.processDestroyedFileVersion(element);
               }
             }
@@ -109,11 +96,10 @@ public class CCParseUtil {
   private static Date parseDate(final String currentVersion) throws ParseException {
     return getDateFormat().parse(currentVersion);
   }
-  
+
   public static String formatDate(final Date date) {
-    return getDateFormat().format(date);    
+    return getDateFormat().format(date);
   }
-  
 
   public static void processChangedDirectory(final HistoryElement element,
                                              final ClearCaseConnection connection,
@@ -123,15 +109,15 @@ public class CCParseUtil {
       final String before = element.getObjectName() + CC_VERSION_SEPARATOR + element.getPreviousVersion(connection, true);
       final String after = element.getObjectName() + CC_VERSION_SEPARATOR + element.getObjectVersion();
 
-      final List<DirectoryChildElement> elementsBefore = readDirectoryVersionContent(connection, before);
-      final List<DirectoryChildElement> elementsAfter = readDirectoryVersionContent(connection, after);
+      final List<SimpleDirectoryChildElement> elementsBefore = connection.getChildren(before);
+      final List<SimpleDirectoryChildElement> elementsAfter = connection.getChildren(after);
 
-      Map<String, DirectoryChildElement> filesBefore = collectMap(elementsBefore);
-      Map<String, DirectoryChildElement> filesAfter = collectMap(elementsAfter);
+      final Map<String, SimpleDirectoryChildElement> filesBefore = collectMap(elementsBefore);
+      final Map<String, SimpleDirectoryChildElement> filesAfter = collectMap(elementsAfter);
 
-      for (String filePath : filesBefore.keySet()) {
-        final DirectoryChildElement sourceElement = filesBefore.get(filePath);
-        if (!filesAfter.containsKey(filePath)) {
+      for (final String fileName : filesBefore.keySet()) {
+        if (!filesAfter.containsKey(fileName)) {
+          final SimpleDirectoryChildElement sourceElement = filesBefore.get(fileName);
           switch (sourceElement.getType()) {
             case DIRECTORY:
               processor.directoryDeleted(sourceElement);
@@ -143,9 +129,9 @@ public class CCParseUtil {
         }
       }
 
-      for (String filePath : filesAfter.keySet()) {
-        final DirectoryChildElement targetElement = filesAfter.get(filePath);
-        if (!filesBefore.containsKey(filePath)) {
+      for (final String fileName : filesAfter.keySet()) {
+        if (!filesBefore.containsKey(fileName)) {
+          final SimpleDirectoryChildElement targetElement = filesAfter.get(fileName);
           switch (targetElement.getType()) {
             case DIRECTORY:
               processor.directoryAdded(targetElement);
@@ -160,10 +146,11 @@ public class CCParseUtil {
     }
   }
 
-  private static Map<String, DirectoryChildElement> collectMap(final List<DirectoryChildElement> elementsBefore) {
-    final HashMap<String, DirectoryChildElement> result = new HashMap<String, DirectoryChildElement>();
-    for (DirectoryChildElement element : elementsBefore) {
-      result.put(element.getPath(), element);
+  @NotNull
+  private static Map<String, SimpleDirectoryChildElement> collectMap(@NotNull final List<SimpleDirectoryChildElement> elementsBefore) {
+    final HashMap<String, SimpleDirectoryChildElement> result = new HashMap<String, SimpleDirectoryChildElement>();
+    for (final SimpleDirectoryChildElement element : elementsBefore) {
+      result.put(element.getName(), element);
     }
     return result;
   }
@@ -320,5 +307,36 @@ public class CCParseUtil {
       }
       myNextElement = null;
     }
+  }
+
+  @Nullable
+  public static SimpleDirectoryChildElement readChildFromLSFormat(@NotNull final String line) {
+    final DirectoryChildElement.Type type;
+    String currentPath = line;
+    if (currentPath.startsWith(DIRECTORY_ELEMENT)) {
+      currentPath = currentPath.substring(DIRECTORY_ELEMENT.length()).trim();
+      type = DirectoryChildElement.Type.DIRECTORY;
+    }
+    else if (currentPath.startsWith(FILE_ELEMENT)){
+      type = DirectoryChildElement.Type.FILE;
+      currentPath = currentPath.substring(FILE_ELEMENT.length()).trim();
+    }
+    else {
+      type = null;
+    }
+
+    if (currentPath.endsWith(NOT_LOADED)) {
+      currentPath = currentPath.substring(0, currentPath.length() - NOT_LOADED.length()).trim();
+    }
+
+    if (currentPath.endsWith(CC_VERSION_SEPARATOR)) {
+      currentPath = currentPath.substring(0, currentPath.length() - CC_VERSION_SEPARATOR.length()).trim();
+    }
+
+    if (type != null) {
+      return new SimpleDirectoryChildElement(currentPath, type);
+    }
+
+    return null;
   }
 }

@@ -18,13 +18,14 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import java.io.IOException;
 import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.NotNull;
 
 public interface ChangedStructureProcessor {
-  void fileAdded(DirectoryChildElement child) throws IOException, VcsException;
+  void fileAdded(@NotNull SimpleDirectoryChildElement child) throws IOException, VcsException;
 
-  void fileDeleted(DirectoryChildElement child) throws IOException, VcsException;
+  void fileDeleted(@NotNull SimpleDirectoryChildElement child) throws IOException, VcsException;
 
-  void directoryDeleted(DirectoryChildElement child) throws IOException, VcsException;
+  void directoryDeleted(@NotNull SimpleDirectoryChildElement child) throws IOException, VcsException;
 
-  void directoryAdded(DirectoryChildElement child) throws IOException, VcsException;
+  void directoryAdded(@NotNull SimpleDirectoryChildElement child) throws IOException, VcsException;
 }
