@@ -5,12 +5,12 @@ import java.io.IOException;
 
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.BuildProgressLogger;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
+import jetbrains.buildServer.vcs.clearcase.Constants;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
@@ -100,7 +100,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
     // have to check the checkout directory fit to CC view structure
     final int ccRootPrefixLength = myAgentConfig.getWorkDirectory().getAbsolutePath().length();
     final String configRelativePath = FileUtil.normalizeRelativePath(root.getAbsolutePath().substring(ccRootPrefixLength, root.getAbsolutePath().length()));
-    final String vcsRootRelativePath = FileUtil.normalizeRelativePath(new File(getOriginViewTag(myVcsRoot), myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH)).getPath());
+    final String vcsRootRelativePath = FileUtil.normalizeRelativePath(new File(getOriginViewTag(myVcsRoot), myVcsRoot.getProperty(Constants.RELATIVE_PATH)).getPath());
     LOG.debug(String.format("configRelativePath=\"%s\"", configRelativePath));
     LOG.debug(String.format("vcsRootRelativePath=\"%s\"", vcsRootRelativePath));
     if (!new File(configRelativePath).equals(new File(vcsRootRelativePath))) {

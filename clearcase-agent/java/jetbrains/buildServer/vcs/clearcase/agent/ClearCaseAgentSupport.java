@@ -25,7 +25,6 @@ import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
 
-
 public class ClearCaseAgentSupport extends AgentVcsSupport /*AgentVcsSupportContext, UpdateByIncludeRules, AgentVcsSupportCore*/ {
   
   static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);

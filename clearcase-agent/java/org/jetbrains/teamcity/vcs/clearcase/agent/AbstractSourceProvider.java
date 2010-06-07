@@ -7,11 +7,11 @@ import java.util.List;
 
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.BuildProgressLogger;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
+import jetbrains.buildServer.vcs.clearcase.Constants;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
@@ -59,7 +59,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
         throw new CCException(String.format("Could not find \"\" view.", originTag));
       }
       //obtain cloned origin view
-      final String pathWithinView = myVcsRoot.getProperty(ClearCaseSupport.RELATIVE_PATH);
+      final String pathWithinView = myVcsRoot.getProperty(Constants.RELATIVE_PATH);
       final CCSnapshotView ccview = getView(originView, myVcsRoot, myCheckoutRoot, myLogger);
       final CCDelta[] changes = setupConfigSpec(ccview, originView.getConfigSpec(), myVersion);
       publish(ccview, changes, root, pathWithinView, myLogger);
@@ -146,7 +146,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   
   
   protected String getOriginViewTag (VcsRoot root) {
-    return root.getProperty(ClearCaseSupport.VIEW_TAG);
+    return root.getProperty(Constants.VIEW_TAG);
   }
   
   protected Date getDate(String version) {

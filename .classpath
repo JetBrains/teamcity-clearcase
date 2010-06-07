@@ -7,6 +7,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TC_DISTR"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TOMCAT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TC_AGENT_LIBS"/>
-	<classpathentry kind="lib" path="clearcase-agent/lib/java_file_copy_library-0.9.5.jar"/>
+	<classpathentry kind="lib" path="clearcase-agent/lib/java_file_copy_library-0.9.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
