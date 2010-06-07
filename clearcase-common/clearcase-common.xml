@@ -16,7 +16,7 @@
   -->
 <project basedir="." default="deploy" name="clearcase-agent">
 
-    <property file="clearcase-agent.properties" />
+    <property file="clearcase-common.properties" />
 
     <property environment="env" />
     <property name="debuglevel" value="source,lines,vars" />
@@ -28,32 +28,29 @@
             <include name="**/*.jar" />
         </fileset>
     </path>
-    <path id="DIST.userclasspath">
-        <fileset dir="${dist}">
-            <include name="**/*.jar" />
-        </fileset>
-    </path>
+
     <path id="TC_AGENT_LIBS.userclasspath">
         <fileset dir="${path.variable.teamcitydistribution}/buildAgent">
             <include name="**/*.jar" />
         </fileset>
     </path>
+    
     <path id="TC_DISTR.userclasspath">
         <fileset dir="${path.variable.teamcitydistribution}/webapps/ROOT/WEB-INF/lib">
             <include name="**/*.jar" />
         </fileset>
     </path>
+    
     <path id="SERVERSIDE.userclasspath">
         <dirset dir="${clearcase-standalone.output.dir}" />
     </path>
-    <path id="clearcase-agent.classpath">
+    
+    <path id="clearcase-common.classpath">
         <pathelement location="bin" />
-        <path refid="DIST.userclasspath" />
-        <path refid="THIRDPARTY_LIBS.userclasspath" />
-        <path refid="TC_AGENT_LIBS.userclasspath" />
         <path refid="TC_DISTR.userclasspath" />
         <path refid="SERVERSIDE.userclasspath" />
     </path>
+    
     <target name="init">
         <mkdir dir="bin" />
         <copy includeemptydirs="false" todir="bin">
@@ -72,33 +69,16 @@
     <target depends="clean" name="cleanall" />
 
     <target name="deploy" depends="build">
-        <mkdir dir="${tmp.path}" />
-        <mkdir dir="${tmp.path}/${product.name}/lib" />
-        <jar destfile="${tmp.path}/${product.name}/lib/${product.name}.jar">
+        <jar destfile="${dist}/${product.name}.jar">
             <fileset dir="bin" />
         </jar>
-        <!-- copy common part-->
-        <copy includeemptydirs="false" todir="${tmp.path}/${product.name}/lib">
-            <fileset dir="${dist}">
-                <include name="**/*-common.jar" />
-            </fileset>
-        </copy>
-        <!-- copy agent -->
-        <copy includeemptydirs="false" todir="${tmp.path}/${product.name}/lib">
-            <fileset dir="lib">
-                <include name="**/*.jar" />
-            </fileset>
-        </copy>
-        <zip destfile="${dist}/${product.name}.zip">
-            <fileset dir="${tmp.path}" />
-        </zip>
     </target>
 
     <target depends="init" name="build">
         <echo message="${ant.project.name}: ${ant.file}" />
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source}" target="${target}">
             <src path="java" />
-            <classpath refid="clearcase-agent.classpath" />
+            <classpath refid="clearcase-common.classpath" />
         </javac>
     </target>
 
