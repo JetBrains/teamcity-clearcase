@@ -100,7 +100,7 @@ public class Util {
     reader.start();
   }
 
-  static String createLoadRuleForVob(final CCVob vob) {
+  public static String createLoadRuleForVob(final CCVob vob) {
     return String.format("load \\%s", vob.getTag());
   }
 
