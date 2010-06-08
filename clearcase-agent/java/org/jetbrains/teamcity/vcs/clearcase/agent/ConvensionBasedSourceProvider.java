@@ -11,6 +11,9 @@ import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.CopyJob;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.FileCopier;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.Source;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
@@ -18,10 +21,6 @@ import org.jetbrains.teamcity.vcs.clearcase.CCException;
 import org.jetbrains.teamcity.vcs.clearcase.CCRegion;
 import org.jetbrains.teamcity.vcs.clearcase.CCSnapshotView;
 import org.jetbrains.teamcity.vcs.clearcase.Util;
-
-import ch.fhnw.filecopier.CopyJob;
-import ch.fhnw.filecopier.FileCopier;
-import ch.fhnw.filecopier.Source;
 
 public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 

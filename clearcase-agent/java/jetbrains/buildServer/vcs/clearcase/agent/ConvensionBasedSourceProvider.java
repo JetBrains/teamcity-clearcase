@@ -29,12 +29,11 @@ import jetbrains.buildServer.vcs.clearcase.CCRegion;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.CopyJob;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.FileCopier;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.Source;
 
 import org.apache.log4j.Logger;
-
-import ch.fhnw.filecopier.CopyJob;
-import ch.fhnw.filecopier.FileCopier;
-import ch.fhnw.filecopier.Source;
 
 public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 

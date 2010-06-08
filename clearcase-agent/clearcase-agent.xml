@@ -23,11 +23,6 @@
     <property name="target" value="1.5" />
     <property name="source" value="1.5" />
 
-    <path id="THIRDPARTY_LIBS.userclasspath">
-        <fileset dir="lib">
-            <include name="**/*.jar" />
-        </fileset>
-    </path>
     <path id="DIST.userclasspath">
         <fileset dir="${dist}">
             <include name="**/*.jar" />
@@ -49,7 +44,6 @@
     <path id="clearcase-agent.classpath">
         <pathelement location="bin" />
         <path refid="DIST.userclasspath" />
-        <path refid="THIRDPARTY_LIBS.userclasspath" />
         <path refid="TC_AGENT_LIBS.userclasspath" />
         <path refid="TC_DISTR.userclasspath" />
         <path refid="SERVERSIDE.userclasspath" />
@@ -84,11 +78,11 @@
             </fileset>
         </copy>
         <!-- copy agent -->
-        <copy includeemptydirs="false" todir="${tmp.path}/${product.name}/lib">
+        <!--copy includeemptydirs="false" todir="${tmp.path}/${product.name}/lib">
             <fileset dir="lib">
                 <include name="**/*.jar" />
             </fileset>
-        </copy>
+        </copy-->
         <zip destfile="${dist}/${product.name}.zip">
             <fileset dir="${tmp.path}" />
         </zip>

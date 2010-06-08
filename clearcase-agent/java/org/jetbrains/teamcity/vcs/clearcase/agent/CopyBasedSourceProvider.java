@@ -9,14 +9,13 @@ import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsRoot;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.CopyJob;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.FileCopier;
+import jetbrains.buildServer.vcs.clearcase.Util.FileSystem.Source;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.teamcity.vcs.clearcase.CCDelta;
 import org.jetbrains.teamcity.vcs.clearcase.CCSnapshotView;
-
-import ch.fhnw.filecopier.CopyJob;
-import ch.fhnw.filecopier.FileCopier;
-import ch.fhnw.filecopier.Source;
 
 class CopyBasedSourceProvider extends AbstractSourceProvider {
   
