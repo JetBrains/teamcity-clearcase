@@ -17,7 +17,6 @@ package jetbrains.buildServer.vcs.clearcase.agent;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Map;
 
 import jetbrains.buildServer.agent.AgentRunningBuild;
@@ -114,27 +113,6 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
     clone.create(String.format("Clone of the \"%s\" view", sourceViewTag));
     return clone;
-    
-//    final CCRegion region = new CCRegion();
-//    for(CCSnapshotView view : region.getViews()){
-//      LOG.debug(String.format("createNew::view: %s", view.getTag()));
-//      if(sourceViewTag.equals(view.getTag())){
-//        LOG.debug(String.format("createNew::found tag: %s", view.getTag()));
-//        final String buildViewTag = getBuildViewTag(build, root, sourceViewTag);
-//        //look for existing view with the same tag and drop it if found
-//        final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
-//        if(existingWithTheSameTag != null){
-//          LOG.debug(String.format("createNew::there already is a view with the same tag: %s. drop it", existingWithTheSameTag));              
-//          existingWithTheSameTag.drop();
-//        }
-//        //create new in the checkout directory
-//        final CCSnapshotView clone = new CCSnapshotView (buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
-//        clone.create(String.format("Clone of the \"%s\" view", view.getTag()));
-//        clone.setConfigSpec(view.getConfigSpec());
-//        return clone;
-//      }
-//    }
-//    throw new CCException(String.format("Could not find the \"%s\" view", sourceViewTag));
   }
 
   /**
@@ -168,10 +146,6 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     return new File(root.getProperty(Constants.CC_VIEW_PATH)).getName();
   }
   
-  protected Date getDate(String version) {
-    return new Date();//TODO: parse version as Date 
-  }
-
   public void dispose() throws VcsException {
     // TODO Auto-generated method stub
   }

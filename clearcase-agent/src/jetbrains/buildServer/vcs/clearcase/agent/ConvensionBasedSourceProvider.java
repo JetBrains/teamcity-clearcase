@@ -39,7 +39,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 
   static final Logger LOG = Logger.getLogger(ConvensionBasedSourceProvider.class);
   
-  ConvensionBasedSourceProvider() {
+  public ConvensionBasedSourceProvider() {
   }
   
   @Override

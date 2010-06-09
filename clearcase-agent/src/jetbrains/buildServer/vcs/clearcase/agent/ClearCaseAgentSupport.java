@@ -25,7 +25,7 @@ import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
 
-public class ClearCaseAgentSupport extends AgentVcsSupport /*AgentVcsSupportContext, UpdateByIncludeRules, AgentVcsSupportCore*/ {
+public class ClearCaseAgentSupport extends AgentVcsSupport {
   
   static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);
   
@@ -46,12 +46,16 @@ public class ClearCaseAgentSupport extends AgentVcsSupport /*AgentVcsSupportCont
 
   public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
     try{
-      Util.execAndWait("cleartool hostinfo");
+      Util.execAndWait(getCheckExecutionCommand());
       return true;
     } catch (Exception e) {
       logger.info(e.getMessage());
       return false;
     }
+  }
+  
+  protected String getCheckExecutionCommand() {
+    return "cleartool hostinfo"; 
   }
 
 }

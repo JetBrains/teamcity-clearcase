@@ -42,16 +42,16 @@
         <dirset dir="${clearcase-standalone.output.dir}" />
     </path>
     <path id="clearcase-agent.classpath">
-        <pathelement location="bin" />
+        <pathelement location="classes" />
         <path refid="DIST.userclasspath" />
         <path refid="TC_AGENT_LIBS.userclasspath" />
         <path refid="TC_DISTR.userclasspath" />
         <path refid="SERVERSIDE.userclasspath" />
     </path>
     <target name="init">
-        <mkdir dir="bin" />
-        <copy includeemptydirs="false" todir="bin">
-            <fileset dir="java">
+        <mkdir dir="classes" />
+        <copy includeemptydirs="false" todir="classes">
+            <fileset dir="src">
                 <exclude name="**/*.launch" />
                 <exclude name="**/*.java" />
             </fileset>
@@ -59,7 +59,7 @@
     </target>
     
     <target name="clean">
-        <delete dir="bin" />
+        <delete dir="classes" />
         <delete dir="${tmp.path}" />
     </target>
     
@@ -69,7 +69,7 @@
         <mkdir dir="${tmp.path}" />
         <mkdir dir="${tmp.path}/${product.name}/lib" />
         <jar destfile="${tmp.path}/${product.name}/lib/${product.name}.jar">
-            <fileset dir="bin" />
+            <fileset dir="classes" />
         </jar>
         <!-- copy common part-->
         <copy includeemptydirs="false" todir="${tmp.path}/${product.name}/lib">
@@ -90,8 +90,8 @@
 
     <target depends="init" name="build">
         <echo message="${ant.project.name}: ${ant.file}" />
-        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source}" target="${target}">
-            <src path="java" />
+        <javac debug="true" debuglevel="${debuglevel}" destdir="classes" source="${source}" target="${target}">
+            <src path="src" />
             <classpath refid="clearcase-agent.classpath" />
         </javac>
     </target>
