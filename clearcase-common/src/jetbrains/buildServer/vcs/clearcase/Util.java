@@ -61,14 +61,14 @@ public class Util {
     process.getOutputStream().close();
     final StringBuffer errBuffer = new StringBuffer();
     final StringBuffer outBuffer = new StringBuffer();
-    pipe(process.getErrorStream(), null, errBuffer);
-    pipe(process.getInputStream(), null, outBuffer);
+    final Thread errReader = pipe(process.getErrorStream(), null, errBuffer);
+    final Thread outReader = pipe(process.getInputStream(), null, outBuffer);
     int result = process.waitFor();
-    // TODO: investigate it
-    // // wait for readers to finish...
-    // stdoutReader.join();
-    // stderrReader.join();
-
+    // wait for readers to finish...
+    errReader.join();
+    outReader.join();
+    process.getErrorStream().close();
+    process.getInputStream().close();    
     LOG.debug(outBuffer.toString());
     if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
       throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
@@ -76,7 +76,7 @@ public class Util {
     return outBuffer.toString().split("\n+");
   }
 
-  private static void pipe(final InputStream inStream, final PrintStream outStream, final StringBuffer out) {
+  private static Thread pipe(final InputStream inStream, final PrintStream outStream, final StringBuffer out) {
     Thread reader = new Thread(new Runnable() {
       public void run() {
         try {
@@ -91,6 +91,7 @@ public class Util {
             buffer[0] = (byte) in;
             out.append(new String(buffer));
           }
+          
         } catch (IOException e) {
           LOG.error(e.getMessage(), e);
         }
@@ -98,6 +99,7 @@ public class Util {
 
     });
     reader.start();
+    return reader;
   }
 
   public static String createLoadRuleForVob(final CCVob vob) {

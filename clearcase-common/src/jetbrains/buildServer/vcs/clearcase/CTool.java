@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -292,8 +294,8 @@ public class CTool {
   
   static class VobObjectParser implements ICCOutputParser {
     
-    private static final String HOST_LOCAL_PATH = "Host-local path";
-    private static final String GLOBAL_PATH = "Global path";
+    private static final Pattern HOST_LOCAL_PATH_PATTERN = Pattern.compile("Host-local path: (.*)");
+    private static final Pattern GLOBAL_PATH_PATTERN = Pattern.compile("Global path: (.*)");    
     
     private String myHostLocalPath;
     private String myGlobalPath;
@@ -302,12 +304,19 @@ public class CTool {
     VobObjectParser(String[] stdout) {
       myStdOut = stdout;
       for (String line : myStdOut) {
-        if (line.trim().startsWith(HOST_LOCAL_PATH)) {
-          myHostLocalPath = line.substring(line.indexOf(":") + 1, line.length()).trim();
-
-        } else if (line.trim().startsWith(GLOBAL_PATH)) {
-          myGlobalPath = line.substring(line.indexOf(":") + 1, line.length()).trim();
-
+        line = line.trim();
+        Matcher matcher = HOST_LOCAL_PATH_PATTERN.matcher(line);
+        if (matcher.matches()) {
+          myHostLocalPath = matcher.group(1).trim();
+          continue;
+        }
+        matcher = GLOBAL_PATH_PATTERN.matcher(line);
+        if (matcher.matches()) {
+          myGlobalPath = matcher.group(1).trim();
+          if (!(myGlobalPath.endsWith(".vws") || myGlobalPath.endsWith(".vbs"))) {
+            throw new RuntimeException(String.format("Wrong Global Path parsing: %s", myGlobalPath));
+          }
+          continue;
         }
       }
     }
