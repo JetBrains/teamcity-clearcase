@@ -16,15 +16,11 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.SystemInfo;
+import com.intellij.openapi.util.io.FileUtil;
+import java.io.*;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import jetbrains.buildServer.CommandLineExecutor;
 import jetbrains.buildServer.ExecResult;
 import jetbrains.buildServer.ProcessListener;
@@ -53,16 +48,10 @@ import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.Constants;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.openapi.util.SystemInfo;
-import com.intellij.openapi.util.io.FileUtil;
 
 @SuppressWarnings({"SimplifiableIfStatement"})
 public class ClearCaseConnection {
@@ -301,30 +290,33 @@ public class ClearCaseConnection {
     return version;
   }
 
-  public InputStream getRecurseChanges(final String since) throws IOException, VcsException {
+  @NotNull
+  public HistoryElementIterator getChangesIterator(@NotNull final String fromVersion) throws IOException, VcsException {
+    if (ClearCaseSupport.shouldUseLshistoryRecurse()) {
+      return new HistoryElementMerger(
+        new HistoryElementProvider(getRecurseChanges(fromVersion)),
+        new HistoryElementProvider(getDirectoryChanges(fromVersion))
+      );
+    }
+    else {
+      return new HistoryElementProvider(getAllChanges(fromVersion));
+    }
+  }
+
+  private InputStream getRecurseChanges(final String since) throws VcsException {
     return doGetChanges(since, "-recurse");
   }
 
-  public InputStream getDirectoryChanges(final String since) throws IOException, VcsException {
+  private InputStream getDirectoryChanges(final String since) throws VcsException {
     return doGetChanges(since, "-directory");
   }
 
+  private InputStream getAllChanges(final String since) throws VcsException {
+    return doGetChanges(since, "-all");
+  }
+
   private InputStream doGetChanges(final String since, final String key) throws VcsException {
-    int attempt = 1;
-    while (true) {
-      LOG.debug("lshistory " + key + " -since " + since + " attempt: " + attempt);
-      try {
-        return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-eventid", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
-      }
-      catch (final VcsException e) {
-        LOG.debug("attempt " + attempt + " failed: ", e);
-        if (attempt >= 10) throw e;
-        try {
-          Thread.sleep(10 * 1000);
-        } catch (InterruptedException ignore) {}
-        attempt++;
-      }
-    }
+    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-eventid", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {

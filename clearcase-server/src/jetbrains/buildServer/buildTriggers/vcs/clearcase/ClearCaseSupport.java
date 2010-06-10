@@ -16,19 +16,14 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
+import com.intellij.execution.ExecutionException;
+import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
@@ -36,61 +31,29 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
-import jetbrains.buildServer.serverSide.BuildServerListener;
-import jetbrains.buildServer.serverSide.InvalidProperty;
-import jetbrains.buildServer.serverSide.PropertiesProcessor;
-import jetbrains.buildServer.serverSide.SBuild;
-import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.ServerPaths;
-import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.serverSide.parameters.BuildParametersProvider;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
-import jetbrains.buildServer.vcs.BuildPatchByIncludeRules;
-import jetbrains.buildServer.vcs.BuildPatchPolicy;
-import jetbrains.buildServer.vcs.CheckoutRules;
-import jetbrains.buildServer.vcs.CollectChangesByIncludeRules;
-import jetbrains.buildServer.vcs.CollectChangesPolicy;
-import jetbrains.buildServer.vcs.FileRule;
-import jetbrains.buildServer.vcs.IncludeRule;
-import jetbrains.buildServer.vcs.IncludeRuleChangeCollector;
-import jetbrains.buildServer.vcs.IncludeRulePatchBuilder;
-import jetbrains.buildServer.vcs.LabelingSupport;
-import jetbrains.buildServer.vcs.ModificationData;
-import jetbrains.buildServer.vcs.ServerVcsSupport;
-import jetbrains.buildServer.vcs.TestConnectionSupport;
-import jetbrains.buildServer.vcs.VcsChange;
-import jetbrains.buildServer.vcs.VcsChangeInfo;
-import jetbrains.buildServer.vcs.VcsException;
-import jetbrains.buildServer.vcs.VcsFileContentProvider;
-import jetbrains.buildServer.vcs.VcsModification;
-import jetbrains.buildServer.vcs.VcsPersonalSupport;
-import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.VcsRootEntry;
-import jetbrains.buildServer.vcs.VcsSupportCore;
-import jetbrains.buildServer.vcs.VcsSupportUtil;
+import jetbrains.buildServer.vcs.*;
 import jetbrains.buildServer.vcs.clearcase.CCException;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import com.intellij.execution.ExecutionException;
-import com.intellij.openapi.util.io.FileUtil;
-
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport,
                                                                   LabelingSupport, VcsFileContentProvider,
-                                                                  CollectChangesByIncludeRules, BuildPatchByIncludeRules, 
+                                                                  CollectChangesByIncludeRules, BuildPatchByIncludeRules,
                                                                   TestConnectionSupport, BuildParametersProvider
 {
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
-  
+
   private final @Nullable ClearCaseStructureCache myCache;
 
   public ClearCaseSupport(File baseDir) {
@@ -112,7 +75,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     if (USE_CC_CACHE) {
       myCache.register(server, dispatcher);
     }
-    
+
     server.registerExtension(BuildParametersProvider.class, this.getClass().getName(), this);
   }
 
@@ -142,6 +105,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     vobRelativePath = relativePath.substring(0, pos);
     return new ViewPath(viewPath.getClearCaseViewPath(), vobRelativePath);
+  }
+
+  public static boolean shouldUseLshistoryRecurse() {
+    return TeamCityProperties.getBoolean(Constants.USE_LSHISTORY_RECURSE);
   }
 
   @NotNull
@@ -533,7 +500,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @Override
   public boolean isAgentSideCheckoutAvailable() {
-    return true;  //To change body of implemented methods use File | Settings | File Templates.
+    return true;
   }
 
   @NotNull
@@ -910,7 +877,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     final HashMap<String, String> out = new HashMap<String, String>();
     try{
 
-      //collect all clearcase's roots and populate current ConfigSpecs for each  
+      //collect all clearcase's roots and populate current ConfigSpecs for each
       for (final VcsRootEntry entry : build.getVcsRootEntries()) {
         if (getName().equals(entry.getVcsRoot().getVcsName())) { //looking for clearcase only
           final String viewPath = entry.getVcsRoot().getProperty(Constants.CC_VIEW_PATH);
@@ -938,7 +905,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     return out;
   }
-  
+
   private String getParamName (VcsRoot root) {
     return String.format("system.%s", String.format(Constants.CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
   }

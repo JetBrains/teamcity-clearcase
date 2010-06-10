@@ -55,16 +55,13 @@ public class CCParseUtil {
                                          final ChangedFilesProcessor fileProcessor) throws ParseException, IOException, VcsException {
     final @Nullable Date lastDate = currentVersion != null ? parseDate(currentVersion) : null;
 
-    final HistoryElementProvider recurseChangesProvider = new HistoryElementProvider(connection.getRecurseChanges(fromVersion));
-    final HistoryElementProvider directoryChangesProvider = new HistoryElementProvider(connection.getDirectoryChanges(fromVersion));
-
-    final HistoryElementsMerger changesProvider = new HistoryElementsMerger(recurseChangesProvider, directoryChangesProvider);
+    final HistoryElementIterator iterator = connection.getChangesIterator(fromVersion);
 
     final ChangesInverter inverter = new ChangesInverter(fileProcessor);
 
     try {
-      while (changesProvider.hasNext()) {
-        final HistoryElement element = changesProvider.next();
+      while (iterator.hasNext()) {
+        final HistoryElement element = iterator.next();
         if (connection.isInsideView(element.getObjectName())) {
           if (lastDate == null || element.getDate().before(lastDate)) {
             if ("checkin".equals(element.getOperation())) {
@@ -87,7 +84,7 @@ public class CCParseUtil {
       }
     }
     finally {
-      changesProvider.close();
+      iterator.close();
     }
 
     inverter.processCollectedChangesInInvertedOrder();
@@ -172,141 +169,6 @@ public class CCParseUtil {
     final int lastSeparatorPos = wholeVersion.lastIndexOf(File.separator);
     final int preLastSeparatorPos = wholeVersion.lastIndexOf(File.separator, lastSeparatorPos - 1);
     return wholeVersion.substring(preLastSeparatorPos + 1, lastSeparatorPos);
-  }
-
-  private static class HistoryElementsMerger {
-    @NotNull private final HistoryElementProvider myFirstProvider;
-    @NotNull private final HistoryElementProvider mySecondProvider;
-    @Nullable private HistoryElement myFirstNextElement;
-    @Nullable private HistoryElement mySecondNextElement;
-
-    private HistoryElementsMerger(@NotNull final HistoryElementProvider firstProvider,
-                                  @NotNull final HistoryElementProvider secondProvider) throws IOException {
-      myFirstProvider = firstProvider;
-      mySecondProvider = secondProvider;
-      readFirstNext();
-      readSecondNext();
-    }
-
-    @NotNull
-    public HistoryElement next() throws IOException, ParseException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      if (myFirstNextElement == null) {
-        return getSecondNext();
-      }
-      else if (mySecondNextElement == null) {
-        return getFirstNext();
-      }
-      else {
-        //noinspection ConstantConditions
-        if (myFirstNextElement.getEventID() > mySecondNextElement.getEventID()) {
-           return getFirstNext();
-        }
-        else {
-          return getSecondNext();
-        }
-      }
-    }
-
-    public boolean hasNext() {
-      return myFirstNextElement != null || mySecondNextElement != null;
-    }
-
-    public void close() throws IOException {
-      myFirstProvider.close();
-      mySecondProvider.close();
-    }
-
-    private HistoryElement getFirstNext() throws IOException {
-      try {
-        //noinspection ConstantConditions
-        return myFirstNextElement;
-      }
-      finally {
-        readFirstNext();
-      }
-    }
-
-    private HistoryElement getSecondNext() throws IOException {
-      try {
-        //noinspection ConstantConditions
-        return mySecondNextElement;
-      }
-      finally {
-        readSecondNext();
-      }
-    }
-
-    private void readFirstNext() throws IOException {
-      myFirstNextElement = readNext(myFirstProvider);
-    }
-
-    private void readSecondNext() throws IOException {
-      mySecondNextElement = readNext(mySecondProvider);
-    }
-
-    @Nullable
-    private HistoryElement readNext(@NotNull final HistoryElementProvider provider) throws IOException {
-      return provider.hasNext() ? provider.next() : null;
-    }
-  }
-
-  private static class HistoryElementProvider {
-    @NotNull private final BufferedReader myReader;
-    @Nullable private HistoryElement myNextElement;
-    @Nullable private String myNextLine;
-
-    private HistoryElementProvider(@NotNull final InputStream inputStream) throws IOException {
-      myReader = new BufferedReader(new InputStreamReader(inputStream));
-      myNextLine = myReader.readLine();
-      readNext();
-    }
-
-    @NotNull
-    public HistoryElement next() throws IOException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      try {
-        //noinspection ConstantConditions
-        return myNextElement;
-      }
-      finally {
-        readNext();
-      }
-    }
-
-    public boolean hasNext() {
-      return myNextElement != null;
-    }
-
-    public void close() throws IOException {
-      myReader.close();
-    }
-
-    private void readNext() throws IOException {
-      String line = myNextLine;
-      while (line != null) {
-        myNextLine = myReader.readLine();
-        if (!line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-          while (myNextLine != null && !line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-            line += '\n' + myNextLine;
-            myNextLine = myReader.readLine();
-          }
-        }
-        if (line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
-          line = line.substring(0, line.length() - ClearCaseConnection.LINE_END_DELIMITER.length());
-        }
-        myNextElement = HistoryElement.readFrom(line);
-        if (myNextElement != null) {
-          return;
-        }
-        line = myNextLine;
-      }
-      myNextElement = null;
-    }
   }
 
   @Nullable
