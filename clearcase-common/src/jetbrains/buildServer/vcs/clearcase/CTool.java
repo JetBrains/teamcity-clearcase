@@ -62,7 +62,9 @@ public class CTool {
       throw new IOException(String.format("The VOB \"%s\" already exists", tag));
     }
     final String command = String.format("cleartool mkvob -tag \\%s -c \"%s\" -stgloc -auto", tag, reason);
-    return new VobObjectParser(Util.execAndWait(command));
+    final String[] execAndWait = Util.execAndWait(command);
+    LOG.debug(String.format("The Vob created: %s", Arrays.toString(execAndWait)));
+    return new VobObjectParser(execAndWait);
   }
   
   private static boolean isVobExists(String tag) {
@@ -161,7 +163,9 @@ public class CTool {
   static VobObjectParser createSnapshotView(String tag, File path, String reason) throws IOException, InterruptedException {
     path.getParentFile().mkdirs();
     final String command = String.format("cleartool mkview -snapshot -tag %s -tcomment \"%s\" \"%s\"", tag, reason, path.getAbsolutePath());
-    return new VobObjectParser(Util.execAndWait(command));
+    final String[] execAndWait = Util.execAndWait(command);    
+    LOG.debug(String.format("View created: %s", Arrays.toString(execAndWait)));
+    return new VobObjectParser(execAndWait);
   }
   
   static ChangeParser[] update(final File path, final Date to) throws IOException, InterruptedException {
