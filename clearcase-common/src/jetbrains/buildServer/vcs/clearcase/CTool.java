@@ -582,7 +582,8 @@ public class CTool {
       /**
        * set NOTE: must be executed under root hierarchy of Snapshot View
        */
-      final String command = String.format("cleartool setcs -overwrite \"%s\"", cffile.getAbsolutePath());
+//"-overwrite" does not support by 2003     final String command = String.format("cleartool setcs -overwrite \"%s\"", cffile.getAbsolutePath()); 
+      final String command = String.format("cleartool setcs \"%s\"", cffile.getAbsolutePath());
       try {
         Util.execAndWait(command, myLocalPath);
         return new ChangeParser[0];// should not reach there
