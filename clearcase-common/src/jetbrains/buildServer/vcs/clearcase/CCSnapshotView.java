@@ -37,7 +37,7 @@ public class CCSnapshotView {
   /**
    * @param localRoot folder where a CC view root is
    * @return
-   * @throws CCException
+   * @throws CCException if the localRoot is not under CC View
    */
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
