@@ -68,8 +68,10 @@ public class Util {
     errReader.join();
     outReader.join();
     process.getErrorStream().close();
-    process.getInputStream().close();    
-    LOG.debug(outBuffer.toString());
+    process.getInputStream().close();
+    if(LOG.isDebugEnabled()){
+      LOG.debug(outBuffer.toString());
+    }
     if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
       throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
     }
