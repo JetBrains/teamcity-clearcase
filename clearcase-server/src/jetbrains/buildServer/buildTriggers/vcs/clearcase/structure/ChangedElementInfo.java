@@ -46,7 +46,7 @@ class ChangedElementInfo {
   }
 
   public List<ChangedElementInfo> getAddedElements() {
-    return myAddedElements;
+    return new ArrayList<ChangedElementInfo>(myAddedElements);//make snapshot
   }
 
   public String toString() {
