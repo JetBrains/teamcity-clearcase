@@ -49,7 +49,6 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       Util.execAndWait(getCheckExecutionCommand());
       return true;
     } catch (Exception e) {
-      logger.info(e.getMessage());
       return false;
     }
   }
