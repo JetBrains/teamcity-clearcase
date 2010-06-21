@@ -600,12 +600,11 @@ public class CTool {
 
         } else {
           throw new IOException(e.getMessage());
-
         }
       }
 
     } finally {
-//      cffile.delete();
+      cffile.delete();
     }
 
   }
