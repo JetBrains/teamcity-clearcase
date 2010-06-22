@@ -631,6 +631,11 @@ public class CTool {
     Util.execAndWait(String.format("cleartool rmname -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
   }
   
+  static void rmver (File root, File file, String version, String reason) throws IOException, InterruptedException {
+    Util.execAndWait(String.format("cleartool rmver -force -version %s -c \"%s\" \"%s\"", version, reason, file.getAbsolutePath()), root);
+  }
+  
+  //rmver -force -version \main\rel2_bugfix\1 util.c
   public static void main(String[] args) throws Exception {
     ChangeParser[] out = parseUpdateOut(new FileInputStream(new File("C:\\BuildAgent-cc\\work\\snapshots\\kdonskov_view_swiftteams\\preview.2010-05-26T145513+04.updt")));
     System.err.println(Arrays.asList(out));

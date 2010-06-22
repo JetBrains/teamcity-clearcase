@@ -156,6 +156,14 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
+  
+  public void remove(File file, String version, String reason) throws CCException {
+    try {
+      CTool.rmver(myLocalPath, file, version, reason);
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }  
 
 //  public CCDelta[] update(File file) throws CCException {
 //    return update(file, new Date());
