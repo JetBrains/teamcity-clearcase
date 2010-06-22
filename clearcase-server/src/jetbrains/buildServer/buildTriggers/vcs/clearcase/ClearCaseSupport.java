@@ -36,6 +36,8 @@ import jetbrains.buildServer.serverSide.parameters.BuildParametersProvider;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.util.filters.Filter;
+import jetbrains.buildServer.util.filters.FilterUtil;
 import jetbrains.buildServer.vcs.*;
 import jetbrains.buildServer.vcs.clearcase.CCException;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
@@ -184,13 +186,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes,
+                                                                     final Set<String> addFileActivities,
+                                                                     final Set<VcsChange> zeroToOneChangedFiles,
                                                                      final ClearCaseConnection connection) {
     return new ChangedFilesProcessor() {
 
 
       public void processChangedDirectory(final HistoryElement element) throws IOException, VcsException {
         LOG.debug("Processing changed directory " + element.getLogRepresentation());
-        CCParseUtil.processChangedDirectory(element, connection, createChangedStructureProcessor(element, key2changes, connection));
+        CCParseUtil.processChangedDirectory(element, connection, createChangedStructureProcessor(element, key2changes, addFileActivities, connection));
       }
 
       public void processDestroyedFileVersion(final HistoryElement element) {
@@ -203,7 +207,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           final String versionAfterChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
           final String versionBeforeChange = pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + element.getPreviousVersion(connection, false);
 
-          addChange(element, element.getObjectName(), connection, VcsChangeInfo.Type.CHANGED, versionBeforeChange, versionAfterChange, key2changes);
+          final VcsChange change =
+            addChange(element, element.getObjectName(), connection, VcsChangeInfo.Type.CHANGED, versionBeforeChange, versionAfterChange, key2changes);
+
+          if (element.getObjectVersionInt() == 1) {
+            zeroToOneChangedFiles.add(change);
+          }
 
           LOG.debug("Change was detected: changed file " + element.getLogRepresentation());
         }
@@ -218,12 +227,14 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private ChangedStructureProcessor createChangedStructureProcessor(final HistoryElement element,
                                                                     final MultiMap<CCModificationKey, VcsChange> key2changes,
+                                                                    final Set<String> addFileActivities,
                                                                     final ClearCaseConnection connection) {
     return new ChangedStructureProcessor() {
       public void fileAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException, IOException {
         final DirectoryChildElement child = simpleChild.createFullElement(connection);
         if (child != null && connection.versionIsInsideView(child.getPathWithoutVersion(), child.getStringVersion(), true)) {
           addChange(element, child.getFullPath(), connection, VcsChangeInfo.Type.ADDED, null, getVersion(child, connection), key2changes);
+          addFileActivities.add(element.getActivity());
           LOG.debug("Change was detected: added file \"" + child.getFullPath() + "\"");
         }
       }
@@ -258,19 +269,21 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return connection.getObjectRelativePathWithVersions(child.getFullPath(), DirectoryChildElement.Type.FILE.equals(child.getType()));
   }
 
-  private void addChange(final HistoryElement element,
+  private VcsChange addChange(final HistoryElement element,
                          final String childFullPath,
                          final ClearCaseConnection connection,
                          final VcsChangeInfo.Type type,
                          final String beforeVersion,
                          final String afterVersion,
                          final MultiMap<CCModificationKey, VcsChange> key2changes) throws VcsException {
-    final CCModificationKey modificationKey = new CCModificationKey(element.getDateString(), element.getUser());
-    key2changes.putValue(modificationKey, createChange(type, connection, beforeVersion, afterVersion, childFullPath));
+    final CCModificationKey modificationKey = new CCModificationKey(element.getDateString(), element.getUser(), element.getActivity());
+    final VcsChange change = createChange(type, connection, beforeVersion, afterVersion, childFullPath);
+    key2changes.putValue(modificationKey, change);
     CCModificationKey realKey = findKey(modificationKey, key2changes);
     if (realKey != null) {
       realKey.getCommentHolder().update(element.getActivity(), element.getComment(), connection.getVersionDescription(childFullPath, !isFile(type)));
     }
+    return change;
   }
 
   @Nullable
@@ -635,9 +648,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
       final ArrayList<ModificationData> list = new ArrayList<ModificationData>();
       final MultiMap<CCModificationKey, VcsChange> key2changes = new MultiMap<CCModificationKey, VcsChange>();
+      final Set<String> addFileActivities = new HashSet<String>();
+      final Set<VcsChange> zeroToOneChangedFiles = new HashSet<VcsChange>();
 
-      final ChangedFilesProcessor fileProcessor = createCollectingChangesFileProcessor(key2changes, connection);
-
+      final ChangedFilesProcessor fileProcessor = createCollectingChangesFileProcessor(key2changes, addFileActivities, zeroToOneChangedFiles, connection);
 
       try {
 
@@ -647,6 +661,16 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
         for (CCModificationKey key : key2changes.keySet()) {
           final List<VcsChange> changes = key2changes.get(key);
+          if (addFileActivities.contains(key.getActivity())) {
+            FilterUtil.filterCollection(changes, new Filter<VcsChange>() {
+              public boolean accept(@NotNull final VcsChange data) {
+                return !zeroToOneChangedFiles.contains(data);
+              }
+            });
+          }
+
+          if (changes.isEmpty()) continue;
+
           final Date date = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT).parse(key.getDate());
           final String version = CCParseUtil.formatDate(new Date(date.getTime() + 1000));
           list.add(new ModificationData(date, changes, key.getCommentHolder().toString(), key.getUser(), root, version, version));
