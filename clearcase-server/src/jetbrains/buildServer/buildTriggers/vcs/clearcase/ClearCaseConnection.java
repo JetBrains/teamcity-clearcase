@@ -16,13 +16,18 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.openapi.util.SystemInfo;
-import com.intellij.openapi.util.io.FileUtil;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import jetbrains.buildServer.CommandLineExecutor;
 import jetbrains.buildServer.ExecResult;
 import jetbrains.buildServer.ProcessListener;
@@ -47,11 +53,19 @@ import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
+import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
+
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.SystemInfo;
+import com.intellij.openapi.util.io.FileUtil;
 
 @SuppressWarnings({"SimplifiableIfStatement"})
 public class ClearCaseConnection {
@@ -251,12 +265,9 @@ public class ClearCaseConnection {
     return CCPathElement.createPathWithoutVersions(CCPathElement.splitIntoPathElements(fullPath));
   }
 
-  private void readVersionTree(final String path, final VersionTree versionTree, final boolean isDirPath) throws IOException, VcsException {
+  private VersionTree readVersionTree(final String path, final VersionTree versionTree, final boolean isDirPath) throws IOException, VcsException {
     final InputStream inputStream = executeAndReturnProcessInput(new String[]{"lsvtree", "-obs", "-all", insertDots(path, isDirPath)});
-
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
-
     try {
 
       String line;
@@ -275,6 +286,7 @@ public class ClearCaseConnection {
     } finally {
       reader.close();
     }
+    return versionTree;
   }
 
   public static String readVersion(final String line) {
@@ -759,16 +771,37 @@ public class ClearCaseConnection {
 
   public Version prepare(final String lastVersion) throws VcsException {
     collectChangesToIgnore(lastVersion);
-    final Version viewLastVersion = getLastVersion(getViewWholePath(), false);
-    if (viewLastVersion == null) {
-      throw new VcsException("Cannot get version in view '" + getViewWholePath() + "' for the directory " +
-                             getViewWholePath());
+    try {
+      final Version viewLastVersion = findVersionFor(lastVersion);
+      if (viewLastVersion == null) {
+        throw new VcsException("Cannot get version in view '" + getViewWholePath() + "' for the directory " +
+                               getViewWholePath());
+      }
+      return viewLastVersion;
+      
+    } catch (Exception e) {
+      throw new VcsException(e);
     }
-    return viewLastVersion;
+    
+  }
+
+  private Version findVersionFor(String lastVersion) throws Exception {
+    final File path = new File(getViewWholePath());
+    final String[] versions = CTool.lsVTree(path);
+    final Date onDate = CCParseUtil.getDateFormat().parse(lastVersion);
+    for (int i = versions.length - 1; i >= 0; i--) {//reverse order
+      final VersionParser parser = CTool.describe(path, versions[i]);
+      if(parser.getCreationDate().before(onDate)){
+       final Version ccVersion = findVersion(path.getAbsolutePath(), parser.getVersion(), true);
+       if(ccVersion != null && versionIsInsideView(path.getAbsolutePath(), ccVersion.getWholeName(), false)){
+         return ccVersion;
+       }
+      }
+    }
+    return getLastVersion(path.getAbsolutePath(), false);
   }
 
   public void mklabel(final String version, final String pname, final String label, final boolean isDirPath) throws VcsException, IOException {
-    //    //cleartool mklabel -version main\lesya_testProject\1 test_label C:\ClearCaseTests\lesya_testProject\lesyaTestVOB\project_root\f1\f14@@\main\lesya_testProject\4\dir\main\lesya_testProject\6\newFileName.txt
     try {
       InputStream inputStream = executeAndReturnProcessInput(new String[]{"mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath)});
       try {
