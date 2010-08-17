@@ -875,13 +875,13 @@ public class ClearCaseConnection {
   }
 
   public boolean fileExistsInParents(@NotNull final HistoryElement element, final boolean isFile) throws VcsException {
-    return doFileExistsInParents(new File(CCPathElement.normalizePath(element.getObjectName())), myViewPath.getClearCaseViewPathFile(), isFile);
+    return doFileExistsInParents(new File(CCPathElement.normalizePath(element.getObjectName())), myViewPath.getWholePathFile(), isFile);
   }
 
   private boolean doFileExistsInParents(@NotNull final File objectFile, @NotNull final File viewFile, final boolean objectIsFile) throws VcsException {
+    if (objectFile.equals(viewFile)) return true;
+    
     final File parentFile = objectFile.getParentFile();
-    if (parentFile.equals(viewFile)) return true;
-
     final String parentPath = parentFile.getAbsolutePath();
     final List<CCPathElement> elements = CCPathElement.splitIntoPathElements(parentPath);
     final CCPathElement lastElement = elements.get(elements.size() - 1);
