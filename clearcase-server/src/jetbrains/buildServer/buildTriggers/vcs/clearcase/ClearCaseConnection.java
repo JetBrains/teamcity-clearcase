@@ -213,7 +213,7 @@ public class ClearCaseConnection {
                                        pathWithoutVersion + CCParseUtil.CC_VERSION_SEPARATOR + lastElementVersion.getWholeName(),
                                        lastElementVersion.getWholeName(), pathWithoutVersion);
     } else {
-      LOG.info("ClearCase: last element version not found for " + pathWithoutVersion);
+      LOG.debug("ClearCase: last element version not found for " + pathWithoutVersion);
       return null;
     }
   }
@@ -250,7 +250,7 @@ public class ClearCaseConnection {
       final List<HistoryElement> historyElements = myChangesToIgnore.get(elementPath);
       if (historyElements != null) {
         for (HistoryElement element : historyElements) {
-          LOG.info("ClearCase: element " + elementPath + ", branch ignored: " + element.getObjectVersion());
+          LOG.debug("ClearCase: element " + elementPath + ", branch ignored: " + element.getObjectVersion());
           versionTree.pruneBranch(element.getObjectVersion());
         }
       }
@@ -380,7 +380,7 @@ public class ClearCaseConnection {
     final Version versionByPath = versionTree.findVersionByPath(normalizedVersion);
 
     if (versionByPath == null) {
-      LOG.info("ClearCase: version by path not found for " + objectPath + " by " + normalizedVersion);
+      LOG.debug("ClearCase: version by path not found for " + objectPath + " by " + normalizedVersion);
     }
 
     return versionByPath;
@@ -426,10 +426,10 @@ public class ClearCaseConnection {
     commandLine.addParameters(arguments);
 
     if (LOG_COMMANDS) {
-      LOG.info("ClearCase executing " + commandLine.getCommandLineString());
+      LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
       ourLogger.log("\n" + commandLine.getCommandLineString());
     }
-    LOG.info("simple execute: " + commandLine.getCommandLineString());
+    LOG.debug("simple execute: " + commandLine.getCommandLineString());
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     final ByteArrayOutputStream err = new ByteArrayOutputStream();
     if (LOG_COMMANDS) {
@@ -611,7 +611,7 @@ public class ClearCaseConnection {
     } catch (VcsException e) {
       if (e.getLocalizedMessage().contains("is not a valid snapshot view path")) {
         //ignore, it is dynamic view
-        LOG.debug("Please ignore the error above if you use dynamic view.");
+        LOG.info("Please ignore the error above if you use dynamic view.");
       } else {
         throw e;
       }
@@ -1100,10 +1100,10 @@ public class ClearCaseConnection {
 
       }
       if (LOG_COMMANDS) {
-        LOG.info("ClearCase executing " + commandLine.toString());
+        LOG.debug("ClearCase executing " + commandLine.toString());
         ourLogger.log("\n" + commandLine.toString());
       }
-      LOG.info("interactive execute: " + commandLine.toString());
+      LOG.debug("interactive execute: " + commandLine.toString());
     }
 
     @Override
@@ -1126,7 +1126,7 @@ public class ClearCaseConnection {
       if (LOG_COMMANDS) {
         ourLogger.log("\n" + line);
       }          
-      LOG.info("output line read: " + line);
+      LOG.debug("output line read: " + line);
     }
 
     @Override

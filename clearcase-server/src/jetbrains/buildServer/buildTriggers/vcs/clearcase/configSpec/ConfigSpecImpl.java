@@ -51,7 +51,7 @@ public class ConfigSpecImpl implements ConfigSpec {
     final Version version = doGetCurrentVersion(ccViewRoot, normalizedFullFileName, versionTree, isFile);
 
     if (version == null) {
-      LOG.info("ClearCase: element \"" + fullFileName + "\" ignored, last version not found;");
+      LOG.debug("ClearCase: element \"" + fullFileName + "\" ignored, last version not found;");
     }
 
     return version;
