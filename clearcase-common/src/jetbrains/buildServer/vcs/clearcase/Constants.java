@@ -28,7 +28,9 @@ public interface Constants {
   @NonNls public static final String UCM = "UCM";
   @NonNls public static final String GLOBAL_LABELS_VOB = "global-labels-vob";
   @NonNls public static final String USE_GLOBAL_LABEL = "use-global-label";
-  @NonNls public static final String USE_LSHISTORY_RECURSE = "clearcase.use.lshistory.recurse";
+  @NonNls public static final String LSHISTORY_DEFAULT_OPTIONS = "clearcase.lshistory.options.default";
+  @NonNls public static final String LSHISTORY_VCS_ROOT_OPTIONS_BY_ID = "clearcase.lshistory.options.vcsRoot{%d}";
+  @NonNls public static final String LSHISTORY_VCS_ROOT_OPTIONS_BY_NAME = "clearcase.lshistory.options.vcsRoot[%s]";
 
   public static final String VOBS_NAME_ONLY = "vobs";
   public static final String VOBS = "vobs/";

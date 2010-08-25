@@ -109,10 +109,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return new ViewPath(viewPath.getClearCaseViewPath(), vobRelativePath);
   }
 
-  public static boolean shouldUseLshistoryRecurse() {
-    return TeamCityProperties.getBoolean(Constants.USE_LSHISTORY_RECURSE);
-  }
-
   @NotNull
   public static ViewPath getViewPath(@NotNull final String viewPath) throws VcsException {
     final String ccViewRoot;

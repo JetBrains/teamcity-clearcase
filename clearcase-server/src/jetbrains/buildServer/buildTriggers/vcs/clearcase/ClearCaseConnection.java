@@ -69,6 +69,8 @@ import com.intellij.openapi.util.io.FileUtil;
 
 @SuppressWarnings({"SimplifiableIfStatement"})
 public class ClearCaseConnection {
+  @NonNls private static final String PATH = "%path%";
+
   private final ViewPath myViewPath;
   private final boolean myUCMSupported;
 
@@ -304,31 +306,65 @@ public class ClearCaseConnection {
 
   @NotNull
   public HistoryElementIterator getChangesIterator(@NotNull final String fromVersion) throws IOException, VcsException {
-    if (ClearCaseSupport.shouldUseLshistoryRecurse()) {
-      return new HistoryElementMerger(
-        new HistoryElementProvider(getRecurseChanges(fromVersion)),
-        new HistoryElementProvider(getDirectoryChanges(fromVersion))
-      );
+    final List<String> lsHistoryOptions = getLSHistoryOptions();
+    HistoryElementIterator iterator = new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions.get(0)));
+    for (int i = 1; i < lsHistoryOptions.size(); i++) {
+      iterator = new HistoryElementMerger(iterator, new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions.get(i))));
     }
-    else {
-      return new HistoryElementProvider(getAllChanges(fromVersion));
+    return iterator;
+  }
+
+  private InputStream getChanges(final String since, final String options) throws VcsException {
+    final String viewWholePath = getViewWholePath();
+    final String preparedOptions = options.replace(PATH, insertDots(viewWholePath, true));
+    return executeSimpleProcess(viewWholePath, preparedOptions, new String[]{ "lshistory", "-eventid", "-since", since, "-fmt", FORMAT });
+  }
+
+  @NotNull
+  private List<String> getLSHistoryOptions() {
+    return splitStringByVerticalBar(getLSHistoryOptionsString());
+  }
+
+  @NotNull
+  private List<String> splitStringByVerticalBar(@NotNull final String string) {
+    final List<String> options = new ArrayList<String>();
+
+    int startPos = 0;
+    int endPos = findNextVerticalBarPos(string, startPos);
+
+    while (endPos != -1) {
+      options.add(string.substring(startPos, endPos));
+      startPos = endPos + 1;
+      endPos = findNextVerticalBarPos(string, startPos);
     }
+
+    options.add(string.substring(startPos));
+
+    return options;
   }
 
-  private InputStream getRecurseChanges(final String since) throws VcsException {
-    return doGetChanges(since, "-recurse");
+  private int findNextVerticalBarPos(final String string, final int startPos) {
+    final int pos = string.indexOf('|', startPos);
+    if (pos < 0) return -1;
+    final int nextPos = pos + 1;
+    if (nextPos < string.length() && string.charAt(nextPos) == '|') {
+      return findNextVerticalBarPos(string, pos + 2);
+    }
+    return pos;
   }
 
-  private InputStream getDirectoryChanges(final String since) throws VcsException {
-    return doGetChanges(since, "-directory");
-  }
+  @NotNull
+  private String getLSHistoryOptionsString() {
+    final String vcsRootOptionsById = TeamCityProperties.getPropertyOrNull(String.format(Constants.LSHISTORY_VCS_ROOT_OPTIONS_BY_ID, myRoot.getId()));
+    if (vcsRootOptionsById != null) return vcsRootOptionsById;
 
-  private InputStream getAllChanges(final String since) throws VcsException {
-    return doGetChanges(since, "-all");
-  }
+    final String vcsRootOptionsByName = TeamCityProperties.getPropertyOrNull(String.format(Constants.LSHISTORY_VCS_ROOT_OPTIONS_BY_NAME, myRoot.getName().replace(' ', '.')));
+    if (vcsRootOptionsByName != null) return vcsRootOptionsByName;
 
-  private InputStream doGetChanges(final String since, final String key) throws VcsException {
-    return executeSimpleProcess(getViewWholePath(), new String[]{"lshistory", "-eventid", key, "-since", since, "-fmt", FORMAT, insertDots(getViewWholePath(), true)});
+    final String defaultOptions = TeamCityProperties.getPropertyOrNull(Constants.LSHISTORY_DEFAULT_OPTIONS);
+    if (defaultOptions != null) return defaultOptions;
+
+    return "-all " + PATH;
   }
 
   public InputStream listDirectoryContent(final String dirPath) throws ExecutionException, IOException, VcsException {
@@ -420,10 +456,17 @@ public class ClearCaseConnection {
   }
 
   public static InputStream executeSimpleProcess(String viewPath, String[] arguments) throws VcsException {
+    return executeSimpleProcess(viewPath, null, arguments);
+  }
+
+  public static InputStream executeSimpleProcess(final String viewPath, final String additionalArgumentsString, final String[] arguments) throws VcsException {
     final GeneralCommandLine commandLine = new GeneralCommandLine();
     commandLine.setExePath("cleartool");
     commandLine.setWorkDirectory(viewPath);
     commandLine.addParameters(arguments);
+    if (additionalArgumentsString != null) {
+      commandLine.getParametersList().addParametersString(additionalArgumentsString);
+    }
 
     if (LOG_COMMANDS) {
       LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
