@@ -893,7 +893,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     void process(@NotNull final ClearCaseConnection connection) throws VcsException;
   }
 
-  public Map<String, String> getParameters(SBuild build, boolean emulationMode) {
+  @NotNull
+  public Map<String, String> getParameters(@NotNull SBuild build, boolean emulationMode) {
     final HashMap<String, String> out = new HashMap<String, String>();
     try{
 
@@ -930,7 +931,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return String.format("system.%s", String.format(Constants.CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
   }
 
-  public Collection<String> getParametersAvailableOnAgent(SBuild build) {
+  @NotNull
+  public Collection<String> getParametersAvailableOnAgent(@NotNull SBuild build) {
     return Collections.<String>emptyList();
   }
 }
