@@ -111,37 +111,50 @@ public class CCPathElement {
   }
 
   public static List<CCPathElement> splitIntoPathElements(final String objectName) {
-    List<CCPathElement> result = new ArrayList<CCPathElement>();
+    final List<CCPathElement> result = new ArrayList<CCPathElement>();
 
-    List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
+    final List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
 
-    for (int i = 0; i < subNames.size(); i++) {
+    for (int i = 0, size = subNames.size(); i < size; i++) {
 
       String currentViewPath = null;
 
       final String subName = subNames.get(i);
-      final boolean beginOfVersion = subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR);
 
-      if (beginOfVersion) {
+      if (subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR)) {
         final CCPathElement currentPair =
           new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
 
         result.add(currentPair);
 
-        for (i += 1; i < subNames.size(); i++) {
-          currentPair.appendVersion(subNames.get(i));
-          try {
-            Integer.parseInt(subNames.get(i));
-            break;
-          } catch (NumberFormatException e) {
-            //ignore
-          }
-        }
-      } else {
+        i = processVersion(currentPair, i, subNames);
+      }
+      else if (i + 1 < size && "main".equalsIgnoreCase(subNames.get(i + 1))) {
+        final CCPathElement currentPair = new CCPathElement(subName, currentViewPath, true);
+
+        result.add(currentPair);
+
+        i = processVersion(currentPair, i, subNames);
+      }
+      else {
         result.add(new CCPathElement(subName, currentViewPath, false));
       }
     }
+
     return removeDots(result);
+  }
+
+  private static int processVersion(final CCPathElement currentPair, int i, final List<String> subNames) {
+    for (i += 1; i < subNames.size(); i++) {
+      currentPair.appendVersion(subNames.get(i));
+      try {
+        Integer.parseInt(subNames.get(i));
+        break;
+      } catch (NumberFormatException e) {
+        //ignore
+      }
+    }
+    return i;
   }
 
   private static List<CCPathElement> removeDots(final List<CCPathElement> result) {

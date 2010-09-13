@@ -16,17 +16,21 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import jetbrains.buildServer.vcs.VcsException;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 
 public class CCParseUtil {
+  @NotNull private static final Logger LOG = Logger.getLogger(CCParseUtil.class);
+
   @NonNls public static final String CC_VERSION_SEPARATOR = "@@";
   @NonNls public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
   @NonNls private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
@@ -62,6 +66,7 @@ public class CCParseUtil {
     try {
       while (iterator.hasNext()) {
         final HistoryElement element = iterator.next();
+        LOG.debug("Processing event: " + element.getLogRepresentation());
         if (connection.isInsideView(element.getObjectName())) {
           if (lastDate == null || element.getDate().before(lastDate)) {
             if ("checkin".equals(element.getOperation())) {
@@ -69,8 +74,8 @@ public class CCParseUtil {
                 if (element.versionIsInsideView(connection, false) && connection.fileExistsInParents(element, false)) {
                   inverter.processChangedDirectory(element);
                 }
-              } else if ("create version".equals(element.getEvent()) && connection.fileExistsInParents(element, true)) {
-                if (element.versionIsInsideView(connection, true)) {
+              } else if ("create version".equals(element.getEvent())) {
+                if (element.versionIsInsideView(connection, true) && connection.fileExistsInParents(element, true)) {
                   inverter.processChangedFile(element);
                 }
               }
