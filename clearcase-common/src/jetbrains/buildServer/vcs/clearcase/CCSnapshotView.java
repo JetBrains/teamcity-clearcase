@@ -16,6 +16,7 @@
 package jetbrains.buildServer.vcs.clearcase;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,9 +36,11 @@ public class CCSnapshotView {
   private String myTag;
 
   /**
-   * @param localRoot folder where a CC view root is
+   * @param localRoot
+   *          folder where a CC view root is
    * @return
-   * @throws CCException if the localRoot is not under CC View
+   * @throws CCException
+   *           if the localRoot is not under CC View
    */
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
@@ -49,7 +52,7 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   CCSnapshotView(final String region, final String server, final String tag, final String glolbalPath) {
     myTag = tag;
     myGlobalPath = glolbalPath;
@@ -59,7 +62,7 @@ public class CCSnapshotView {
     myTag = tag;
     myLocalPath = new File(localPath);
   }
-  
+
   public CCSnapshotView(final CCVob vob, final String tag, final String localPath) {
     myTag = tag;
     myConfigSpecs = new ArrayList<String>(CTool.DEFAULT_CONFIG_SPECS);
@@ -156,27 +159,23 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   public void remove(File file, String version, String reason) throws CCException {
     try {
       CTool.rmver(myLocalPath, file, version, reason);
     } catch (Exception e) {
       throw new CCException(e);
     }
-  }  
-
-//  public CCDelta[] update(File file) throws CCException {
-//    return update(file, new Date());
-//  }
-//
-//  public CCDelta[] update(File file, final Date to) throws CCException {
-//    try {
-//      return wrap(CTool.update(file, to));
-//    } catch (Exception e) {
-//      throw new CCException(e);
-//    }
-//  }
-
+  }
+  
+  public void drop(File file, String reason) throws CCException {
+    try {
+      CTool.rmelem(myLocalPath, file, reason);
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }
+  
   private CCDelta[] wrap(final ChangeParser[] parsers) {
     final ArrayList<CCDelta> out = new ArrayList<CCDelta>(parsers.length);
     for (final ChangeParser change : parsers) {
@@ -189,6 +188,10 @@ public class CCSnapshotView {
     final CCRegion region = new CCRegion();
     for (CCSnapshotView view : region.getViews()) {
       if (view.getTag().trim().equals(getTag().trim())) {
+        // TODO: move initialization to proper place
+        myGlobalPath = view.getGlobalPath();
+        myLocalPath = view.getLocalPath();
+        myConfigSpecs = new ArrayList<String>(view.getConfigSpec());
         return true;
       }
     }
@@ -208,7 +211,7 @@ public class CCSnapshotView {
   public void drop() throws CCException {
     try {
       CTool.dropView(getGlobalPath());
-      
+
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -218,5 +221,5 @@ public class CCSnapshotView {
   public String toString() {
     return String.format("{CCSnapshotView: tag=\"%s\", global=\"%s\" local=\"%s\"}", getTag(), getGlobalPath(), getLocalPath());
   }
-
+  
 }

@@ -105,7 +105,11 @@ public class Util {
   }
 
   public static String createLoadRuleForVob(final CCVob vob) {
-    return String.format("load \\%s", vob.getTag());
+    return String.format("load %s", normalizeVobTag(vob.getTag()));
+  }
+  
+  static String normalizeVobTag(final String tag){
+    return tag.startsWith("\\")||tag.startsWith("/")? tag : String.format("\\%s", tag.trim());  
   }
 
   public static java.io.File createTempFile() throws IOException {

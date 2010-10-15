@@ -19,35 +19,33 @@ import java.io.File;
 
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
-
-
 public class CCVob {
-  
+
   private String myTag;
   private String myGlobalPath;
   private boolean isAvailable;
   private String myRegion;
   private String myServerHost;
 
-  public CCVob(final String tag){
-    myTag = tag;
+  public CCVob(final String tag) {
+    myTag = Util.normalizeVobTag(tag);
   }
-  
-  CCVob(final String tag, final String region, final String host, final String globalPath){
-    myTag = tag;
+
+  CCVob(final String tag, final String region, final String host, final String globalPath) {
+    this(tag);
     myRegion = region;
     myServerHost = host;
     myGlobalPath = globalPath;
   }
-  
+
   public String getTag() {
     return myTag;
   }
-  
+
   public String getRegion() {
     return myRegion;
   }
-  
+
   public String getServerHost() {
     return myServerHost;
   }
@@ -55,23 +53,23 @@ public class CCVob {
   public String getGlobalPath() {
     return myGlobalPath;
   }
-  
+
   @Override
-  public String toString () {
-    return String.format("{CCVob: region=\"%s\", host=\"%s\", tag=\"%s\", global=\"%s\"}", getRegion(), getServerHost(), getTag(), getGlobalPath()); 
+  public String toString() {
+    return String.format("{CCVob: region=\"%s\", host=\"%s\", tag=\"%s\", global=\"%s\"}", getRegion(), getServerHost(), getTag(), getGlobalPath());
   }
-  
+
   public void create(final String reason) throws CCException {
     try {
       final VobObjectParser result = CTool.createVob(myTag, reason);
-      myGlobalPath =  result.getGlobalPath();
+      myGlobalPath = result.getGlobalPath();
       isAvailable = true;
     } catch (Exception e) {
       throw new CCException(e);
     }
-    
+
   }
-  
+
   public void load(final File dump, String reason) throws CCException {
     try {
       final VobObjectParser result = CTool.importVob(myTag, dump, reason);
@@ -82,16 +80,26 @@ public class CCVob {
 
     }
   }
-  
+
   public void drop() throws CCException {
     try {
-      if(isAvailable()){
+      if (isAvailable()) {
         CTool.dropVob(getGlobalPath());
-        isAvailable  = false;
+        isAvailable = false;
       }
     } catch (Exception e) {
       throw new CCException(e);
     }
+  }
+
+  public boolean exists() throws CCException {
+    final CCRegion region = new CCRegion();
+    for (CCVob vob : region.getVobs()) {
+      if (vob.getTag().trim().equals(getTag().trim())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public boolean isAvailable() {

@@ -68,7 +68,7 @@ public class CTool {
     if (isVobExists(tag)) {
       throw new IOException(String.format("The VOB \"%s\" already exists", tag));
     }
-    final String command = String.format("cleartool mkvob -tag \\%s -c \"%s\" -stgloc -auto", tag, reason);
+    final String command = String.format("cleartool mkvob -tag %s -c \"%s\" -stgloc -auto", tag, reason);
     final String[] execAndWait = Util.execAndWait(command);
     LOG.debug(String.format("The Vob created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
@@ -236,17 +236,18 @@ public class CTool {
     final ArrayList<VobParser> out = new ArrayList<VobParser>();
     for (String line : stdOut) {
       final String trim = line.trim();
-      if (trim.startsWith(VobParser.TAG_TOKEN) && !buffer.isEmpty()) {
-        // reach the next section
-        out.add(new VobParser(buffer.toArray(new String[buffer.size()])));
-        buffer.clear();
+      if (trim.length() > 0) {
+        if (trim.startsWith(VobParser.TAG_TOKEN) && !buffer.isEmpty()) {
+          // reach the next section
+          out.add(new VobParser(buffer.toArray(new String[buffer.size()])));
+          buffer.clear();
+        }
+        buffer.add(trim);
       }
-      buffer.add(trim);
     }
-    out.add(new VobParser(buffer.toArray(new String[buffer.size()])));// do not
-    // forget
-    // the
-    // last
+    if (!buffer.isEmpty()) {
+      out.add(new VobParser(buffer.toArray(new String[buffer.size()])));// do_not_forget_the_last
+    }
     return out.toArray(new VobParser[out.size()]);
   }
 
@@ -279,17 +280,20 @@ public class CTool {
     final ArrayList<ViewParser> out = new ArrayList<ViewParser>();
     for (String line : stdOut) {
       final String trim = line.trim();
-      if (trim.startsWith(ViewParser.TAG_TOKEN) && !buffer.isEmpty()) {
-        // reach the next section
-        out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));
-        buffer.clear();
+      if (trim.length() > 0) {
+        if (trim.startsWith(ViewParser.TAG_TOKEN) && !buffer.isEmpty()) {
+          // reach the next section
+          out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));
+          buffer.clear();
+        }
+        buffer.add(trim);
       }
-      buffer.add(trim);
     }
-    out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));// do not
-    // forget
-    // the
-    // last
+    if (!buffer.isEmpty()) {
+      // do_not_forget_the_last
+      out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));// do
+                                                                         // not
+    }
     return out.toArray(new ViewParser[out.size()]);
   }
 
@@ -299,12 +303,17 @@ public class CTool {
   }
 
   /**
-   *  Label's info is not provided
+   * Label's info is not provided
    */
   public static String[] lsVTree(File root) throws IOException, InterruptedException {
     final File executionFolder = getFolder(root);
     final String relativePath = FileUtil.getRelativePath(executionFolder, root);
-    final String command = String.format("cleartool lsvtree -obs -all %s", relativePath/*root.getAbsolutePath()*/);
+    final String command = String.format("cleartool lsvtree -obs -all %s", relativePath/*
+                                                                                        * root.
+                                                                                        * getAbsolutePath
+                                                                                        * (
+                                                                                        * )
+                                                                                        */);
     final String[] rawOut = Util.execAndWait(command, executionFolder);
     // remove labels info
     final ArrayList<String> out = new ArrayList<String>(rawOut.length);
@@ -742,6 +751,10 @@ public class CTool {
   static void rmname(File root, File file, String reason) throws IOException, InterruptedException {
     Util.execAndWait(String.format("cleartool rmname -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
   }
+  
+  static void rmelem(File root, File file, String reason) throws IOException, InterruptedException {
+    Util.execAndWait(String.format("cleartool rmelem -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+  }
 
   static void rmver(File root, File file, String version, String reason) throws IOException, InterruptedException {
     Util.execAndWait(String.format("cleartool rmver -force -version %s -c \"%s\" \"%s\"", version, reason, file.getAbsolutePath()), root);
@@ -751,21 +764,24 @@ public class CTool {
   public static void main(String[] args) throws Exception {
     System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\"), new File("C:\\test.folder\\")));
     System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\"), new File("C:\\test.folder\\aa.txt")));
-    System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\inner.folder"), new File("C:\\test.folder\\aa.txt")));    
-    
-//    VersionParser parser = new VersionParser(new String[] { "directory version;.@@\\main\\lesya_testProject\\5;20070314.215817;(build-3, build-2, label_27_1m, label_27, label_26, label_25, label_24, label_23, label_22, testProject_TW2600)" });
-//    System.err.println(parser);
-//    parser = new VersionParser(new String[] { "directory version;.@@\\main\\lesya_testProject\\4;20070314.215806;" });
-//    System.err.println(parser);
-//    // File file = new
-//    // File("Z:\\data\\kdonskov_view_swiftteams\\swiftteams\\tests");
-//    // String[] tree = lsVTree(file);
-//    // for (String version : tree) {
-//    // VersionParser parser = describe(file, version);
-//    // System.err.println(parser);
-//    // }
-//    // ChangeParser[] out = parseUpdateOut(new FileInputStream(file));
-//    // System.err.println(Arrays.asList(out));
+    System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\inner.folder"), new File("C:\\test.folder\\aa.txt")));
+
+    // VersionParser parser = new VersionParser(new String[] {
+    // "directory version;.@@\\main\\lesya_testProject\\5;20070314.215817;(build-3, build-2, label_27_1m, label_27, label_26, label_25, label_24, label_23, label_22, testProject_TW2600)"
+    // });
+    // System.err.println(parser);
+    // parser = new VersionParser(new String[] {
+    // "directory version;.@@\\main\\lesya_testProject\\4;20070314.215806;" });
+    // System.err.println(parser);
+    // // File file = new
+    // // File("Z:\\data\\kdonskov_view_swiftteams\\swiftteams\\tests");
+    // // String[] tree = lsVTree(file);
+    // // for (String version : tree) {
+    // // VersionParser parser = describe(file, version);
+    // // System.err.println(parser);
+    // // }
+    // // ChangeParser[] out = parseUpdateOut(new FileInputStream(file));
+    // // System.err.println(Arrays.asList(out));
   }
 
 }
