@@ -41,7 +41,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   public UpdatePolicy getUpdatePolicy() {
-    return new ConvensionBasedSourceProvider();
+    return /*new LinkBasedSourceProvider()*/new ConvensionBasedSourceProvider();
   }
 
   public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
@@ -49,6 +49,10 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       Util.execAndWait(getCheckExecutionCommand());
       return true;
     } catch (Exception e) {
+      LOG.debug(String.format("Failed to use ClearCase checkout on agent. See details below."));
+      LOG.debug(String.format("User: %s", System.getProperty("user.name")));
+      LOG.debug(String.format("Path: %s", System.getenv("PATH")));
+      LOG.debug(String.format("Error: %s", e.getMessage()));      
       return false;
     }
   }
