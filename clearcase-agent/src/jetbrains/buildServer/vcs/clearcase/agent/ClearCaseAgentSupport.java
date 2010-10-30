@@ -15,23 +15,28 @@
  */
 package jetbrains.buildServer.vcs.clearcase.agent;
 
+import java.util.regex.Pattern;
+
 import jetbrains.buildServer.TextLogger;
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.vcs.AgentVcsSupport;
 import jetbrains.buildServer.agent.vcs.AgentVcsSupportCore;
 import jetbrains.buildServer.agent.vcs.UpdatePolicy;
+import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
 
 public class ClearCaseAgentSupport extends AgentVcsSupport {
-  
+
   static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);
   
-  public ClearCaseAgentSupport(){
+  private Boolean canRun;
+
+  public ClearCaseAgentSupport() {
   }
-  
+
   public String getName() {
     return Constants.NAME;
   }
@@ -45,21 +50,43 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
-    try{
+    if(canRun == null){
+      canRun = canRun(config);
+    }
+    return canRun;
+  }
+  
+  private boolean canRun(BuildAgentConfiguration config){
+    //check variable is set and set executable path to CTool if exists 
+    final String cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
+    if(cleartoolExecPath != null){
+      CTool.setCleartoolExecutable(cleartoolExecPath);
+    }
+    //check can run
+    try {
       Util.execAndWait(getCheckExecutionCommand());
       return true;
     } catch (Exception e) {
-      LOG.info(String.format("Failed to use ClearCase checkout on the agent. See details below."));
-      LOG.info(String.format("User: %s", System.getProperty("user.name")));
-      LOG.info(String.format("Path: %s", System.getenv("PATH")));
-      LOG.info(String.format("Error message: %s", e.getMessage()));
-      LOG.debug(e);      
+      if (isCleartoolNotFound(e)) {
+        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" environment variable is not defined.", CTool.CLEARTOOL_EXEC_PATH_ENV));        
+      } else {
+        LOG.info(String.format("ClearCase agent checkout is disabled for some reasons. Turn on DEBUG logging level for more detail."));
+      }
+      LOG.debug(String.format("User: %s", System.getProperty("user.name")));
+      LOG.debug(String.format("Path: %s", System.getenv("PATH")));
+      LOG.debug(String.format("Error message: %s", e.getMessage()));
+      LOG.debug(e);
       return false;
     }
+    
   }
-  
+
+  boolean isCleartoolNotFound(Exception e) {
+    return Pattern.matches(String.format(".*CreateProcess: %s error=2", getCheckExecutionCommand()), e.getMessage().trim());
+  }
+
   protected String getCheckExecutionCommand() {
-    return "cleartool hostinfo"; 
+    return String.format("%s hostinfo", CTool.getCleartoolExecutable());
   }
 
 }

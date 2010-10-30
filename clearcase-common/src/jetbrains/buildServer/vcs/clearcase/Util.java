@@ -53,6 +53,7 @@ public class Util {
   }
 
   public static String[] execAndWait(String command, String[] envp, File dir) throws IOException, InterruptedException {
+    LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
     Process process = Runtime.getRuntime().exec(command, envp, dir);
     // if(stdin != null){
     // process.getOutputStream().write(stdin.getBytes());

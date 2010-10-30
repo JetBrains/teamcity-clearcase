@@ -16,15 +16,17 @@
 package jetbrains.buildServer.vcs.clearcase;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import jetbrains.buildServer.vcs.clearcase.CTool.ChangeParser;
+import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 import org.apache.log4j.Logger;
+
+import com.intellij.openapi.util.io.FileUtil;
 
 public class CCSnapshotView {
 
@@ -174,6 +176,23 @@ public class CCSnapshotView {
     } catch (Exception e) {
       throw new CCException(e);
     }
+  }
+  
+  public CCHistory[] getHistory(File file) throws CCException {
+    try {
+      final HistoryParser[] history = CTool.lsHistory(file, false);
+      return wrap(history);
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }
+  
+  private CCHistory[] wrap(HistoryParser[] parsers) {
+    final ArrayList<CCHistory> out = new ArrayList<CCHistory>(parsers.length);
+    for (final HistoryParser parser : parsers) {
+      out.add(new CCHistory(this, parser));
+    }
+    return out.toArray(new CCHistory[out.size()]);
   }
   
   private CCDelta[] wrap(final ChangeParser[] parsers) {

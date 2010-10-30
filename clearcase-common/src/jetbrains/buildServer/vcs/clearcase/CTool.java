@@ -40,10 +40,35 @@ import org.apache.log4j.Logger;
 
 public class CTool {
 
+  public static final String CLEARTOOL_EXEC_PATH_ENV = "TEAMCITY_CLEARTOOL_PATH";
+
+  private static final String CMD_DESCRIBE = "{0} describe -fmt \"%m;%En@@%Vn;%Nd;%l\" \"{1}\"";
+  private static final String CMD_LSVTREE = "%s lsvtree -obs -all %s";
+  private static final String CMD_DSCRVIEW = "%s lsview -cview -long";
+  private static final String CMD_LSVIEW = "%s lsview -long";
+  private static final String CMD_LSLOCATIONS = "%s lsstgloc -vob -long";
+  private static final String CMD_LSVOB = "%s lsvob -long";
+  private static final String CMD_LSHISTORY_CONTAINING = "%s lshistory -fmt \"%s\" %s";
+  private static final String CMD_LSHISTORY_CONTAINER = "%s lshistory -directory -fmt \"%s\" %s";
+  private static final String CMD_LSCHANGE = "%s update -print -log \"%s\"";
+  private static final String CMD_UPDATE = "%s update -force -overwrite -log \"%s\"";
+  private static final String CMD_MKVIEW = "%s mkview -snapshot -tag %s -tcomment \"%s\" \"%s\"";
+  private static final String CMD_RMVIEW = "%s rmview -force %s";
+  private static final String CMD_RMVOB = "%s rmvob -force %s";
+  private static final String CMD_SETCS = "%s setcs \"%s\"";
+  private static final String CMD_RMVER = "%s rmver -force -version %s -c \"%s\" \"%s\"";
+  private static final String CMD_RMELEM = "%s rmelem -force -c \"%s\" \"%s\"";
+  private static final String CMD_RMNAME = "%s rmname -force -c \"%s\" \"%s\"";
+  private static final String CMD_CHECKIN = "%s checkin -identical -nwarn -c \"%s\" \"%s\"";
+  private static final String CMD_MKELEM = "%s mkelem -nwarn -c \"%s\" \"%s\"";
+  private static final String CMD_CHECKOUT = "%s checkout -c \"%s\" \"%s\"";
+  private static final String CMD_CATCS = "%s catcs -tag %s";
+
   private static final Logger LOG = Logger.getLogger(CTool.class);
 
   private static String ourSessionUser;
   private static String ourSessionPassword;
+  private static String ourCleartoolExecutable = "cleartool";
 
   static final List<String> DEFAULT_CONFIG_SPECS = Collections.unmodifiableList(new ArrayList<String>() {
     private static final long serialVersionUID = 1L;
@@ -52,6 +77,18 @@ public class CTool {
       add("element * /main/LATEST");
     }
   });
+
+  public static String getCleartoolExecutable() {
+    return ourCleartoolExecutable;
+  }
+
+  public static void setCleartoolExecutable(final String executable) {
+    if (executable != null) {
+      ourCleartoolExecutable = executable.trim();
+    } else {
+      LOG.warn(String.format("Could not set CleartoolExecutable to \"null\""));
+    }
+  }
 
   /**
    * the account uses for PsExec execution only
@@ -68,7 +105,7 @@ public class CTool {
     if (isVobExists(tag)) {
       throw new IOException(String.format("The VOB \"%s\" already exists", tag));
     }
-    final String command = String.format("cleartool mkvob -tag %s -c \"%s\" -stgloc -auto", tag, reason);
+    final String command = String.format("%s mkvob -tag %s -c \"%s\" -stgloc -auto", getCleartoolExecutable(), tag, reason);
     final String[] execAndWait = Util.execAndWait(command);
     LOG.debug(String.format("The Vob created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
@@ -76,7 +113,7 @@ public class CTool {
 
   private static boolean isVobExists(String tag) {
     try {
-      Util.execAndWait(String.format("cleartool lsvob \\%s", tag));
+      Util.execAndWait(String.format("%s lsvob \\%s", getCleartoolExecutable(), tag));
       return true;
     } catch (Exception e) {
       return false;
@@ -139,7 +176,7 @@ public class CTool {
         // psexec writes own output to stderr
       }
       // read VOB properties
-      final VobObjectParser vobObjectResult = new VobObjectParser(Util.execAndWait(String.format("cleartool lsvob -long \\%s", tag)));
+      final VobObjectParser vobObjectResult = new VobObjectParser(Util.execAndWait(String.format("%s lsvob -long \\%s", getCleartoolExecutable(), tag)));
       if (vobObjectResult.getGlobalPath() == null) {
         throw new IOException(String.format("Could not create %s VOB", tag));
       }
@@ -158,18 +195,18 @@ public class CTool {
   }
 
   static void dropVob(String globalPath) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool rmvob -force %s", globalPath));
+    Util.execAndWait(String.format(CMD_RMVOB, getCleartoolExecutable(), globalPath));
     LOG.debug(String.format("The Vob \"%s\" has been dropt", globalPath));
   }
 
   static void dropView(String globalPath) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool rmview -force %s", globalPath));
+    Util.execAndWait(String.format(CMD_RMVIEW, getCleartoolExecutable(), globalPath));
     LOG.debug(String.format("The View \"%s\" has been dropt", globalPath));
   }
 
   static VobObjectParser createSnapshotView(String tag, File path, String reason) throws IOException, InterruptedException {
     path.getParentFile().mkdirs();
-    final String command = String.format("cleartool mkview -snapshot -tag %s -tcomment \"%s\" \"%s\"", tag, reason, path.getAbsolutePath());
+    final String command = String.format(CMD_MKVIEW, getCleartoolExecutable(), tag, reason, path.getAbsolutePath());
     final String[] execAndWait = Util.execAndWait(command);
     LOG.debug(String.format("View created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
@@ -178,13 +215,9 @@ public class CTool {
   static ChangeParser[] update(final File path, final Date to) throws IOException, InterruptedException {
     final File file = Util.createTempFile();
     try {
-      final String command = String.format("cleartool update -force -overwrite -log \"%s\"", file.getAbsolutePath());
+      final String command = String.format(CMD_UPDATE, getCleartoolExecutable(), file.getAbsolutePath());
       Util.execAndWait(command, path);
       return parseUpdateOut(new FileInputStream(file));
-      // return
-      // parseUpdateOut(/*Util.execAndWait("cleartool update -force -overwrite",*/
-      // getFullEnvp(new String[] { "CCASE_NO_LOG=true" }),
-      // path));
     } finally {
       file.delete();
     }
@@ -193,12 +226,28 @@ public class CTool {
   static ChangeParser[] lsChange(File path) throws IOException, InterruptedException {
     final File file = Util.createTempFile();
     try {
-      final String command = String.format("cleartool update -print -log \"%s\"", file.getAbsolutePath());
+      final String command = String.format(CMD_LSCHANGE, getCleartoolExecutable(), file.getAbsolutePath());
       Util.execAndWait(command, path);
       return parseUpdateOut(new FileInputStream(file));
     } finally {
       file.delete();
     }
+
+  }
+
+  static HistoryParser[] lsHistory(File file, boolean isDirectory) throws IOException, InterruptedException {
+    final String command;
+    if (isDirectory) {
+      command = String.format(CMD_LSHISTORY_CONTAINER, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT, file.getAbsolutePath());
+    } else {
+      command = String.format(CMD_LSHISTORY_CONTAINING, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT, file.getAbsolutePath());
+    }
+    final ArrayList<HistoryParser> buffer = new ArrayList<HistoryParser>();
+    final String[] output = Util.execAndWait(command);
+    for (String line : output) {
+      buffer.add(new HistoryParser(line));
+    }
+    return buffer.toArray(new HistoryParser[buffer.size()]);
 
   }
 
@@ -230,7 +279,7 @@ public class CTool {
   }
 
   static VobParser[] lsVob() throws IOException, InterruptedException {
-    final String command = "cleartool lsvob -long";
+    final String command = String.format(CMD_LSVOB, getCleartoolExecutable());
     final String[] stdOut = Util.execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<VobParser> out = new ArrayList<VobParser>();
@@ -252,7 +301,7 @@ public class CTool {
   }
 
   static StorageParser[] lsStgLoc() throws IOException, InterruptedException {
-    final String command = "cleartool lsstgloc -vob -long";
+    final String command = String.format(CMD_LSLOCATIONS, getCleartoolExecutable());
     final String[] stdOut = Util.execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<StorageParser> out = new ArrayList<StorageParser>();
@@ -274,7 +323,7 @@ public class CTool {
   }
 
   static ViewParser[] lsView() throws IOException, InterruptedException {
-    final String command = "cleartool lsview -long";
+    final String command = String.format(CMD_LSVIEW, getCleartoolExecutable());
     final String[] stdOut = Util.execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<ViewParser> out = new ArrayList<ViewParser>();
@@ -292,13 +341,13 @@ public class CTool {
     if (!buffer.isEmpty()) {
       // do_not_forget_the_last
       out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));// do
-                                                                         // not
+      // not
     }
     return out.toArray(new ViewParser[out.size()]);
   }
 
   static ViewParser lsView(File root) throws IOException, InterruptedException {
-    final String command = "cleartool lsview -cview -long";
+    final String command = String.format(CMD_DSCRVIEW, getCleartoolExecutable());
     return new ViewParser(Util.execAndWait(command, root));
   }
 
@@ -308,12 +357,7 @@ public class CTool {
   public static String[] lsVTree(File root) throws IOException, InterruptedException {
     final File executionFolder = getFolder(root);
     final String relativePath = FileUtil.getRelativePath(executionFolder, root);
-    final String command = String.format("cleartool lsvtree -obs -all %s", relativePath/*
-                                                                                        * root.
-                                                                                        * getAbsolutePath
-                                                                                        * (
-                                                                                        * )
-                                                                                        */);
+    final String command = String.format(CMD_LSVTREE, getCleartoolExecutable(), relativePath);
     final String[] rawOut = Util.execAndWait(command, executionFolder);
     // remove labels info
     final ArrayList<String> out = new ArrayList<String>(rawOut.length);
@@ -329,17 +373,12 @@ public class CTool {
   }
 
   public static VersionParser describe(File root, String version) throws IOException, InterruptedException {
-    final String command = MessageFormat.format("cleartool describe -fmt \"%m;%En@@%Vn;%Nd;%l\" \"{0}\"", version);
+    final String command = MessageFormat.format(CMD_DESCRIBE, getCleartoolExecutable(), version);
     return new VersionParser(Util.execAndWait(command, getFolder(root)));
   }
 
   private static File getFolder(File file) {
     return file.isDirectory() ? file : file.getParentFile();
-  }
-
-  static String[] catCs(File root) throws IOException, InterruptedException {
-    final String command = "cleartool catcs";
-    return Util.execAndWait(command, root);
   }
 
   interface ICCOutputParser {
@@ -458,6 +497,69 @@ public class CTool {
 
     protected String getRest(String trim, String tagToken) {
       return trim.substring(tagToken.length(), trim.length()).trim();
+    }
+
+  }
+
+  static class HistoryParser {
+
+    private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyyMMddHHmmss");
+    static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
+    private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
+
+    // cleartool lshistory -fmt
+    // "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\n" .
+    // 20101019.134210#--#f0eb67e7c0fa9bcb7d73215e64d51721#--#version#--#\main\1#--#checkin#--#create
+    // version#--#Time delta meter#--#
+    // cleartool lshistory -directory -fmt
+    // "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\n" .
+    // 20101019.134211#--#.#--#directory version#--#\main\9#--#checkin#--#create
+    // directory version#--#Time delta meter#--#
+    private boolean isValid;
+    final Date date;
+    final String path;
+    final String kind;
+    final String version;
+    final String operation;
+    final String event;
+    final String comment;
+    final String activity;
+
+    HistoryParser(String line) throws IOException {
+      final Matcher matcher = PATTERN.matcher(line.trim());
+      if (matcher.matches()) {
+        try {
+          // date
+          final String dateStr = String.format("%s%s%s%s%s%s", matcher.group(1), matcher.group(2), matcher.group(3), matcher.group(4), matcher.group(5), matcher.group(6));
+          date = DATE_FORMATTER.parse(dateStr);
+          // relative path(object)
+          path = matcher.group(7);
+          // kind
+          kind = matcher.group(8);
+          // version
+          version = matcher.group(9);
+          // operation
+          operation = matcher.group(10);
+          // event
+          event = matcher.group(11);
+          // comment
+          comment = matcher.group(12);
+          // activity
+          activity = matcher.group(13);
+          // all parsed
+          isValid = true;
+          return;
+
+        } catch (Exception e) {
+          throw new IOException(e.getMessage());
+
+        }
+      }
+      throw new IOException(String.format("The \"%s\" output line is not matched", line));
+    }
+
+    boolean isValid() {
+      return isValid;
     }
 
   }
@@ -704,7 +806,7 @@ public class CTool {
       // "-overwrite" does not support by 2003 final String command =
       // String.format("cleartool setcs -overwrite \"%s\"",
       // cffile.getAbsolutePath());
-      final String command = String.format("cleartool setcs \"%s\"", cffile.getAbsolutePath());
+      final String command = String.format(CMD_SETCS, getCleartoolExecutable(), cffile.getAbsolutePath());
       try {
         Util.execAndWait(command, myLocalPath);
         return new ChangeParser[0];// should not reach there
@@ -731,57 +833,33 @@ public class CTool {
   }
 
   static List<String> getConfigSpecs(final String viewTag) throws IOException, InterruptedException {
-    final String command = String.format("cleartool catcs -tag %s", viewTag);
+    final String command = String.format(CMD_CATCS, getCleartoolExecutable(), viewTag);
     final String[] result = Util.execAndWait(command);
     return Arrays.asList(result);
   }
 
   static void checkout(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool checkout -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+    Util.execAndWait(String.format(CMD_CHECKOUT, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void mkelem(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool mkelem -nwarn -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+    Util.execAndWait(String.format(CMD_MKELEM, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void checkin(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool checkin -identical -nwarn -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+    Util.execAndWait(String.format(CMD_CHECKIN, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void rmname(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool rmname -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+    Util.execAndWait(String.format(CMD_RMNAME, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
-  
+
   static void rmelem(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool rmelem -force -c \"%s\" \"%s\"", reason, file.getAbsolutePath()), root);
+    Util.execAndWait(String.format(CMD_RMELEM, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void rmver(File root, File file, String version, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format("cleartool rmver -force -version %s -c \"%s\" \"%s\"", version, reason, file.getAbsolutePath()), root);
-  }
-
-  // rmver -force -version \main\rel2_bugfix\1 util.c
-  public static void main(String[] args) throws Exception {
-    System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\"), new File("C:\\test.folder\\")));
-    System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\"), new File("C:\\test.folder\\aa.txt")));
-    System.err.println(FileUtil.getRelativePath(new File("C:\\test.folder\\inner.folder"), new File("C:\\test.folder\\aa.txt")));
-
-    // VersionParser parser = new VersionParser(new String[] {
-    // "directory version;.@@\\main\\lesya_testProject\\5;20070314.215817;(build-3, build-2, label_27_1m, label_27, label_26, label_25, label_24, label_23, label_22, testProject_TW2600)"
-    // });
-    // System.err.println(parser);
-    // parser = new VersionParser(new String[] {
-    // "directory version;.@@\\main\\lesya_testProject\\4;20070314.215806;" });
-    // System.err.println(parser);
-    // // File file = new
-    // // File("Z:\\data\\kdonskov_view_swiftteams\\swiftteams\\tests");
-    // // String[] tree = lsVTree(file);
-    // // for (String version : tree) {
-    // // VersionParser parser = describe(file, version);
-    // // System.err.println(parser);
-    // // }
-    // // ChangeParser[] out = parseUpdateOut(new FileInputStream(file));
-    // // System.err.println(Arrays.asList(out));
+    Util.execAndWait(String.format(CMD_RMVER, getCleartoolExecutable(), version, reason, file.getAbsolutePath()), root);
   }
 
 }

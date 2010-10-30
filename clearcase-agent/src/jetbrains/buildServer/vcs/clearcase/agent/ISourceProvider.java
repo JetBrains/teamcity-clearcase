@@ -30,6 +30,6 @@ interface ISourceProvider extends UpdateByCheckoutRules2 {
   
   String[] getConfigSpecs(AgentRunningBuild build, VcsRoot root) throws CCException; 
   
-  void publish(CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException;
+  void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException;
   
 }

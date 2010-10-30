@@ -18,10 +18,6 @@ package jetbrains.buildServer.vcs.clearcase;
 
 public class CCDelta {
   
-  public enum Kind {
-    ADDITION, MODIFICATION, DELETION
-  }
-
   private CCSnapshotView myView;
   
   private Kind myKind;

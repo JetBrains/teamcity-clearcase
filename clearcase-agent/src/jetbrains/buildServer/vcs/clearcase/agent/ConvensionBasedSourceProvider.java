@@ -65,7 +65,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
     
   };
 
-  public void publish(CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
+  public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
     //do nothing. all data already should be in the checkout directory
   }
   
