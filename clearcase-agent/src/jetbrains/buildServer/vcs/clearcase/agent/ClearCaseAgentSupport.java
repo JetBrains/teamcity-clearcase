@@ -31,7 +31,7 @@ import org.apache.log4j.Logger;
 public class ClearCaseAgentSupport extends AgentVcsSupport {
 
   static final Logger LOG = Logger.getLogger(ClearCaseAgentSupport.class);
-  
+
   private Boolean canRun;
 
   public ClearCaseAgentSupport() {
@@ -50,16 +50,16 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
-    if(canRun == null){
+    if (canRun == null) {
       canRun = canRun(config);
     }
     return canRun;
   }
-  
-  private boolean canRun(BuildAgentConfiguration config){
+
+  private boolean canRun(BuildAgentConfiguration config) {
     //check variable is set and set executable path to CTool if exists 
     final String cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
-    if(cleartoolExecPath != null){
+    if (cleartoolExecPath != null) {
       CTool.setCleartoolExecutable(cleartoolExecPath);
     }
     //check can run
@@ -68,17 +68,18 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       return true;
     } catch (Exception e) {
       if (isCleartoolNotFound(e)) {
-        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" environment variable is not defined.", CTool.CLEARTOOL_EXEC_PATH_ENV));        
+        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" environment variable is not defined.", CTool.CLEARTOOL_EXEC_PATH_ENV));
       } else {
-        LOG.info(String.format("ClearCase agent checkout is disabled for some reasons. Turn on DEBUG logging level for more detail."));
+        LOG.info(String.format("ClearCase agent checkout is disabled for some reasons. %s", LOG.isDebugEnabled() ? "See more detail below:" : "Turn on DEBUG logging level for more detail."));
       }
       LOG.debug(String.format("User: %s", System.getProperty("user.name")));
       LOG.debug(String.format("Path: %s", System.getenv("PATH")));
+      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, cleartoolExecPath));
       LOG.debug(String.format("Error message: %s", e.getMessage()));
       LOG.debug(e);
       return false;
     }
-    
+
   }
 
   boolean isCleartoolNotFound(Exception e) {
