@@ -374,7 +374,6 @@ public class CTool {
 
   public static VersionParser describe(File root, String version) throws IOException, InterruptedException {
     final String command = MessageFormat.format(CMD_DESCRIBE, getCleartoolExecutable(), version);
-    System.out.println("Describe:" + command);
     return new VersionParser(Util.execAndWait(command, getFolder(root)));
   }
 
