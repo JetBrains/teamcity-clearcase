@@ -16,10 +16,19 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vcs.VcsException;
-import java.io.*;
-import jetbrains.buildServer.serverSide.TeamCityProperties;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
   private final InputStream myInput;
@@ -119,11 +128,14 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     };
   }
 
-  private void cleanStreams(InputStream ...streams) throws IOException {
-    final byte[] buffer = new byte[1024];
-    for (InputStream stream : streams) {
+  private void cleanStreams(InputStream... streams) throws IOException {
+    for (final InputStream stream : streams) {
       if (stream.available() > 0) {
-        while (stream.read(buffer) != -1) {}
+        while (stream.read() != -1) {
+          if (stream.available() == 0) {
+            break;
+          }
+        }
       }
     }
   }
