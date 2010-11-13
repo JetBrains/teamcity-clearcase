@@ -44,7 +44,8 @@ public class CTool {
 
   private static final String CMD_DESCRIBE = "{0} describe -fmt \"%m;%En@@%Vn;%Nd;%l\" \"{1}\"";
   private static final String CMD_LSVTREE = "%s lsvtree -obs -all %s";
-  private static final String CMD_DSCRVIEW = "%s lsview -cview -long";
+  private static final String CMD_DSCRVIEW_IN_FOLDER = "%s lsview -cview -long";
+  private static final String CMD_DSCRVIEW_BY_TAG = "%s lsview -long %s";
   private static final String CMD_LSVIEW = "%s lsview -long";
   private static final String CMD_LSLOCATIONS = "%s lsstgloc -vob -long";
   private static final String CMD_LSVOB = "%s lsvob -long";
@@ -347,8 +348,13 @@ public class CTool {
   }
 
   static ViewParser lsView(File root) throws IOException, InterruptedException {
-    final String command = String.format(CMD_DSCRVIEW, getCleartoolExecutable());
+    final String command = String.format(CMD_DSCRVIEW_IN_FOLDER, getCleartoolExecutable());
     return new ViewParser(Util.execAndWait(command, root));
+  }
+
+  static ViewParser lsView(String viewTag) throws IOException, InterruptedException {
+    final String command = String.format(CMD_DSCRVIEW_BY_TAG, getCleartoolExecutable(), viewTag);
+    return new ViewParser(Util.execAndWait(command));
   }
 
   /**
@@ -781,11 +787,38 @@ public class CTool {
 
   }
 
+  /*
+Tag: buildagent_null_vcsroot_1_kdonskov_swiftteams_view "Clone of the kdonskov_swiftteams_view view"
+  Global path: \\ruspv-win2003-c\ccstg_c\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
+  Server host: ruspv-win2003-c
+  Region: swiftteams
+  Active: NO
+  View tag uuid:d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
+View on host: ruspv-win2003-c
+View server access path: c:\ClearCase_Storage\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
+View uuid: d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
+View attributes: snapshot
+View owner: SWIFTTEAMS\kdonskov    
+   */
   static class ViewParser extends VobParser {
+    
+    static final Pattern VIEW_VIEW_TAG_UID_PATTERN = Pattern.compile("View tag uuid: (.*)");
+    static final Pattern VIEW_UID_PATTERN = Pattern.compile("View uuid: (.*)");    
+
+    private String myUUID;
 
     protected ViewParser(String[] stdout) {
       super(stdout);
+      for(String line : stdout){
+        final Matcher uidMatcher = VIEW_UID_PATTERN.matcher(line.trim());
+        if(uidMatcher.matches()){
+          myUUID = uidMatcher.group(1);
+        }
+      }
+    }
 
+    public String getUUID() {
+      return myUUID;
     }
 
   }

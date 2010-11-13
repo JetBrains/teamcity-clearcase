@@ -19,14 +19,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.clearcase.CTool.ChangeParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 import org.apache.log4j.Logger;
-
-import com.intellij.openapi.util.io.FileUtil;
 
 public class CCSnapshotView {
 
@@ -169,7 +168,7 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   public void drop(File file, String reason) throws CCException {
     try {
       CTool.rmelem(myLocalPath, file, reason);
@@ -177,7 +176,7 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   public CCHistory[] getHistory(File file) throws CCException {
     try {
       final HistoryParser[] history = CTool.lsHistory(file, false);
@@ -186,7 +185,7 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   private CCHistory[] wrap(HistoryParser[] parsers) {
     final ArrayList<CCHistory> out = new ArrayList<CCHistory>(parsers.length);
     for (final HistoryParser parser : parsers) {
@@ -194,7 +193,7 @@ public class CCSnapshotView {
     }
     return out.toArray(new CCHistory[out.size()]);
   }
-  
+
   private CCDelta[] wrap(final ChangeParser[] parsers) {
     final ArrayList<CCDelta> out = new ArrayList<CCDelta>(parsers.length);
     for (final ChangeParser change : parsers) {
@@ -219,7 +218,7 @@ public class CCSnapshotView {
 
   public boolean isAlive() throws CCException {
     try {
-      CTool.lsView(getLocalPath());
+      CTool.lsView(getTag());
       return true;
     } catch (Exception e) {
       LOG.debug(e);
@@ -227,10 +226,26 @@ public class CCSnapshotView {
     }
   }
 
-  public void drop() throws CCException {
+  /**
+   * Regenerates view.dat from the CC Server
+   * @throws CCException
+   */
+  public CCSnapshotView restore() throws CCException {
+    try {
+      final ViewParser parser = CTool.lsView(getTag());
+      final String viewUuid = parser.getUUID();      
+      final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
+      FileUtil.writeFile(new File(getLocalPath(), "view.dat"), content);
+      return this;
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }
+
+  public CCSnapshotView drop() throws CCException {
     try {
       CTool.dropView(getGlobalPath());
-
+      return this;
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -240,5 +255,5 @@ public class CCSnapshotView {
   public String toString() {
     return String.format("{CCSnapshotView: tag=\"%s\", global=\"%s\" local=\"%s\"}", getTag(), getGlobalPath(), getLocalPath());
   }
-  
+
 }

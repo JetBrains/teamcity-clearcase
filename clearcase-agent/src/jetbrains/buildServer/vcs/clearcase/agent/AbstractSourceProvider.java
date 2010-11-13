@@ -56,17 +56,17 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     return configSpecs.split("\n+");
   }
 
-  public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File destFolder, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
+  public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
 
     build.getBuildLogger().targetStarted("Updating from ClearCase repository...");
     try {
-      // check origin exists
-      final String viewRootName = getOriginViewTag(root);
+//      // check origin exists
+//      final String viewRootName = getOriginViewTag(root);
       // obtain cloned origin view
       final String pathWithinView = root.getProperty(Constants.RELATIVE_PATH);
-      final CCSnapshotView ccview = getView(build, viewRootName, root, destFolder, build.getBuildLogger());
+      final CCSnapshotView ccview = getView(build, /*viewRootName, */root, checkoutDirectory, build.getBuildLogger());
       final CCDelta[] changes = setupConfigSpec(ccview, getConfigSpecs(build, root), toVersion);
-      publish(build, ccview, changes, destFolder, pathWithinView, build.getBuildLogger());
+      publish(build, ccview, changes, checkoutDirectory, pathWithinView, build.getBuildLogger());
 
     } catch (Exception e) {
       build.getBuildLogger().buildFailureDescription("Updating from ClearCase repository failed.");
@@ -80,15 +80,15 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
   protected abstract File getCCRootDirectory(AgentRunningBuild build, File checkoutRoot);
 
-  protected CCSnapshotView getView(AgentRunningBuild build, String viewRootName, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+  protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
     // use tmp for build
     final File ccCheckoutRoot = getCCRootDirectory(build, checkoutRoot);
     // scan for exists
-    final CCSnapshotView existingView = findView(build, root, viewRootName, ccCheckoutRoot, logger);
+    final CCSnapshotView existingView = findView(build, root, /*viewRootName, */ccCheckoutRoot, logger);
     if (existingView != null) {
       return existingView;
     }
-    return createNew(build, root, viewRootName, ccCheckoutRoot, logger);
+    return createNew(build, root, /*viewRootName, */ccCheckoutRoot, logger);
   }
 
   /**
@@ -96,12 +96,12 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
    * 
    * @param root
    * @param sourceViewTag
-   * @param checkoutRoot
+   * @param viewRoot
    * @param logger
    * @return
    */
-  protected CCSnapshotView createNew(AgentRunningBuild build, VcsRoot root, String sourceViewTag, File checkoutRoot, BuildProgressLogger logger) throws CCException {
-    final String buildViewTag = getBuildViewTag(build, root, sourceViewTag);
+  protected CCSnapshotView createNew(AgentRunningBuild build, VcsRoot root, /*String sourceViewTag, */File viewRoot, BuildProgressLogger logger) throws CCException {
+    final String buildViewTag = getBuildViewTag(build, root/*, sourceViewTag*/);
     // look for existing view with the same tag and drop it if found
     final CCSnapshotView existingWithTheSameTag = Util.Finder.findView(new CCRegion(), buildViewTag);
     if (existingWithTheSameTag != null) {
@@ -109,8 +109,8 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       existingWithTheSameTag.drop();
     }
     // create new in the checkout directory
-    final CCSnapshotView clone = new CCSnapshotView(buildViewTag, new File(checkoutRoot, sourceViewTag).getAbsolutePath());
-    clone.create(String.format("Clone of the \"%s\" view", sourceViewTag));
+    final CCSnapshotView clone = new CCSnapshotView(buildViewTag, /*new File(*/viewRoot/*, sourceViewTag)*/.getAbsolutePath());
+    clone.create(String.format("Clone view \'%s\' created", buildViewTag));
     return clone;
   }
 
@@ -120,13 +120,12 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
    * @param root
    * @throws CCException
    */
-  protected CCSnapshotView findView(AgentRunningBuild build, VcsRoot root, String viewRootName, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+  protected CCSnapshotView findView(AgentRunningBuild build, VcsRoot root, File viewRoot, BuildProgressLogger logger) throws CCException {
     try {
-      LOG.debug(String.format("findView::expectedViewName: %s", viewRootName));
-      final File candidate = new File(checkoutRoot, viewRootName);
-      if (candidate.exists() && candidate.isDirectory()) {
-        final CCSnapshotView clonedView = new CCSnapshotView(getBuildViewTag(build, root, viewRootName), candidate.getAbsolutePath());
-        LOG.debug(String.format("Found view's folder \"%s\" in %s", viewRootName, checkoutRoot.getAbsolutePath()));
+      LOG.debug(String.format("findView::viewRoot=%s", viewRoot.getAbsolutePath()));
+      if (viewRoot.exists() && viewRoot.isDirectory()) {
+        final CCSnapshotView clonedView = new CCSnapshotView(getBuildViewTag(build, root), viewRoot.getAbsolutePath());
+        LOG.debug(String.format("Found existing view's root folder \"%s\"", viewRoot.getAbsolutePath()));
         return clonedView;
       }
       LOG.debug(String.format("findView::found: %s", "no one suitable view's folder found"));
@@ -137,8 +136,8 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     }
   }
 
-  protected String getBuildViewTag(AgentRunningBuild build, VcsRoot root, String sourceViewTag) throws CCException {
-    return String.format("buildagent_%s_vcsroot_%s_%s", build.getAgentConfiguration().getName(), root.getId(), sourceViewTag);
+  protected String getBuildViewTag(AgentRunningBuild build, VcsRoot root) throws CCException {
+    return String.format("buildagent_%s_vcsroot_%s", build.getAgentConfiguration().getName(), root.getId());
   }
 
   protected String getOriginViewTag(VcsRoot root) {
