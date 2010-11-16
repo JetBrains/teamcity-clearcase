@@ -70,7 +70,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       if (isCleartoolNotFound(e)) {
         LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" environment variable is not defined.", CTool.CLEARTOOL_EXEC_PATH_ENV));
       } else {
-        LOG.info(String.format("ClearCase agent checkout is disabled for some reasons. %s", LOG.isDebugEnabled() ? "See more detail below:" : "Turn on DEBUG logging level for more detail."));
+        LOG.info(String.format("ClearCase agent checkout is disabled: %s", e.getMessage()));
       }
       LOG.debug(String.format("User: %s", System.getProperty("user.name")));
       LOG.debug(String.format("Path: %s", System.getenv("PATH")));
