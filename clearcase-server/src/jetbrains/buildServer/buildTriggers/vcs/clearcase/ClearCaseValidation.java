@@ -98,7 +98,6 @@ public class ClearCaseValidation {
   static class ClearcaseConfigurationValidator implements IValidation {
 
     static final String CANNOT_CONTACT_LICENSE_SERVER_PATTERN = "Unable to contact albd_server on host";
-    static final String YOU_DO_NOT_HAVE_LICENSE_TO_RUN_CLEARCASE = "You do not have a license to run ClearCase";
 
     public String getDescription() {
       return "ClearCase Client configuration problem";
