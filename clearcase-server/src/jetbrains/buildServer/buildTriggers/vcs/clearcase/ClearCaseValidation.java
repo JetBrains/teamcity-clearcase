@@ -103,8 +103,6 @@ public class ClearCaseValidation {
       return "ClearCase Client configuration problem";
     }
 
-//    static final Pattern CLIENT_IS_NOT_CONFIGURED = Pattern.compile("(.*)cleartool: Error: Unable to contact albd_server on host '(.*)'(.*)cleartool: Error: (.*)");
-    
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       try {
         Util.execAndWait("cleartool hostinfo");
