@@ -52,7 +52,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
     } else {
       checkoutToRelativePath = FileUtil.normalizeRelativePath(FileUtil.getRelativePath(getCCRootDirectory(build, checkoutDirectory), checkoutDirectory));
     }
-    if (!serverSidePathWithinAView.equals(checkoutToRelativePath)) {
+    if (!new File(serverSidePathWithinAView).equals(new File(checkoutToRelativePath))) {
       LOG.warn(String.format("%s: Wrong checkout directory. Expected \"%s\", but found \"%s\". Perhaps build cannot be succeeded. See more ...", root.getName(), serverSidePathWithinAView, checkoutToRelativePath));
     }
     super.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
@@ -63,11 +63,11 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   }
 
   @Override
-  protected CCSnapshotView getView(AgentRunningBuild build, /*String viewRootName, */VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+  protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
     //use temporary for build
     final File ccCheckoutRoot = getCCRootDirectory(build, checkoutRoot);
     //scan for exists
-    final CCSnapshotView existingOnFileSystemView = findView(build, root, /*viewRootName, */ccCheckoutRoot, logger);
+    final CCSnapshotView existingOnFileSystemView = findView(build, root, ccCheckoutRoot, logger);
     if (existingOnFileSystemView != null) {
       //view's root exist. let's check view exists on server side
       if (isAlive(existingOnFileSystemView)) {
@@ -80,10 +80,10 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
         createNew(build, root, tmpViewRoot, logger);
         FileUtil.delete(tmpViewRoot);
         //try lookup again
-        return getView(build, /*viewRootName, */root, ccCheckoutRoot, logger);
+        return getView(build, root, ccCheckoutRoot, logger);
       }
     }
-    return createNew(build, root, /*viewRootName, */ccCheckoutRoot, logger);
+    return createNew(build, root, ccCheckoutRoot, logger);
   }
 
   private CCSnapshotView restore(CCSnapshotView existingView) throws CCException {
