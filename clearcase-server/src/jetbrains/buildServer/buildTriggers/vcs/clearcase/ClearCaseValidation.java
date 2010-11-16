@@ -168,20 +168,26 @@ public class ClearCaseValidation {
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);      
       try {
-        checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer);
+        if(checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)){
+          debug(String.format("%s.validate(\"%s\"): passed", getClass().getSimpleName(), ccViewPathRootPath));
+          return true;
+        } else {
+          debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewPathRootPath));
+          return false;          
+        }
       } catch (final IOException e) {
         validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewPathRootPath));        
+        debug(String.format("%s.validate(\"%s\"): %s", getClass().getSimpleName(), ccViewPathRootPath, e.getMessage()));        
         return false;
       }
-      debug(String.format("%s.validate(\"%s\"): passed", getClass().getSimpleName(), ccViewPathRootPath));      
-      return true;
     }
 
-    private void checkClearCaseView(String propertyName, String ccViewPath, Collection<InvalidProperty> result) throws IOException {
+    private boolean checkClearCaseView(String propertyName, String ccViewPath, Collection<InvalidProperty> result) throws IOException {
       if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
-        result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view"));
+        result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view\nCheck your \"ClearCase view path\" setting"));
+        return false;
       }
+      return true;
     }
 
     public Collection<InvalidProperty> process(Map<String, String> properties) {
@@ -280,12 +286,12 @@ public class ClearCaseValidation {
   
   private static void debug(String message) {
     LOG.debug(message);
-//    System.out.println(message);
+    System.out.println(message);
   }
 
   private static void debug(Throwable t) {
     LOG.debug(t);
-//    t.printStackTrace(System.out);
+    t.printStackTrace(System.out);
   }
 
   private static String trim(String val) {
