@@ -57,16 +57,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   private boolean canRun(BuildAgentConfiguration config) {
-    //check property(environment variable) is set and set executable path to CTool if exists
-    String cleartoolExecPath = config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP);
-    if (cleartoolExecPath != null) {
-      CTool.setCleartoolExecutable(cleartoolExecPath);
-    } else {
-      cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
-      if (cleartoolExecPath != null) {
-        CTool.setCleartoolExecutable(cleartoolExecPath);
-      }
-    }
+    setupCleartool(config);
     //check can run
     try {
       Util.execAndWait(getCheckExecutionCommand());
@@ -79,12 +70,26 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       }
       LOG.debug(String.format("User: %s", System.getProperty("user.name")));
       LOG.debug(String.format("Path: %s", System.getenv("PATH")));
-      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, cleartoolExecPath));
+      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_PROP, config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP)));      
+      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV)));
       LOG.debug(String.format("Error message: %s", e.getMessage()));
       LOG.debug(e);
       return false;
     }
 
+  }
+
+  private void setupCleartool(BuildAgentConfiguration config) {
+    //check property(environment variable) is set and set executable path to CTool if exists
+    String cleartoolExecPath = config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP);
+    if (cleartoolExecPath != null) {
+      CTool.setCleartoolExecutable(cleartoolExecPath);
+    } else {
+      cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
+      if (cleartoolExecPath != null) {
+        CTool.setCleartoolExecutable(cleartoolExecPath);
+      }
+    }
   }
 
   boolean isCleartoolNotFound(Exception e) {
