@@ -40,7 +40,8 @@ import org.apache.log4j.Logger;
 
 public class CTool {
 
-  public static final String CLEARTOOL_EXEC_PATH_ENV = "TEAMCITY_CLEARTOOL_PATH";
+  public static final String CLEARTOOL_EXEC_PATH_ENV = "CLEARTOOL_PATH";
+  public static final String CLEARTOOL_EXEC_PATH_PROP = "cleartool.path";
 
   private static final String CMD_DESCRIBE = "{0} describe -fmt \"%m;%En@@%Vn;%Nd;%l\" \"{1}\"";
   private static final String CMD_LSVTREE = "%s lsvtree -obs -all %s";

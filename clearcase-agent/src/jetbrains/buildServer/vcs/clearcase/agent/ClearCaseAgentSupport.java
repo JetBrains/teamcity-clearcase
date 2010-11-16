@@ -57,10 +57,15 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   private boolean canRun(BuildAgentConfiguration config) {
-    //check variable is set and set executable path to CTool if exists 
-    final String cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
+    //check property(environment variable) is set and set executable path to CTool if exists
+    String cleartoolExecPath = config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP);
     if (cleartoolExecPath != null) {
       CTool.setCleartoolExecutable(cleartoolExecPath);
+    } else {
+      cleartoolExecPath = config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV);
+      if (cleartoolExecPath != null) {
+        CTool.setCleartoolExecutable(cleartoolExecPath);
+      }
     }
     //check can run
     try {
@@ -68,7 +73,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       return true;
     } catch (Exception e) {
       if (isCleartoolNotFound(e)) {
-        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" environment variable is not defined.", CTool.CLEARTOOL_EXEC_PATH_ENV));
+        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" property is not defined.", CTool.CLEARTOOL_EXEC_PATH_PROP));        
       } else {
         LOG.info(String.format("ClearCase agent checkout is disabled: %s", e.getMessage()));
       }
