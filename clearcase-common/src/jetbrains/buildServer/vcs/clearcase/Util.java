@@ -32,6 +32,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -39,6 +40,27 @@ import org.apache.log4j.Logger;
 public class Util {
 
   private static final Logger LOG = Logger.getLogger(Util.class);
+
+  /**
+   * @param command
+   * @return
+   */
+  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");  
+  //
+
+  public static boolean canRun(String executable) {
+    try {
+      execAndWait(executable);
+    } catch (Exception e) {
+      LOG.debug(e);
+      final Matcher matcher = EXE_NOT_FOUND_PATTERN.matcher(e.getMessage().trim());
+      if (matcher.matches()) {
+        LOG.debug(String.format("Cannot run \"%s\": executable not found", executable));
+        return false;
+      }
+    }
+    return true;
+  }
 
   public static String[] execAndWait(String command) throws IOException, InterruptedException {
     return execAndWait(command, new File("."));
@@ -55,10 +77,6 @@ public class Util {
   public static String[] execAndWait(String command, String[] envp, File dir) throws IOException, InterruptedException {
     LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
     Process process = Runtime.getRuntime().exec(command, envp, dir);
-    // if(stdin != null){
-    // process.getOutputStream().write(stdin.getBytes());
-    // process.getOutputStream().flush();
-    // }
     process.getOutputStream().close();
     final StringBuffer errBuffer = new StringBuffer();
     final StringBuffer outBuffer = new StringBuffer();
@@ -70,7 +88,7 @@ public class Util {
     outReader.join();
     process.getErrorStream().close();
     process.getInputStream().close();
-    if(LOG.isDebugEnabled()){
+    if (LOG.isDebugEnabled()) {
       LOG.debug(outBuffer.toString());
     }
     if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
@@ -86,15 +104,15 @@ public class Util {
           byte[] buffer = new byte[1];
           int in;
           while ((in = inStream.read()) > -1) {// use
-                                               // "final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));"
-                                               // instead
+            // "final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));"
+            // instead
             if (outStream != null) {
               outStream.write(in);
             }
             buffer[0] = (byte) in;
             out.append(new String(buffer));
           }
-          
+
         } catch (IOException e) {
           LOG.error(e.getMessage(), e);
         }
@@ -108,9 +126,9 @@ public class Util {
   public static String createLoadRuleForVob(final CCVob vob) {
     return String.format("load %s", normalizeVobTag(vob.getTag()));
   }
-  
-  static String normalizeVobTag(final String tag){
-    return tag.startsWith("\\")||tag.startsWith("/")? tag : String.format("\\%s", tag.trim());  
+
+  static String normalizeVobTag(final String tag) {
+    return tag.startsWith("\\") || tag.startsWith("/") ? tag : String.format("\\%s", tag.trim());
   }
 
   public static java.io.File createTempFile() throws IOException {
@@ -658,6 +676,10 @@ public class Util {
       }
     }
 
+  }
+  
+  public static void main(String[] args) throws Exception {
+    Runtime.getRuntime().exec("cleartool1.exe");
   }
 
 }

@@ -34,6 +34,11 @@ import java.util.Set;
 
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseGlobalLabelingValidator;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRelativePathValidator;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRootPathValidator;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.IValidation;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ValidationComposite;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
@@ -119,7 +124,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @NotNull
   public static ViewPath getViewPath(@NotNull final VcsRoot vcsRoot) throws VcsException {
     final String viewPath = vcsRoot.getProperty(Constants.VIEW_PATH);
-    if (viewPath != null && viewPath.trim().length() != 0) {
+    if (viewPath != null && trim(viewPath).length() != 0) {
       return getViewPath(viewPath);
     }
     return new ViewPath(vcsRoot.getProperty(Constants.CC_VIEW_PATH), vcsRoot.getProperty(Constants.RELATIVE_PATH));
@@ -178,12 +183,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return sb.toString();
   }
 
-  /*
-   * @NotNull private static ViewPath getViewPath(@NotNull final VcsRoot
-   * vcsRoot, @NotNull final ConfigSpecLoadRule loadRule) throws VcsException {
-   * return new ViewPath(vcsRoot.getProperty(CC_VIEW_PATH),
-   * loadRule.getRelativePath()); }
-   */
   public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
     return doCreateConnection(root, includeRule, false, loadRule);
   }
@@ -209,7 +208,11 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     try {
       return new ClearCaseConnection(viewPath, isUCM, myCache, root, checkCSChange);
     } catch (Exception e) {
-      throw new VcsException(e);
+      if (e instanceof VcsException) {
+        throw (VcsException) e;
+      } else {
+        throw new VcsException(e);
+      }
     }
   }
 
@@ -433,64 +436,75 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @NotNull
   public PropertiesProcessor getVcsPropertiesProcessor() {
     return new AbstractVcsPropertiesProcessor() {
+
       public Collection<InvalidProperty> process(Map<String, String> properties) {
-
-        final List<InvalidProperty> result = new ArrayList<InvalidProperty>();
-        if (isEmpty(properties.get(Constants.CC_VIEW_PATH))) {
-          result.add(new InvalidProperty(Constants.CC_VIEW_PATH, "ClearCase view path must be specified"));
-        } else {
-          try {
-            CCPathElement.normalizePath(Constants.CC_VIEW_PATH);
-            CCPathElement.normalizePath(Constants.RELATIVE_PATH);
-          } catch (VcsException e) {
-            result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
-            return result;
-          }
-
-          final int countBefore = result.size();
-          checkDirectoryProperty(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
-
-          if (result.size() == countBefore) {
-            try {
-              checkClearCaseView(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
-            } catch (final IOException e) {
-              result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
-            }
-          }
-
-          try {
-            if (isEmpty(CCPathElement.normalizePath(properties.get(Constants.RELATIVE_PATH)))) {
-              result.add(new InvalidProperty(Constants.RELATIVE_PATH, "Relative path must not be equal to \".\". At least VOB name must be specified."));
-            } else {
-              final ViewPath viewPath = new ViewPath(properties.get(Constants.CC_VIEW_PATH), properties.get(Constants.RELATIVE_PATH));
-              checkDirectoryProperty(Constants.RELATIVE_PATH, viewPath.getWholePath(), result);
-            }
-          } catch (VcsException e) {
-            result.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getLocalizedMessage()));
-          }
-
-          checkGlobalLabelsVOBProperty(properties, result);
-
+        final ArrayList<InvalidProperty> validationResult = new ArrayList<InvalidProperty>();
+        //collect all validation errors 
+        final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearcaseViewRootPathValidator(), new ClearcaseViewRelativePathValidator(), new ClearcaseGlobalLabelingValidator() });
+        //transform to expected 
+        final Map<IValidation, Collection<InvalidProperty>> result = composite.validate(properties);
+        for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : result.entrySet()) {
+          validationResult.addAll(entry.getValue());
         }
+        return validationResult;
 
-        return result;
+        //        final List<InvalidProperty> result = new ArrayList<InvalidProperty>();
+        //        if (isEmpty(properties.get(Constants.CC_VIEW_PATH))) {
+        //          result.add(new InvalidProperty(Constants.CC_VIEW_PATH, "ClearCase view path must be specified"));
+        //        } else {
+        //          try {
+        //            CCPathElement.normalizePath(Constants.CC_VIEW_PATH);
+        //            CCPathElement.normalizePath(Constants.RELATIVE_PATH);
+        //          } catch (VcsException e) {
+        //            result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
+        //            return result;
+        //          }
+        //
+        //          final int countBefore = result.size();
+        //          checkDirectoryProperty(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
+
+        //----------        
+        //          if (result.size() == countBefore) {
+        //            try {
+        //              checkClearCaseView(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
+        //            } catch (final IOException e) {
+        //              result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
+        //            }
+        //          }
+        //
+        //          try {
+        //            if (isEmpty(CCPathElement.normalizePath(properties.get(Constants.RELATIVE_PATH)))) {
+        //              result.add(new InvalidProperty(Constants.RELATIVE_PATH, "Relative path must not be equal to \".\". At least VOB name must be specified."));
+        //            } else {
+        //              final ViewPath viewPath = new ViewPath(properties.get(Constants.CC_VIEW_PATH), properties.get(Constants.RELATIVE_PATH));
+        //              checkDirectoryProperty(Constants.RELATIVE_PATH, viewPath.getWholePath(), result);
+        //            }
+        //          } catch (VcsException e) {
+        //            result.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getLocalizedMessage()));
+        //          }
+        //
+        //          checkGlobalLabelsVOBProperty(properties, result);
+        //
+        //        }
+        //
+        //        return result;
       }
 
-      private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws IOException {
-        if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
-          result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view"));
-        }
-      }
-
-      private void checkGlobalLabelsVOBProperty(final Map<String, String> properties, final List<InvalidProperty> result) {
-        final boolean useGlobalLabel = "true".equals(properties.get(Constants.USE_GLOBAL_LABEL));
-        if (!useGlobalLabel)
-          return;
-        final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);
-        if (globalLabelsVOB == null || "".equals(globalLabelsVOB.trim())) {
-          result.add(new InvalidProperty(Constants.GLOBAL_LABELS_VOB, "Global labels VOB must be specified"));
-        }
-      }
+      //      private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws IOException {
+      //        if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
+      //          result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view"));
+      //        }
+      //      }
+      //
+      //      private void checkGlobalLabelsVOBProperty(final Map<String, String> properties, final List<InvalidProperty> result) {
+      //        final boolean useGlobalLabel = "true".equals(properties.get(Constants.USE_GLOBAL_LABEL));
+      //        if (!useGlobalLabel)
+      //          return;
+      //        final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);
+      //        if (globalLabelsVOB == null || "".equals(globalLabelsVOB.trim())) {
+      //          result.add(new InvalidProperty(Constants.GLOBAL_LABELS_VOB, "Global labels VOB must be specified"));
+      //        }
+      //      }
     };
   }
 
@@ -533,17 +547,54 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
-  public String testConnection(@NotNull VcsRoot vcsRoot) throws VcsException {
-    final ClearCaseConnection caseConnection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
-    try {
-      try {
-        return caseConnection.testConnection();
-      } finally {
-        caseConnection.dispose();
+  public String testConnection(final @NotNull VcsRoot vcsRoot) throws VcsException {
+    final String[] validationResult = new String[] { "Passed" };
+    //validate in general
+    final ValidationComposite composite = new ValidationComposite(new IValidation[] { 
+        new ClearCaseValidation.ClearcaseViewRootPathValidator(), 
+        new ClearCaseValidation.ClearcaseViewRelativePathValidator(), 
+        new ClearCaseValidation.CleartoolValidator(),
+        new ClearCaseValidation.ClearcaseConfigurationValidator(), 
+        new ClearCaseValidation.ClearcaseViewValidator(), 
+        new ClearCaseValidation.IValidation() {
+          public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
+            try {
+              ClearCaseConnection caseConnection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
+              try {
+                validationResult[0] = caseConnection.testConnection();
+
+              } finally {
+                caseConnection.dispose();
+              }
+            } catch (Exception e) {
+              validationResultBuffer.add(
+                  //it fired by "Relative path..." setting because others already checked hard I guess... 
+                  new InvalidProperty(Constants.RELATIVE_PATH, String.format("%s\nCheck your \"Relative path within the view\" setting", e.getMessage())));
+              LOG.info(e.getMessage());
+              LOG.debug(e);              
+              return false;
+            }
+            return true;
+          }
+
+          public String getDescription() {
+            return "Summary functionality check";
+          }
+        } });
+    //fire validation
+    final Map<IValidation, Collection<InvalidProperty>> validationErrors = composite.validate(vcsRoot.getProperties());
+    //format exception if something is
+    final StringBuffer readableOut = new StringBuffer();
+    if (!validationErrors.isEmpty()) {
+      for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : validationErrors.entrySet()) {
+        for (final InvalidProperty prop : entry.getValue()) {
+          readableOut.append(String.format("%s\n", prop.getInvalidReason()));
+        }
       }
-    } catch (IOException e) {
-      throw new VcsException(e);
+      throw new VcsException(readableOut.toString());
     }
+    //all ok
+    return validationResult[0];
   }
 
   @Nullable
@@ -892,7 +943,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       //collect all clearcase's roots and populate current ConfigSpecs for each
       for (final VcsRootEntry entry : build.getVcsRootEntries()) {
         if (getName().equals(entry.getVcsRoot().getVcsName())) { //looking for clearcase only
-          final String viewPath = entry.getVcsRoot().getProperty(Constants.CC_VIEW_PATH);
+          final String viewPath = trim(entry.getVcsRoot().getProperty(Constants.CC_VIEW_PATH));
           final File viewRoot = new File(viewPath);
           if (viewRoot.exists()) {
             try {
@@ -926,4 +977,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public Collection<String> getParametersAvailableOnAgent(@NotNull SBuild build) {
     return Collections.<String> emptyList();
   }
+
+  static String trim(String string) {
+    if (string != null) {
+      return string.trim();
+    }
+    return null;
+  }
+
 }

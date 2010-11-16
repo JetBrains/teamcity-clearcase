@@ -16,13 +16,13 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.File;
 
-import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.FileRule;
+import jetbrains.buildServer.vcs.VcsException;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * @author maxim.manuylov
@@ -35,8 +35,8 @@ public class ViewPath {
   private String myWholePath;
 
   public ViewPath(@NotNull final String ccViewPath, @Nullable final String relativePath) throws VcsException {
-    myCCViewPath = CCPathElement.normalizePath(ccViewPath);
-    myRelativePath = removeFirstSeparatorIfNeeded(CCPathElement.normalizePath(relativePath == null ? "" : relativePath));
+    myCCViewPath = CCPathElement.normalizePath(ccViewPath.trim());
+    myRelativePath = removeFirstSeparatorIfNeeded(CCPathElement.normalizePath(relativePath == null ? "" : relativePath.trim()));
     myIncludeRuleFrom = null;
     updateWholePath();
   }
