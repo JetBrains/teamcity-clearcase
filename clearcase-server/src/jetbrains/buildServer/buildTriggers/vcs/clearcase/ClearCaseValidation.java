@@ -286,12 +286,12 @@ public class ClearCaseValidation {
   
   private static void debug(String message) {
     LOG.debug(message);
-    System.out.println(message);
+//    System.out.println(message);
   }
 
   private static void debug(Throwable t) {
     LOG.debug(t);
-    t.printStackTrace(System.out);
+//    t.printStackTrace(System.out);
   }
 
   private static String trim(String val) {
