@@ -569,7 +569,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
             } catch (Exception e) {
               validationResultBuffer.add(
                   //it fired by "Relative path..." setting because others already checked hard I guess... 
-                  new InvalidProperty(Constants.RELATIVE_PATH, String.format("%s\nCheck your \"Relative path within the view\" setting", e.getMessage())));
+                  new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))); //$NON-NLS-1$
               LOG.info(e.getMessage());
               LOG.debug(e);              
               return false;

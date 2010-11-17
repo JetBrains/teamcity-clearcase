@@ -35,6 +35,13 @@ public class ClearCaseValidation {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseValidation.class);
 
+  private static final String NO_PARAM_VALIDATION_PASSED = "validation failed"; //$NON-NLS-1$
+  private static final String NO_PARAM_VALIDATION_FAILED = "validation failed"; //$NON-NLS-1$
+  private static final String SINGLE_PARAM_VALIDATION_FAILED = "validation: \"%s\" failed"; //$NON-NLS-1$
+  private static final String SINGLE_PARAM_VALIDATION_PASSED = "validation: \"%s\" passed"; //$NON-NLS-1$
+  private static final String DOUBLLE_PARAM_VALIDATION_PASSED = "validation: %s, \"%s\" passed"; //$NON-NLS-1$
+  private static final String DOUBLLE_PARAM_VALIDATION_FAILED = "validation: %s, \"%s\" failed"; //$NON-NLS-1$
+
   interface IValidation {
     String getDescription();
 
@@ -76,19 +83,19 @@ public class ClearCaseValidation {
    */
   static class CleartoolValidator implements IValidation {
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-      boolean canRun = Util.canRun("cleartool");
+      boolean canRun = Util.canRun("cleartool"); //$NON-NLS-1$
       if (!canRun) {
-        final String reason = String.format("\"cleartool\" is not in PATH");
+        final String reason = String.format(Messages.getString("ClearCaseValidation.cleartool_not_found_message")); //$NON-NLS-1$
         validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, reason));
-        debug(String.format("%s.validate(): failed", getClass().getSimpleName()));        
+        debug(String.format(NO_PARAM_VALIDATION_FAILED, getClass().getSimpleName()));
       } else {
-        debug(String.format("%s.validate(): passed", getClass().getSimpleName()));    
+        debug(String.format(NO_PARAM_VALIDATION_PASSED, getClass().getSimpleName()));
       }
       return canRun;
     }
 
     public String getDescription() {
-      return "Check the \"cleartool\" runnable";
+      return "Check the \"cleartool\" runnable"; //$NON-NLS-1$
     }
   }
 
@@ -97,40 +104,40 @@ public class ClearCaseValidation {
    */
   static class ClearcaseConfigurationValidator implements IValidation {
 
-    static final String CANNOT_CONTACT_LICENSE_SERVER_PATTERN = "Unable to contact albd_server on host";
+    static final String CANNOT_CONTACT_LICENSE_SERVER_PATTERN = "Unable to contact albd_server on host"; //$NON-NLS-1$
 
     public String getDescription() {
-      return "ClearCase Client configuration problem";
+      return "ClearCase Client configuration problem"; //$NON-NLS-1$
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       try {
-        Util.execAndWait("cleartool hostinfo");
-        debug(String.format("%s.validate(): passed", getClass().getSimpleName()));        
+        Util.execAndWait("cleartool hostinfo"); //$NON-NLS-1$
+        debug(String.format(NO_PARAM_VALIDATION_PASSED, getClass().getSimpleName()));
         return true;
       } catch (Exception e) {
         debug(e);
         final String message = trim(e.getMessage());
-        if(message.contains(CANNOT_CONTACT_LICENSE_SERVER_PATTERN)){
-          int beginIndex = message.indexOf("'");
-          final String host = message.substring(beginIndex + 1, message.indexOf("'", beginIndex + 1));
-          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format("ClearCase Client is not configured properly:\n\tError: Unable to contact albd_server on host '%s'", host)));
-          debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), message));          
+        if (message.contains(CANNOT_CONTACT_LICENSE_SERVER_PATTERN)) {
+          int beginIndex = message.indexOf("'"); //$NON-NLS-1$
+          final String host = message.substring(beginIndex + 1, message.indexOf("'", beginIndex + 1)); //$NON-NLS-1$
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_wrong_configured_error_message"), host))); //$NON-NLS-1$
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
         } else {
-          debug(String.format("%s.validate(): \"%s\" is not matched, failed", getClass().getSimpleName(), message));
+          debug(String.format("validation: \"%s\" is not matched, failed", message)); //$NON-NLS-1$
         }
       }
       return false;
     }
   }
-  
+
   /**
    * Checks Global Labeling properties
    */
   static class ClearcaseGlobalLabelingValidator implements IValidation {
 
     public String getDescription() {
-      return "Check Labeling properties";
+      return "Check Labeling properties"; //$NON-NLS-1$
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
@@ -138,16 +145,16 @@ public class ClearCaseValidation {
     }
 
     private boolean checkGlobalLabelsVOBProperty(final Map<String, String> properties, final Collection<InvalidProperty> result) {
-      final boolean useGlobalLabel = "true".equals(properties.get(Constants.USE_GLOBAL_LABEL));
-      final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);      
+      final boolean useGlobalLabel = Boolean.getBoolean(properties.get(Constants.USE_GLOBAL_LABEL));
+      final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);
       if (useGlobalLabel) {
-        if (globalLabelsVOB == null || "".equals(trim(globalLabelsVOB))) {
-          result.add(new InvalidProperty(Constants.GLOBAL_LABELS_VOB, "Global labels VOB must be specified"));
-          debug(String.format("%s.validate(%s, \"%s\"): failed", getClass().getSimpleName(), useGlobalLabel, globalLabelsVOB));          
+        if (globalLabelsVOB == null || trim(globalLabelsVOB).length() == 0) { //$NON-NLS-1$
+          result.add(new InvalidProperty(Constants.GLOBAL_LABELS_VOB, Messages.getString("ClearCaseValidation.global_label_vob_lost_error_message"))); //$NON-NLS-1$
+          debug(String.format(DOUBLLE_PARAM_VALIDATION_FAILED, useGlobalLabel, globalLabelsVOB));
           return false;
         }
       }
-      debug(String.format("%s.validate(%s, \"%s\"): passed", getClass().getSimpleName(), useGlobalLabel, globalLabelsVOB));
+      debug(String.format(DOUBLLE_PARAM_VALIDATION_PASSED, useGlobalLabel, globalLabelsVOB));
       return true;
     }
 
@@ -159,29 +166,29 @@ public class ClearCaseValidation {
   static class ClearcaseViewValidator implements IValidation {
 
     public String getDescription() {
-      return "Check the ClearCase view is alive";
+      return "Check the ClearCase view is alive"; //$NON-NLS-1$
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-      final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);      
+      final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);
       try {
-        if(checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)){
-          debug(String.format("%s.validate(\"%s\"): passed", getClass().getSimpleName(), ccViewPathRootPath));
+        if (checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)) {
+          debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewPathRootPath));
           return true;
         } else {
-          debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewPathRootPath));
-          return false;          
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath));
+          return false;
         }
       } catch (final IOException e) {
         validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
-        debug(String.format("%s.validate(\"%s\"): %s", getClass().getSimpleName(), ccViewPathRootPath, e.getMessage()));        
+        debug(String.format(DOUBLLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath, e.getMessage()));
         return false;
       }
     }
 
     private boolean checkClearCaseView(String propertyName, String ccViewPath, Collection<InvalidProperty> result) throws IOException {
       if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
-        result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view\nCheck your \"ClearCase view path\" setting"));
+        result.add(new InvalidProperty(propertyName, String.format(Messages.getString("ClearCaseValidation.clearcase_view_root_path_does_not_point_to_alive_clearcase_view"), ccViewPath))); //$NON-NLS-1$
         return false;
       }
       return true;
@@ -192,22 +199,22 @@ public class ClearCaseValidation {
     }
 
   }
-  
+
   /**
    * Checks the CC View's root folder set and valid
    */
   static class ClearcaseViewRootPathValidator extends AbstractVcsPropertiesProcessor/*just for checkDirectoryProperty only*/implements IValidation {
 
     public String getDescription() {
-      return "Check ClearCase view path";
+      return "Check ClearCase view path"; //$NON-NLS-1$
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       final String ccViewRootPath = trim(properties.get(Constants.CC_VIEW_PATH));
       //check path exists
       if (isEmpty(ccViewRootPath)) {
-        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, "ClearCase view path must be specified"));
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRootPath));        
+        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, Messages.getString("ClearCaseValidation.clearcase_view_root_path_missed"))); //$NON-NLS-1$
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
         return false;
       }
       //check paths is well formed 
@@ -215,17 +222,17 @@ public class ClearCaseValidation {
         CCPathElement.normalizePath(ccViewRootPath);
       } catch (VcsException e) {
         validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRootPath));
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
         return false;
       }
       //check path is directory? 
       final int countBefore = validationResultBuffer.size();
       checkDirectoryProperty(Constants.CC_VIEW_PATH, ccViewRootPath, validationResultBuffer);
       if (countBefore != validationResultBuffer.size()) {
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRootPath));        
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
         return false;
       }
-      debug(String.format("%s.validate(\"%s\"): passed", getClass().getSimpleName(), ccViewRootPath));      
+      debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewRootPath));
       return true;
     }
 
@@ -241,26 +248,26 @@ public class ClearCaseValidation {
   static class ClearcaseViewRelativePathValidator extends AbstractVcsPropertiesProcessor/*just for checkDirectoryProperty only*/implements IValidation {
 
     public String getDescription() {
-      return "Check ClearCase relative view path";
+      return "Check ClearCase relative view path"; //$NON-NLS-1$
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       //check path exists
       final String ccViewRelativePath = trim(properties.get(Constants.RELATIVE_PATH));
       if (isEmpty(ccViewRelativePath)) {
-        validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, "Relative path must be specified"));
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRelativePath));        
+        validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, Messages.getString("ClearCaseValidation.clearcase_view_relative_path_missed"))); //$NON-NLS-1$
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
         return false;
       }
       //check paths is well formed 
       try {
         final String normalizedPath = CCPathElement.normalizePath(ccViewRelativePath);
         if (isEmpty(normalizedPath)) {
-          validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, "Relative path must not be equal to \".\". At least VOB name must be specified."));
+          validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, Messages.getString("ClearCaseValidation.clearcase_view_relative_path_does_not_point_to_inner_folder"))); //$NON-NLS-1$
         }
       } catch (VcsException e) {
         validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getMessage()));
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRelativePath));        
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
         return false;
       }
       //check path is directory? 
@@ -268,10 +275,10 @@ public class ClearCaseValidation {
       final String pathWithinTheView = new File(trim(properties.get(Constants.CC_VIEW_PATH)), ccViewRelativePath).getAbsolutePath();
       checkDirectoryProperty(Constants.RELATIVE_PATH, pathWithinTheView, validationResultBuffer);
       if (countBefore != validationResultBuffer.size()) {
-        debug(String.format("%s.validate(\"%s\"): failed", getClass().getSimpleName(), ccViewRelativePath));        
+        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
         return false;
       }
-      debug(String.format("%s.validate(\"%s\"): passed", getClass().getSimpleName(), ccViewRelativePath));      
+      debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewRelativePath));
       return true;
     }
 
@@ -280,15 +287,15 @@ public class ClearCaseValidation {
     }
 
   }
-  
+
   private static void debug(String message) {
     LOG.debug(message);
-//    System.out.println(message);
+    //    System.out.println(message);
   }
 
   private static void debug(Throwable t) {
     LOG.debug(t);
-//    t.printStackTrace(System.out);
+    //    t.printStackTrace(System.out);
   }
 
   private static String trim(String val) {
