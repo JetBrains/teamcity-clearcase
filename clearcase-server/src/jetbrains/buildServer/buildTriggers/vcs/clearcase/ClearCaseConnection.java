@@ -16,17 +16,26 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.openapi.util.SystemInfo;
-import com.intellij.openapi.util.io.FileUtil;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.text.ParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import jetbrains.buildServer.CommandLineExecutor;
 import jetbrains.buildServer.ExecResult;
 import jetbrains.buildServer.ProcessListener;
@@ -44,14 +53,19 @@ import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.VcsRootUtil;
 import jetbrains.buildServer.vcs.clearcase.CTool;
-import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
+
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.SystemInfo;
+import com.intellij.openapi.util.io.FileUtil;
 
 @SuppressWarnings({"SimplifiableIfStatement"})
 public class ClearCaseConnection {
@@ -303,7 +317,7 @@ public class ClearCaseConnection {
   private InputStream getChanges(final String since, final String options) throws VcsException {
     final String viewWholePath = getViewWholePath();
     final String preparedOptions = options.replace(PATH, insertDots(viewWholePath, true));
-    return executeSimpleProcess(viewWholePath, preparedOptions, new String[]{"lshistory", "-eventid", "-since", since, "-fmt", FORMAT});
+    return executeSimpleProcess(viewWholePath, preparedOptions, new String[]{ "lshistory", "-eventid", "-since", since, "-fmt", FORMAT });
   }
 
   @NotNull
@@ -345,9 +359,6 @@ public class ClearCaseConnection {
   private String getLSHistoryOptionsString() {
     final String vcsRootOptionsById = TeamCityProperties.getPropertyOrNull(String.format(Constants.LSHISTORY_VCS_ROOT_OPTIONS_BY_ID, myRoot.getId()));
     if (vcsRootOptionsById != null) return vcsRootOptionsById;
-
-    final String vcsRootOptionsByName = TeamCityProperties.getPropertyOrNull(String.format(Constants.LSHISTORY_VCS_ROOT_OPTIONS_BY_NAME, VcsRootUtil.createSimplifiedName(myRoot)));
-    if (vcsRootOptionsByName != null) return vcsRootOptionsByName;
 
     final String defaultOptions = TeamCityProperties.getPropertyOrNull(Constants.LSHISTORY_DEFAULT_OPTIONS);
     if (defaultOptions != null) return defaultOptions;
