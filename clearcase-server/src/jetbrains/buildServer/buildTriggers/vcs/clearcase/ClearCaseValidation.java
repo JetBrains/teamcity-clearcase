@@ -104,6 +104,7 @@ public class ClearCaseValidation {
    */
   static class ClearcaseConfigurationValidator implements IValidation {
 
+    static final String UNKNOWN_HOST_PATTERN = "Unknown host"; //$NON-NLS-1$    
     static final String CANNOT_CONTACT_LICENSE_SERVER_PATTERN = "Unable to contact albd_server on host"; //$NON-NLS-1$
 
     public String getDescription() {
@@ -118,16 +119,31 @@ public class ClearCaseValidation {
       } catch (Exception e) {
         debug(e);
         final String message = trim(e.getMessage());
-        if (message.contains(CANNOT_CONTACT_LICENSE_SERVER_PATTERN)) {
-          int beginIndex = message.indexOf("'"); //$NON-NLS-1$
-          final String host = message.substring(beginIndex + 1, message.indexOf("'", beginIndex + 1)); //$NON-NLS-1$
-          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_wrong_configured_error_message"), host))); //$NON-NLS-1$
+        if (message.contains(UNKNOWN_HOST_PATTERN)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_cannot_connect_to_host_error_message"), getHost(message)))); //$NON-NLS-1$
           debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
+          
+        } else if (message.contains(CANNOT_CONTACT_LICENSE_SERVER_PATTERN)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_cannot_connect_to_albd_server_error_message"), getHost(message)))); //$NON-NLS-1$
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
+
         } else {
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, message)); //$NON-NLS-1$          
           debug(String.format("validation: \"%s\" is not matched, failed", message)); //$NON-NLS-1$
         }
       }
       return false;
+    }
+    
+    private String getHost(String message){
+      int beginIndex = message.indexOf("'"); //$NON-NLS-1$
+      if(beginIndex != -1){
+        int nextIndex = message.indexOf("'", beginIndex + 1);
+        if(nextIndex != -1){
+          return message.substring(beginIndex + 1, nextIndex); //$NON-NLS-1$
+        }
+      }
+      return message;
     }
   }
 
