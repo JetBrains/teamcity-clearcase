@@ -43,9 +43,10 @@ public class ClearCaseValidation {
   private static final String DOUBLLE_PARAM_VALIDATION_FAILED = "validation: %s, \"%s\" failed"; //$NON-NLS-1$
 
   interface IValidation {
-    String getDescription();
 
+    String getDescription();
     boolean validate(final Map<String, String> properties, final Collection<InvalidProperty> validationResultBuffer);
+    
   }
 
   static class ValidationComposite {
@@ -122,7 +123,7 @@ public class ClearCaseValidation {
         if (message.contains(UNKNOWN_HOST_PATTERN)) {
           validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_cannot_connect_to_host_error_message"), getHost(message)))); //$NON-NLS-1$
           debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
-          
+
         } else if (message.contains(CANNOT_CONTACT_LICENSE_SERVER_PATTERN)) {
           validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, String.format(Messages.getString("ClearCaseValidation.cleartool_cannot_connect_to_albd_server_error_message"), getHost(message)))); //$NON-NLS-1$
           debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
@@ -134,12 +135,12 @@ public class ClearCaseValidation {
       }
       return false;
     }
-    
-    private String getHost(String message){
+
+    private String getHost(String message) {
       int beginIndex = message.indexOf("'"); //$NON-NLS-1$
-      if(beginIndex != -1){
+      if (beginIndex != -1) {
         int nextIndex = message.indexOf("'", beginIndex + 1);
-        if(nextIndex != -1){
+        if (nextIndex != -1) {
           return message.substring(beginIndex + 1, nextIndex); //$NON-NLS-1$
         }
       }
