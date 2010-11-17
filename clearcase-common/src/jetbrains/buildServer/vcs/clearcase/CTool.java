@@ -40,43 +40,43 @@ import org.apache.log4j.Logger;
 
 public class CTool {
 
-  public static final String CLEARTOOL_EXEC_PATH_ENV = "CLEARTOOL_PATH";
-  public static final String CLEARTOOL_EXEC_PATH_PROP = "cleartool.path";
+  public static final String CLEARTOOL_EXEC_PATH_ENV = "CLEARTOOL_PATH"; //$NON-NLS-1$
+  public static final String CLEARTOOL_EXEC_PATH_PROP = "cleartool.path"; //$NON-NLS-1$
 
-  private static final String CMD_DESCRIBE = "{0} describe -fmt \"%m;%En@@%Vn;%Nd;%l\" \"{1}\"";
-  private static final String CMD_LSVTREE = "%s lsvtree -obs -all %s";
-  private static final String CMD_DSCRVIEW_IN_FOLDER = "%s lsview -cview -long";
-  private static final String CMD_DSCRVIEW_BY_TAG = "%s lsview -long %s";
-  private static final String CMD_LSVIEW = "%s lsview -long";
-  private static final String CMD_LSLOCATIONS = "%s lsstgloc -vob -long";
-  private static final String CMD_LSVOB = "%s lsvob -long";
-  private static final String CMD_LSHISTORY_CONTAINING = "%s lshistory -fmt \"%s\" %s";
-  private static final String CMD_LSHISTORY_CONTAINER = "%s lshistory -directory -fmt \"%s\" %s";
-  private static final String CMD_LSCHANGE = "%s update -print -log \"%s\"";
-  private static final String CMD_UPDATE = "%s update -force -overwrite -log \"%s\"";
-  private static final String CMD_MKVIEW = "%s mkview -snapshot -tag %s -tcomment \"%s\" \"%s\"";
-  private static final String CMD_RMVIEW = "%s rmview -force %s";
-  private static final String CMD_RMVOB = "%s rmvob -force %s";
-  private static final String CMD_SETCS = "%s setcs \"%s\"";
-  private static final String CMD_RMVER = "%s rmver -force -version %s -c \"%s\" \"%s\"";
-  private static final String CMD_RMELEM = "%s rmelem -force -c \"%s\" \"%s\"";
-  private static final String CMD_RMNAME = "%s rmname -force -c \"%s\" \"%s\"";
-  private static final String CMD_CHECKIN = "%s checkin -identical -nwarn -c \"%s\" \"%s\"";
-  private static final String CMD_MKELEM = "%s mkelem -nwarn -c \"%s\" \"%s\"";
-  private static final String CMD_CHECKOUT = "%s checkout -c \"%s\" \"%s\"";
-  private static final String CMD_CATCS = "%s catcs -tag %s";
+  private static final String CMD_DESCRIBE = Messages.getString("CTool.cmd_describe"); //$NON-NLS-1$
+  private static final String CMD_LSVTREE = Messages.getString("CTool.cmd_lsvtree"); //$NON-NLS-1$
+  private static final String CMD_DSCRVIEW_IN_FOLDER = Messages.getString("CTool.cmd_dscrview_inplace"); //$NON-NLS-1$
+  private static final String CMD_DSCRVIEW_BY_TAG = Messages.getString("CTool.cmd_dscrview_bytag"); //$NON-NLS-1$
+  private static final String CMD_LSVIEW = Messages.getString("CTool.cmd_lsview"); //$NON-NLS-1$
+  private static final String CMD_LSLOCATIONS = Messages.getString("CTool.cmd_lsstgloc"); //$NON-NLS-1$
+  private static final String CMD_LSVOB = Messages.getString("CTool.cmd_lsvob"); //$NON-NLS-1$
+  private static final String CMD_LSHISTORY_CONTAINING = Messages.getString("CTool.cmd_lshistory"); //$NON-NLS-1$
+  private static final String CMD_LSHISTORY_CONTAINER = Messages.getString("CTool.cmd_lshistory_inplace"); //$NON-NLS-1$
+  private static final String CMD_LSCHANGE = Messages.getString("CTool.cmd_lschanges"); //$NON-NLS-1$
+  private static final String CMD_UPDATE = Messages.getString("CTool.cmd_update"); //$NON-NLS-1$
+  private static final String CMD_MKVIEW = Messages.getString("CTool.cmd_mkview"); //$NON-NLS-1$
+  private static final String CMD_RMVIEW = Messages.getString("CTool.cmd_rmview"); //$NON-NLS-1$
+  private static final String CMD_RMVOB = Messages.getString("CTool.cmd_rmvob"); //$NON-NLS-1$
+  private static final String CMD_SETCS = Messages.getString("CTool.cmd_setcs"); //$NON-NLS-1$
+  private static final String CMD_RMVER = Messages.getString("CTool.cmd_rmver"); //$NON-NLS-1$
+  private static final String CMD_RMELEM = Messages.getString("CTool.cmd_rmelem"); //$NON-NLS-1$
+  private static final String CMD_RMNAME = Messages.getString("CTool.cmd_rmname"); //$NON-NLS-1$
+  private static final String CMD_CHECKIN = Messages.getString("CTool.cmd_checkin"); //$NON-NLS-1$
+  private static final String CMD_MKELEM = Messages.getString("CTool.cmd_mkelem"); //$NON-NLS-1$
+  private static final String CMD_CHECKOUT = Messages.getString("CTool.cmd_checkout"); //$NON-NLS-1$
+  private static final String CMD_CATCS = Messages.getString("CTool.cmd_catcs"); //$NON-NLS-1$
 
   private static final Logger LOG = Logger.getLogger(CTool.class);
 
   private static String ourSessionUser;
   private static String ourSessionPassword;
-  private static String ourCleartoolExecutable = "cleartool";
+  private static String ourCleartoolExecutable = "cleartool"; //$NON-NLS-1$
 
   static final List<String> DEFAULT_CONFIG_SPECS = Collections.unmodifiableList(new ArrayList<String>() {
     private static final long serialVersionUID = 1L;
     {
-      add("element * CHECKEDOUT");
-      add("element * /main/LATEST");
+      add("element * CHECKEDOUT"); //$NON-NLS-1$
+      add("element * /main/LATEST"); //$NON-NLS-1$
     }
   });
 
