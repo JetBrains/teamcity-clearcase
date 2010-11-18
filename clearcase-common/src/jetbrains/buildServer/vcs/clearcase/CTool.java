@@ -27,7 +27,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,8 @@ import java.util.regex.Pattern;
 import jetbrains.buildServer.util.FileUtil;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class CTool {
 
@@ -54,7 +55,8 @@ public class CTool {
   private static final String CMD_LSHISTORY_CONTAINER = Messages.getString("CTool.cmd_lshistory_inplace"); //$NON-NLS-1$
   private static final String CMD_LSCHANGE = Messages.getString("CTool.cmd_lschanges"); //$NON-NLS-1$
   private static final String CMD_UPDATE = Messages.getString("CTool.cmd_update"); //$NON-NLS-1$
-  private static final String CMD_MKVIEW = Messages.getString("CTool.cmd_mkview"); //$NON-NLS-1$
+  private static final String CMD_MKVIEW_AUTOLOC = Messages.getString("CTool.cmd_mkview_autoloc"); //$NON-NLS-1$
+  private static final String CMD_MKVIEW_VWS = Messages.getString("CTool.cmd_mkview_vws"); //$NON-NLS-1$  
   private static final String CMD_RMVIEW = Messages.getString("CTool.cmd_rmview"); //$NON-NLS-1$
   private static final String CMD_RMVOB = Messages.getString("CTool.cmd_rmvob"); //$NON-NLS-1$
   private static final String CMD_SETCS = Messages.getString("CTool.cmd_setcs"); //$NON-NLS-1$
@@ -71,14 +73,6 @@ public class CTool {
   private static String ourSessionUser;
   private static String ourSessionPassword;
   private static String ourCleartoolExecutable = "cleartool"; //$NON-NLS-1$
-
-  static final List<String> DEFAULT_CONFIG_SPECS = Collections.unmodifiableList(new ArrayList<String>() {
-    private static final long serialVersionUID = 1L;
-    {
-      add("element * CHECKEDOUT"); //$NON-NLS-1$
-      add("element * /main/LATEST"); //$NON-NLS-1$
-    }
-  });
 
   public static String getCleartoolExecutable() {
     return ourCleartoolExecutable;
@@ -122,79 +116,79 @@ public class CTool {
     }
   }
 
-  static VobObjectParser importVob(final String tag, final File dump, final String reason) throws IOException, InterruptedException, CCException {
-    final long timeStamp = System.currentTimeMillis();
-    CCStorage anyStorage = null;
-    File silentCmd = null;
-    try {
-      // looking for any VOB for storage detection
-      CCStorage[] availableVobs = new CCRegion("any").getStorages();
-      if (availableVobs.length == 0) {
-        throw new CCException("No one VOB Storage found");
-      }
-      anyStorage = availableVobs[0];
-      final String uploadCommand = String.format("xcopy /Y \"%s\" %s", dump, anyStorage.getGlobalPath());// TODO:
-      // use
-      // timestamp
-      // in
-      // file
-      // name
-
-      /**
-       * upload replica to target host. it required by replica's import
-       */
-      Util.execAndWait(uploadCommand);
-      /**
-       * run command using psexec make sure the user account has administrative
-       * privileges on target host
-       */
-
-      silentCmd = new File(String.format("import_replica_%s.cmd", timeStamp));
-      silentCmd.createNewFile();
-      final FileWriter writer = new FileWriter(silentCmd);
-      writer.write("@echo off\n");
-      writer.write("echo yes>yes.txt\n");
-      writer.write(String.format("multitool mkreplica -import -workdir %s -c \"%s\" -tag \\%s -stgloc -auto -npreserve %s 2>&1 1>>c:\\replica.log 0<yes.txt\n", "c:\\rep.tmp", reason, tag, String.format("%s\\%s", anyStorage.getGlobalPath(), dump.getName())));// TODO:
-      // use
-      // timestamp
-      // in
-      // file
-      // name
-      writer.write("del /F /Q yes.txt\n");
-      writer.close();
-
-      final String command;
-
-      if (ourSessionUser != null) {
-        // the tool was logged in
-        command = String.format("psexec \\\\%s -u %s -p %s -c %s", anyStorage.getServerHost(), ourSessionUser, ourSessionPassword, silentCmd.getAbsolutePath());
-      } else {
-        // use current credentials
-        command = String.format("psexec \\\\%s -c %s", anyStorage.getServerHost(), silentCmd.getAbsolutePath());
-      }
-      try {
-        Util.execAndWait(command);
-      } catch (Exception e) {
-        // psexec writes own output to stderr
-      }
-      // read VOB properties
-      final VobObjectParser vobObjectResult = new VobObjectParser(Util.execAndWait(String.format("%s lsvob -long \\%s", getCleartoolExecutable(), tag)));
-      if (vobObjectResult.getGlobalPath() == null) {
-        throw new IOException(String.format("Could not create %s VOB", tag));
-      }
-      return vobObjectResult;
-
-    } finally {
-      // cleanup
-      if (silentCmd != null) {
-        silentCmd.delete();
-      }
-      if (anyStorage != null) {
-        Util.execAndWait(String.format("cmd /c del /F /Q \"%s\\%s\"", anyStorage.getGlobalPath(), dump.getName()));
-      }
-    }
-
-  }
+  //  static VobObjectParser importVob(final String tag, final File dump, final String reason) throws IOException, InterruptedException, CCException {
+  //    final long timeStamp = System.currentTimeMillis();
+  //    CCStorage anyStorage = null;
+  //    File silentCmd = null;
+  //    try {
+  //      // looking for any VOB for storage detection
+  //      CCStorage[] availableVobs = new CCRegion("any").getStorages();
+  //      if (availableVobs.length == 0) {
+  //        throw new CCException("No one VOB Storage found");
+  //      }
+  //      anyStorage = availableVobs[0];
+  //      final String uploadCommand = String.format("xcopy /Y \"%s\" %s", dump, anyStorage.getGlobalPath());// TODO:
+  //      // use
+  //      // timestamp
+  //      // in
+  //      // file
+  //      // name
+  //
+  //      /**
+  //       * upload replica to target host. it required by replica's import
+  //       */
+  //      Util.execAndWait(uploadCommand);
+  //      /**
+  //       * run command using psexec make sure the user account has administrative
+  //       * privileges on target host
+  //       */
+  //
+  //      silentCmd = new File(String.format("import_replica_%s.cmd", timeStamp));
+  //      silentCmd.createNewFile();
+  //      final FileWriter writer = new FileWriter(silentCmd);
+  //      writer.write("@echo off\n");
+  //      writer.write("echo yes>yes.txt\n");
+  //      writer.write(String.format("multitool mkreplica -import -workdir %s -c \"%s\" -tag \\%s -stgloc -auto -npreserve %s 2>&1 1>>c:\\replica.log 0<yes.txt\n", "c:\\rep.tmp", reason, tag, String.format("%s\\%s", anyStorage.getGlobalPath(), dump.getName())));// TODO:
+  //      // use
+  //      // timestamp
+  //      // in
+  //      // file
+  //      // name
+  //      writer.write("del /F /Q yes.txt\n");
+  //      writer.close();
+  //
+  //      final String command;
+  //
+  //      if (ourSessionUser != null) {
+  //        // the tool was logged in
+  //        command = String.format("psexec \\\\%s -u %s -p %s -c %s", anyStorage.getServerHost(), ourSessionUser, ourSessionPassword, silentCmd.getAbsolutePath());
+  //      } else {
+  //        // use current credentials
+  //        command = String.format("psexec \\\\%s -c %s", anyStorage.getServerHost(), silentCmd.getAbsolutePath());
+  //      }
+  //      try {
+  //        Util.execAndWait(command);
+  //      } catch (Exception e) {
+  //        // psexec writes own output to stderr
+  //      }
+  //      // read VOB properties
+  //      final VobObjectParser vobObjectResult = new VobObjectParser(Util.execAndWait(String.format("%s lsvob -long \\%s", getCleartoolExecutable(), tag)));
+  //      if (vobObjectResult.getGlobalPath() == null) {
+  //        throw new IOException(String.format("Could not create %s VOB", tag));
+  //      }
+  //      return vobObjectResult;
+  //
+  //    } finally {
+  //      // cleanup
+  //      if (silentCmd != null) {
+  //        silentCmd.delete();
+  //      }
+  //      if (anyStorage != null) {
+  //        Util.execAndWait(String.format("cmd /c del /F /Q \"%s\\%s\"", anyStorage.getGlobalPath(), dump.getName()));
+  //      }
+  //    }
+  //
+  //  }
 
   static void dropVob(String globalPath) throws IOException, InterruptedException {
     Util.execAndWait(String.format(CMD_RMVOB, getCleartoolExecutable(), globalPath));
@@ -206,9 +200,19 @@ public class CTool {
     LOG.debug(String.format("The View \"%s\" has been dropt", globalPath));
   }
 
-  static VobObjectParser createSnapshotView(String tag, File path, String reason) throws IOException, InterruptedException {
-    path.getParentFile().mkdirs();
-    final String command = String.format(CMD_MKVIEW, getCleartoolExecutable(), tag, reason, path.getAbsolutePath());
+  static VobObjectParser createSnapshotView(@NotNull String tag, @Nullable String globalViewPath, @NotNull String localViewPath, @Nullable String reason) throws IOException, InterruptedException {
+    //TODO: why here ????
+    final File parentFile = new File(localViewPath).getParentFile();
+    if(parentFile != null && !parentFile.exists()){
+      parentFile.mkdirs();  
+    }
+    //fire
+    final String command;
+    if (globalViewPath != null) {
+      command = String.format(CMD_MKVIEW_VWS, getCleartoolExecutable(), tag, globalViewPath, reason, localViewPath);
+    } else {
+      command = String.format(CMD_MKVIEW_AUTOLOC, getCleartoolExecutable(), tag, reason, localViewPath);
+    }
     final String[] execAndWait = Util.execAndWait(command);
     LOG.debug(String.format("View created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
@@ -672,6 +676,7 @@ public class CTool {
   }
 
   static class StorageParser extends AbstractCCParser {
+
     static final String NAME_TOKEN = "Name: ";
     static final String TYPE_TOKEN = "Type: ";
     static final String GLOBAL_PATH_TOKEN = "Global path: ";
@@ -789,30 +794,30 @@ public class CTool {
   }
 
   /*
-Tag: buildagent_null_vcsroot_1_kdonskov_swiftteams_view "Clone of the kdonskov_swiftteams_view view"
+  Tag: buildagent_null_vcsroot_1_kdonskov_swiftteams_view "Clone of the kdonskov_swiftteams_view view"
   Global path: \\ruspv-win2003-c\ccstg_c\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
   Server host: ruspv-win2003-c
   Region: swiftteams
   Active: NO
   View tag uuid:d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
-View on host: ruspv-win2003-c
-View server access path: c:\ClearCase_Storage\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
-View uuid: d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
-View attributes: snapshot
-View owner: SWIFTTEAMS\kdonskov    
+  View on host: ruspv-win2003-c
+  View server access path: c:\ClearCase_Storage\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
+  View uuid: d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
+  View attributes: snapshot
+  View owner: SWIFTTEAMS\kdonskov    
    */
   static class ViewParser extends VobParser {
-    
+
     static final Pattern VIEW_VIEW_TAG_UID_PATTERN = Pattern.compile("View tag uuid: (.*)");
-    static final Pattern VIEW_UID_PATTERN = Pattern.compile("View uuid: (.*)");    
+    static final Pattern VIEW_UID_PATTERN = Pattern.compile("View uuid: (.*)");
 
     private String myUUID;
 
     protected ViewParser(String[] stdout) {
       super(stdout);
-      for(String line : stdout){
+      for (String line : stdout) {
         final Matcher uidMatcher = VIEW_UID_PATTERN.matcher(line.trim());
-        if(uidMatcher.matches()){
+        if (uidMatcher.matches()) {
           myUUID = uidMatcher.group(1);
         }
       }

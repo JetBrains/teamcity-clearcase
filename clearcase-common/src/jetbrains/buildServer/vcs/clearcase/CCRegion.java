@@ -15,6 +15,7 @@
  */
 package jetbrains.buildServer.vcs.clearcase;
 
+import java.io.File;
 import java.util.ArrayList;
 
 import jetbrains.buildServer.vcs.clearcase.CTool.StorageParser;
@@ -56,7 +57,7 @@ public class CCRegion {
     try {
       final ArrayList<CCStorage> out = new ArrayList<CCStorage>();
       for(StorageParser result : CTool.lsStgLoc()){
-        out.add(new CCStorage(result.getServerHost(), result.getTag(), result.getGlobalPath()));
+        out.add(new CCStorage(result.getServerHost(), result.getType(), result.getTag(), result.getGlobalPath()));
       }
       return out.toArray(new CCStorage[out.size()]);
       
@@ -69,7 +70,7 @@ public class CCRegion {
     try {
       final ArrayList<CCSnapshotView> out = new ArrayList<CCSnapshotView>();
       for(ViewParser result : CTool.lsView()){
-        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), result.getGlobalPath()));
+        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), new File(result.getGlobalPath())));
       }
       return out.toArray(new CCSnapshotView[out.size()]);
       

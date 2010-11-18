@@ -550,13 +550,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public String testConnection(final @NotNull VcsRoot vcsRoot) throws VcsException {
     final String[] validationResult = new String[] { "Passed" };
     //validate in general
-    final ValidationComposite composite = new ValidationComposite(new IValidation[] { 
-        new ClearCaseValidation.ClearcaseViewRootPathValidator(), 
-        new ClearCaseValidation.ClearcaseViewRelativePathValidator(), 
-        new ClearCaseValidation.CleartoolValidator(),
-        new ClearCaseValidation.ClearcaseConfigurationValidator(), 
-        new ClearCaseValidation.ClearcaseViewValidator(), 
-        new ClearCaseValidation.IValidation() {
+    final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(), new ClearCaseValidation.CleartoolValidator(),
+        new ClearCaseValidation.ClearcaseConfigurationValidator(), new ClearCaseValidation.ClearcaseViewValidator(), new ClearCaseValidation.IValidation() {
           public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
             try {
               ClearCaseConnection caseConnection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
@@ -568,10 +563,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               }
             } catch (Exception e) {
               validationResultBuffer.add(
-                  //it fired by "Relative path..." setting because others already checked hard I guess... 
+              //it fired by "Relative path..." setting because others already checked hard I guess... 
                   new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))); //$NON-NLS-1$
               LOG.info(e.getMessage());
-              LOG.debug(e);              
+              LOG.debug(e);
               return false;
             }
             return true;
@@ -939,7 +934,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public Map<String, String> getParameters(@NotNull SBuild build, boolean emulationMode) {
     final HashMap<String, String> out = new HashMap<String, String>();
     try {
-
       //collect all clearcase's roots and populate current ConfigSpecs for each
       for (final VcsRootEntry entry : build.getVcsRootEntries()) {
         if (getName().equals(entry.getVcsRoot().getVcsName())) { //looking for clearcase only
@@ -953,8 +947,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               for (String spec : ccView.getConfigSpec()) {
                 specsBuffer.append(spec).append("\n");
               }
+              //pass config spec to agents
               out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
-
+              //pass tag to agents
+              out.put(getOriginalViewTagParameterName(entry.getVcsRoot()), ccView.getTag().trim());
             } catch (CCException e) {
               LOG.error(e.getMessage(), e);
             }
@@ -969,8 +965,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return out;
   }
 
+  public static String getOriginalViewTagParameterName(VcsRoot root) {
+    return String.format("system.%s", String.format(Constants.AGENT_SOURCE_VIEW_TAG_PROP_PATTERN, root.getId()));
+  }
+
   public static String getConfigSpecParameterName(VcsRoot root) {
-    return String.format("system.%s", String.format(Constants.CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
+    return String.format("system.%s", String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
   }
 
   @NotNull

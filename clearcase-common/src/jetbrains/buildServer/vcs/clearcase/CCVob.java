@@ -15,8 +15,6 @@
  */
 package jetbrains.buildServer.vcs.clearcase;
 
-import java.io.File;
-
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 public class CCVob {
@@ -70,16 +68,16 @@ public class CCVob {
 
   }
 
-  public void load(final File dump, String reason) throws CCException {
-    try {
-      final VobObjectParser result = CTool.importVob(myTag, dump, reason);
-      myGlobalPath = result.getGlobalPath();
-
-    } catch (Exception e) {
-      throw new CCException(e);
-
-    }
-  }
+  //  public void load(final File dump, String reason) throws CCException {
+  //    try {
+  //      final VobObjectParser result = CTool.importVob(myTag, dump, reason);
+  //      myGlobalPath = result.getGlobalPath();
+  //
+  //    } catch (Exception e) {
+  //      throw new CCException(e);
+  //
+  //    }
+  //  }
 
   public void drop() throws CCException {
     try {

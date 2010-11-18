@@ -31,10 +31,10 @@ public class CCSnapshotView {
 
   private static final Logger LOG = Logger.getLogger(CTool.class);
 
-  private ArrayList<String> myConfigSpecs = new ArrayList<String>();
-  private File myLocalPath;
-  private String myGlobalPath;
-  private String myTag;
+  protected ArrayList<String> myConfigSpecs = new ArrayList<String>();
+  protected File myLocalPath;
+  protected File myGlobalPath;
+  protected String myTag;
 
   /**
    * @param localRoot
@@ -46,7 +46,7 @@ public class CCSnapshotView {
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
       final ViewParser parser = CTool.lsView(localRoot);
-      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), parser.getGlobalPath());
+      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()));
       view.myLocalPath = localRoot;
       return view;
     } catch (Exception e) {
@@ -54,29 +54,27 @@ public class CCSnapshotView {
     }
   }
 
-  CCSnapshotView(final String region, final String server, final String tag, final String glolbalPath) {
+  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath) {
     myTag = tag;
     myGlobalPath = glolbalPath;
   }
 
-  public CCSnapshotView(final String tag, final String localPath) {
+  public CCSnapshotView(final String tag, final File localPath) {
     myTag = tag;
-    myLocalPath = new File(localPath);
+    myLocalPath = localPath;
   }
 
-  public CCSnapshotView(final CCVob vob, final String tag, final String localPath) {
-    myTag = tag;
-    myConfigSpecs = new ArrayList<String>(CTool.DEFAULT_CONFIG_SPECS);
-    myConfigSpecs.add(Util.createLoadRuleForVob(vob));
-    myLocalPath = new File(localPath);
-    myLocalPath.getParentFile().mkdirs();
+  //TODO: review constructors 
+  public CCSnapshotView(String buildViewTag, File globalViewLocation, File localPath) {
+    this(buildViewTag, localPath);
+    myGlobalPath = globalViewLocation;
   }
 
   public String getTag() {
     return myTag;
   }
 
-  public String getGlobalPath() {
+  public File getGlobalPath() {
     return myGlobalPath;
   }
 
@@ -89,8 +87,13 @@ public class CCSnapshotView {
       if (exists()) {
         throw new CCException(String.format("The view \"%s\" already exists", getTag()));
       }
-      final VobObjectParser result = CTool.createSnapshotView(getTag(), myLocalPath, reason);
-      myGlobalPath = result.getGlobalPath();
+      final VobObjectParser result;
+      if (myGlobalPath != null) {
+        result = CTool.createSnapshotView(getTag(), myGlobalPath.getAbsolutePath(), myLocalPath.getAbsolutePath(), reason);
+      } else {
+        result = CTool.createSnapshotView(getTag(), null, myLocalPath.getAbsolutePath(), reason);
+      }
+      myGlobalPath = new File(result.getGlobalPath());
       setConfigSpec(myConfigSpecs);
 
     } catch (Exception e) {
@@ -228,12 +231,13 @@ public class CCSnapshotView {
 
   /**
    * Regenerates view.dat from the CC Server
+   * 
    * @throws CCException
    */
   public CCSnapshotView restore() throws CCException {
     try {
       final ViewParser parser = CTool.lsView(getTag());
-      final String viewUuid = parser.getUUID();      
+      final String viewUuid = parser.getUUID();
       final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
       FileUtil.writeFile(new File(getLocalPath(), "view.dat"), content);
       return this;
@@ -244,7 +248,7 @@ public class CCSnapshotView {
 
   public CCSnapshotView drop() throws CCException {
     try {
-      CTool.dropView(getGlobalPath());
+      CTool.dropView(getGlobalPath().getAbsolutePath());
       return this;
     } catch (Exception e) {
       throw new CCException(e);

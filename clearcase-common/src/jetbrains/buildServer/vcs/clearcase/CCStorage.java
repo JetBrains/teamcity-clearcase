@@ -16,19 +16,28 @@
 package jetbrains.buildServer.vcs.clearcase;
 
 public class CCStorage {
+  
+  public static final String VOB = "VOB";
+  public static final String View = "View";  
 
   private String myTag;
   private String myGlobalPath;
   private String myServerHost;
+  private String myType;
 
-  CCStorage(final String serverHost, final String tag, final String globalPath){
-      myTag = tag;
-      myGlobalPath = globalPath;
-      myServerHost = serverHost;
+  CCStorage(final String serverHost, final String type, final String tag, final String globalPath) {
+    myType = type;
+    myTag = tag;
+    myGlobalPath = globalPath;
+    myServerHost = serverHost;
   }
-  
+
   public String getServerHost() {
     return myServerHost;
+  }
+  
+  public String getType() {
+    return myType;
   }
 
   public String getTag() {
@@ -38,5 +47,5 @@ public class CCStorage {
   public String getGlobalPath() {
     return myGlobalPath;
   }
-  
+
 }
