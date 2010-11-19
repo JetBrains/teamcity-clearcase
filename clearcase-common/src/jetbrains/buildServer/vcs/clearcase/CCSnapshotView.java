@@ -16,7 +16,9 @@
 package jetbrains.buildServer.vcs.clearcase;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import jetbrains.buildServer.util.FileUtil;
@@ -26,6 +28,7 @@ import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class CCSnapshotView {
 
@@ -183,6 +186,15 @@ public class CCSnapshotView {
   public CCHistory[] getHistory(File file) throws CCException {
     try {
       final HistoryParser[] history = CTool.lsHistory(file, false);
+      return wrap(history);
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }
+  
+  public CCDelta[] update(final @NotNull File path) throws CCException {
+    try {
+      final ChangeParser[] history = CTool.update(path, new Date());
       return wrap(history);
     } catch (Exception e) {
       throw new CCException(e);
