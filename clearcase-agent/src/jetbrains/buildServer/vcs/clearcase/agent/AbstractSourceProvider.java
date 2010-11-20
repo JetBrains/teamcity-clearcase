@@ -52,6 +52,8 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   public String[] getConfigSpecs(AgentRunningBuild build, VcsRoot root) throws CCException {
     // load configSpecs
     final Map<String, String> properties = build.getBuildParameters().getSystemProperties();
+    //    LOG.debug(String.format("getAllParameters().keySet(): %s", toString(properties.keySet())));
+    //    LOG.debug(String.format("getAllParameters().values(): %s", toString(properties.values())));    
     final String key = String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId());
     final String configSpecs = properties.get(key);
     if (configSpecs == null) {
@@ -62,6 +64,14 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
     return configSpecs.split("\n+");
   }
+
+  //  private String toString(Collection<String> values) {
+  //    StringBuffer out = new StringBuffer("[");
+  //    for(String s : values){
+  //      out.append(s).append(",");
+  //    }
+  //    return out.append("]").toString();
+  //  }
 
   public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
 
@@ -119,7 +129,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
   private CCSnapshotView create(AgentRunningBuild build, final VcsRoot root, final String buildViewTag, final File viewRoot) throws CCException {
     final CCRegion ccRegion = new CCRegion();
-    
+
     //check there id already is any Server Storage Location for a view
     boolean hasViewsStorageLocation = false;
 
@@ -130,7 +140,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
         break;
       }
     }
-    
+
     //check there is any View's location and hope mkview -stgloc -auto will work properly
     final CCSnapshotView clone;
     if (hasViewsStorageLocation) {
@@ -145,7 +155,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       if (ccOriginalView == null) {
         throw new CCException(String.format("Could not find view for tag \"%s\"", ccOriginalViewTag));
       }
-      
+
       //...construct
       final File originalViewGlobalFolder = ccOriginalView.getGlobalPath();
       final File originalViewGlobalFolderLocation = originalViewGlobalFolder.getParentFile();
@@ -206,6 +216,14 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     }
     timedSpesc.add("end time");
     return targetView.setConfigSpec(timedSpesc);
+  }
+
+  protected void dumpRules(final CheckoutRules rules) {
+    if (rules != null) {
+      LOG.debug(String.format("Found CheckoutRiles: {%s}", rules.toString().trim()));
+    } else {
+      LOG.debug("Checkout is null");
+    }
   }
 
 }

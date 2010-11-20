@@ -31,6 +31,8 @@ import jetbrains.buildServer.vcs.clearcase.Constants;
 import org.apache.log4j.Logger;
 
 public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
+  
+  private static final String DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors";  //$NON-NLS-1$
 
   static final Logger LOG = Logger.getLogger(ConvensionBasedSourceProvider.class);
 
@@ -43,20 +45,60 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   }
 
   public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
-    //load server side
+    //check any CheckoutRules except Default exists and throw an exception if found
+    validateCheckoutRules(build, root, rules);
+    //check the "Checkout Directory" equals to "Relative Path within the View" setting
+    validateCheckoutDirectory(root, checkoutDirectory, build);
+    //perform update
+    super.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
+  }
+
+  private void validateCheckoutDirectory(VcsRoot root, File checkoutDirectory, AgentRunningBuild build) throws VcsException {
     final String serverSidePathWithinAView = root.getProperty(Constants.RELATIVE_PATH);
-    //check configuration and warn if differs 
+    //normalize relative paths 
     final String checkoutToRelativePath;
     if (!checkoutDirectory.isAbsolute()) {
       checkoutToRelativePath = FileUtil.normalizeRelativePath(checkoutDirectory.getPath());
     } else {
       checkoutToRelativePath = FileUtil.normalizeRelativePath(FileUtil.getRelativePath(getCCRootDirectory(build, checkoutDirectory), checkoutDirectory));
     }
-    if (!new File(serverSidePathWithinAView).equals(new File(checkoutToRelativePath))) {
-      LOG.warn(String.format("%s: Wrong checkout directory. Expected \"%s\", but found \"%s\". Perhaps build cannot be succeeded. See more ...", root.getName(), serverSidePathWithinAView, checkoutToRelativePath));
+    //check configuration and warn if differs
+    final File serverSidePathWithinAViewDirectory = new File(serverSidePathWithinAView);
+    final File agentSideCheckoutDirectory = new File(checkoutToRelativePath);
+    if (!serverSidePathWithinAViewDirectory.equals(agentSideCheckoutDirectory)) {
+      if(isDisableValidationErrors(build)){
+        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_warning_message"),  //$NON-NLS-1$
+            root.getName(), 
+            serverSidePathWithinAViewDirectory.getPath(), 
+            agentSideCheckoutDirectory));
+      } else {
+        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_error_message"),  //$NON-NLS-1$
+            root.getName(), 
+            serverSidePathWithinAViewDirectory.getPath(), 
+            agentSideCheckoutDirectory));        
+        LOG.error(validationException.getMessage(), validationException);        
+        throw validationException;
+      }
     }
-    super.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
-  };
+  }
+
+  private void validateCheckoutRules(final AgentRunningBuild build, final VcsRoot root, final CheckoutRules rules) throws VcsException {
+    dumpRules(rules);    
+    if(rules != null && !CheckoutRules.DEFAULT.equals(rules)){
+      if(isDisableValidationErrors(build)){
+        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_warning_message"), //$NON-NLS-1$
+            root.getName(),
+            rules.toString().trim()));
+      } else {
+        final VcsException validationException = new VcsException(String.format(
+            Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_error_message"), //$NON-NLS-1$
+            root.getName(),
+            rules.toString().trim()));        
+        LOG.error(validationException.getMessage(), validationException);        
+        throw validationException;
+      }
+    }
+  }
 
   public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
     //do nothing. all data already should be in the checkout directory
@@ -76,7 +118,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
       } else {
         //have to create new temporary one because CC could not create maps view into existing folder
         final File tmpViewRoot = new File(build.getAgentConfiguration().getTempDirectory(), String.valueOf(System.currentTimeMillis()));
-        LOG.debug(String.format("getView::creating temporary snapshot view in \"%s\"", tmpViewRoot.getAbsolutePath()));
+        LOG.debug(String.format("getView::creating temporary snapshot view in \"%s\"", tmpViewRoot.getAbsolutePath())); //$NON-NLS-1$
         createNew(build, root, tmpViewRoot, logger);
         FileUtil.delete(tmpViewRoot);
         //try lookup again
@@ -93,5 +135,15 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   private boolean isAlive(final CCSnapshotView view) throws CCException {
     return view.isAlive();
   }
+  
+  private boolean isDisableValidationErrors(AgentRunningBuild build) {
+    final String disableValidationError = build.getBuildParameters().getSystemProperties().get(DISABLE_VALIDATION_ERRORS);
+    LOG.debug(String.format("Found %s=\"%s\"", DISABLE_VALIDATION_ERRORS, disableValidationError));
+    if(Boolean.parseBoolean(disableValidationError)){
+      return true;
+    }
+    return false;
+  }
+  
 
 }

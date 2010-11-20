@@ -162,7 +162,7 @@ public class ClearCaseValidation {
     }
 
     private boolean checkGlobalLabelsVOBProperty(final Map<String, String> properties, final Collection<InvalidProperty> result) {
-      final boolean useGlobalLabel = Boolean.getBoolean(properties.get(Constants.USE_GLOBAL_LABEL));
+      final boolean useGlobalLabel = Boolean.parseBoolean(properties.get(Constants.USE_GLOBAL_LABEL));
       final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);
       if (useGlobalLabel) {
         if (globalLabelsVOB == null || trim(globalLabelsVOB).length() == 0) { //$NON-NLS-1$
@@ -307,12 +307,10 @@ public class ClearCaseValidation {
 
   private static void debug(String message) {
     LOG.debug(message);
-    //    System.out.println(message);
   }
 
   private static void debug(Throwable t) {
     LOG.debug(t);
-    //    t.printStackTrace(System.out);
   }
 
   private static String trim(String val) {

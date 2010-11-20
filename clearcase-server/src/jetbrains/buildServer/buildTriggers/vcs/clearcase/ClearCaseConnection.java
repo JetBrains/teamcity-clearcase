@@ -276,7 +276,6 @@ public class ClearCaseConnection {
       while ((line = reader.readLine()) != null) {
         if (line.trim().length() > 0) {
           String elementVersion = readVersion(line);
-          //System.out.println("add version " + elementVersion);
           versionTree.addVersion(elementVersion);
         }
       }

@@ -955,7 +955,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               LOG.error(e.getMessage(), e);
             }
           } else {
-            LOG.error(String.format("The view's root directyory \"%s\" does not exist. Could not set ConfigSpec for this VcsRoot", viewPath));
+            LOG.error(String.format("The view's root directory \"%s\" does not exist. Could not get ConfigSpec of this VcsRoot", viewPath));
           }
         }
       }
