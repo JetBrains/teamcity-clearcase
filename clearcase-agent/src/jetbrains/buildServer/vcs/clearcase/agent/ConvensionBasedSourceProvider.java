@@ -76,7 +76,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
       } else {
         //have to create new temporary one because CC could not create maps view into existing folder
         final File tmpViewRoot = new File(build.getAgentConfiguration().getTempDirectory(), String.valueOf(System.currentTimeMillis()));
-        LOG.debug(String.format("getView::create temporary snapshot view in \"%s\" but is not alive.", tmpViewRoot.getAbsolutePath()));
+        LOG.debug(String.format("getView::creating temporary snapshot view in \"%s\"", tmpViewRoot.getAbsolutePath()));
         createNew(build, root, tmpViewRoot, logger);
         FileUtil.delete(tmpViewRoot);
         //try lookup again
