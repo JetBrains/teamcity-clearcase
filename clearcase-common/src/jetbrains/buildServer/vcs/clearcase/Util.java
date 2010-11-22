@@ -89,10 +89,11 @@ public class Util {
     process.getErrorStream().close();
     process.getInputStream().close();
     if (LOG.isDebugEnabled()) {
-      LOG.debug(outBuffer.toString());
+      LOG.debug(String.format("Command stdout:\n%s", outBuffer.toString()));
     }
     if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
-      throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
+      LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));      
+      throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
     }
     return outBuffer.toString().split("\n+");
   }

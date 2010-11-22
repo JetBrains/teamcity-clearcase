@@ -17,6 +17,7 @@ package jetbrains.buildServer.vcs.clearcase.agent;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import jetbrains.buildServer.agent.AgentRunningBuild;
@@ -50,19 +51,26 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   }
 
   public String[] getConfigSpecs(AgentRunningBuild build, VcsRoot root) throws CCException {
-    // load configSpecs
-    final Map<String, String> properties = build.getBuildParameters().getSystemProperties();
-    //    LOG.debug(String.format("getAllParameters().keySet(): %s", toString(properties.keySet())));
-    //    LOG.debug(String.format("getAllParameters().values(): %s", toString(properties.values())));    
-    final String key = String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId());
-    final String configSpecs = properties.get(key);
-    if (configSpecs == null) {
-      throw new CCException(String.format("Could not get ConfigSpecs for \"%s\"", root.getName()));
-    } else {
-      LOG.debug(String.format("Found ConfigSpecs for \"%s\": %s", root.getName(), configSpecs));
+    final String originalViewTag = getSourceViewTag(build, root);
+    final CCSnapshotView originalView = Util.Finder.findView(new CCRegion(), originalViewTag);
+    if (originalView == null) {
+      throw new CCException(String.format("Could not find \"%s\" view", originalViewTag));
     }
-
-    return configSpecs.split("\n+");
+    final List<String> spec = originalView.getConfigSpec();
+    return spec.toArray(new String[spec.size()]);
+    //    // load configSpecs
+    //    final Map<String, String> properties = build.getBuildParameters().getSystemProperties();
+    //    //    LOG.debug(String.format("getAllParameters().keySet(): %s", toString(properties.keySet())));
+    //    //    LOG.debug(String.format("getAllParameters().values(): %s", toString(properties.values())));    
+    //    final String key = String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId());
+    //    final String configSpecs = properties.get(key);
+    //    if (configSpecs == null) {
+    //      throw new CCException(String.format("Could not get ConfigSpecs for \"%s\"", root.getName()));
+    //    } else {
+    //      LOG.debug(String.format("Found ConfigSpecs for \"%s\": %s", root.getName(), configSpecs));
+    //    }
+    //
+    //    return configSpecs.split("\n+");
   }
 
   //  private String toString(Collection<String> values) {
@@ -141,20 +149,23 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       }
     }
 
+    //try to find and use original view location as base 
+    LOG.debug(String.format("create:: preparing target location for the snapshot view storage directory"));
+    final String ccOriginalViewTag = getSourceViewTag(build, root);
+    LOG.debug(String.format("create:: found source view tag: \"%s\"", ccOriginalViewTag));
+    final CCSnapshotView ccOriginalView = Util.Finder.findView(ccRegion, ccOriginalViewTag);
+    if (ccOriginalView == null) {
+      throw new CCException(String.format("Could not find view for tag \"%s\"", ccOriginalViewTag));
+    }
+    //obtain stream if required
+    final String ccOriginalStream = ccOriginalView.isUcm() ? ccOriginalView.getStream() : null;
+
     //check there is any View's location and hope mkview -stgloc -auto will work properly
     final CCSnapshotView clone;
     if (hasViewsStorageLocation) {
-      clone = new CCSnapshotView(buildViewTag, viewRoot);
-    } else {
 
-      //try to find and use original view location as base 
-      LOG.debug(String.format("create:: preparing target location for the snapshot view storage directory"));
-      final String ccOriginalViewTag = getSourceViewTag(build, root);
-      LOG.debug(String.format("create:: found source view tag: \"%s\"", ccOriginalViewTag));
-      final CCSnapshotView ccOriginalView = Util.Finder.findView(ccRegion, ccOriginalViewTag);
-      if (ccOriginalView == null) {
-        throw new CCException(String.format("Could not find view for tag \"%s\"", ccOriginalViewTag));
-      }
+      clone = new CCSnapshotView(buildViewTag, ccOriginalStream, null, viewRoot);
+    } else {
 
       //...construct
       final File originalViewGlobalFolder = ccOriginalView.getGlobalPath();
@@ -164,7 +175,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       LOG.debug(String.format("create:: use \"%s\" Global Location folder for build view", buildViewGlobalFolder));
 
       //let's go...
-      clone = new CCSnapshotView(buildViewTag, buildViewGlobalFolder, viewRoot);
+      clone = new CCSnapshotView(buildViewTag, ccOriginalStream, buildViewGlobalFolder, viewRoot);
     }
     clone.create(String.format("Clone view \'%s\' created", buildViewTag));
     return clone;

@@ -22,61 +22,59 @@ import jetbrains.buildServer.vcs.clearcase.CTool.StorageParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobParser;
 
-
-
 public class CCRegion {
 
   private String myTag;
 
-  public CCRegion(){
+  public CCRegion() {
     this("any");
   }
 
-  public CCRegion(final String tag){
+  public CCRegion(final String tag) {
     myTag = tag;
   }
 
-  public String getTag(){
+  public String getTag() {
     return myTag;
   }
-  
+
   public CCVob[] getVobs() throws CCException {
     try {
       final ArrayList<CCVob> out = new ArrayList<CCVob>();
-      for(VobParser result : CTool.lsVob()){
+      for (VobParser result : CTool.lsVob()) {
         out.add(new CCVob(result.getTag(), result.getRegion(), result.getServerHost(), result.getGlobalPath()));
       }
       return out.toArray(new CCVob[out.size()]);
-      
+
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
-  
-  public CCStorage[] getStorages () throws CCException {
+
+  public CCStorage[] getStorages() throws CCException {
     try {
       final ArrayList<CCStorage> out = new ArrayList<CCStorage>();
-      for(StorageParser result : CTool.lsStgLoc()){
+      for (StorageParser result : CTool.lsStgLoc()) {
         out.add(new CCStorage(result.getServerHost(), result.getType(), result.getTag(), result.getGlobalPath()));
       }
       return out.toArray(new CCStorage[out.size()]);
-      
+
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
-  
-  public CCSnapshotView[] getViews () throws CCException {
+
+  public CCSnapshotView[] getViews() throws CCException {
     try {
       final ArrayList<CCSnapshotView> out = new ArrayList<CCSnapshotView>();
-      for(ViewParser result : CTool.lsView()){
-        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), new File(result.getGlobalPath())));
+      for (ViewParser result : CTool.lsView()) {
+        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), new File(result.getGlobalPath()), result.getAttributes().contains(ViewParser.ATTRIBUTE_UCM)));
       }
       return out.toArray(new CCSnapshotView[out.size()]);
-      
+
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
-  
+
 }

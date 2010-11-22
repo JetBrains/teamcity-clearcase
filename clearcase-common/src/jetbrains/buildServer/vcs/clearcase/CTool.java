@@ -56,7 +56,11 @@ public class CTool {
   private static final String CMD_LSCHANGE = Messages.getString("CTool.cmd_lschanges"); //$NON-NLS-1$
   private static final String CMD_UPDATE = Messages.getString("CTool.cmd_update"); //$NON-NLS-1$
   private static final String CMD_MKVIEW_AUTOLOC = Messages.getString("CTool.cmd_mkview_autoloc"); //$NON-NLS-1$
-  private static final String CMD_MKVIEW_VWS = Messages.getString("CTool.cmd_mkview_vws"); //$NON-NLS-1$  
+  private static final String CMD_MKVIEW_VWS = Messages.getString("CTool.cmd_mkview_vws"); //$NON-NLS-1$
+
+  private static final String CMD_MKVIEW_AUTOLOC_UCM = Messages.getString("CTool.cmd_mkview_autoloc_ucm"); //$NON-NLS-1$
+  private static final String CMD_MKVIEW_VWS_UCM = Messages.getString("CTool.cmd_mkview_vws_ucm"); //$NON-NLS-1$  
+
   private static final String CMD_RMVIEW = Messages.getString("CTool.cmd_rmview"); //$NON-NLS-1$
   private static final String CMD_RMVOB = Messages.getString("CTool.cmd_rmvob"); //$NON-NLS-1$
   private static final String CMD_SETCS = Messages.getString("CTool.cmd_setcs"); //$NON-NLS-1$
@@ -67,6 +71,8 @@ public class CTool {
   private static final String CMD_MKELEM = Messages.getString("CTool.cmd_mkelem"); //$NON-NLS-1$
   private static final String CMD_CHECKOUT = Messages.getString("CTool.cmd_checkout"); //$NON-NLS-1$
   private static final String CMD_CATCS = Messages.getString("CTool.cmd_catcs"); //$NON-NLS-1$
+
+  private static final String CMD_LSSTREAM = "%s lsstream -long -view %s";
 
   private static final Logger LOG = Logger.getLogger(CTool.class);
 
@@ -200,18 +206,26 @@ public class CTool {
     LOG.debug(String.format("The View \"%s\" has been dropt", globalPath));
   }
 
-  static VobObjectParser createSnapshotView(@NotNull String tag, @Nullable String globalViewPath, @NotNull String localViewPath, @Nullable String reason) throws IOException, InterruptedException {
+  static VobObjectParser createSnapshotView(@NotNull String tag, @Nullable String stream, @Nullable String globalViewPath, @NotNull String localViewPath, @Nullable String reason) throws IOException, InterruptedException {
     //TODO: why here ????
     final File parentFile = new File(localViewPath).getParentFile();
-    if(parentFile != null && !parentFile.exists()){
-      parentFile.mkdirs();  
+    if (parentFile != null && !parentFile.exists()) {
+      parentFile.mkdirs();
     }
     //fire
     final String command;
     if (globalViewPath != null) {
-      command = String.format(CMD_MKVIEW_VWS, getCleartoolExecutable(), tag, globalViewPath, reason, localViewPath);
+      if (stream == null) {
+        command = String.format(CMD_MKVIEW_VWS, getCleartoolExecutable(), tag, globalViewPath, reason, localViewPath);
+      } else {
+        command = String.format(CMD_MKVIEW_VWS_UCM, getCleartoolExecutable(), tag, stream, globalViewPath, reason, localViewPath);
+      }
     } else {
-      command = String.format(CMD_MKVIEW_AUTOLOC, getCleartoolExecutable(), tag, reason, localViewPath);
+      if (stream == null) {
+        command = String.format(CMD_MKVIEW_AUTOLOC, getCleartoolExecutable(), tag, reason, localViewPath);
+      } else {
+        command = String.format(CMD_MKVIEW_AUTOLOC_UCM, getCleartoolExecutable(), tag, stream, reason, localViewPath);
+      }
     }
     final String[] execAndWait = Util.execAndWait(command);
     LOG.debug(String.format("View created: %s", Arrays.toString(execAndWait)));
@@ -518,14 +532,6 @@ public class CTool {
     static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
     private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
 
-    // cleartool lshistory -fmt
-    // "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\n" .
-    // 20101019.134210#--#f0eb67e7c0fa9bcb7d73215e64d51721#--#version#--#\main\1#--#checkin#--#create
-    // version#--#Time delta meter#--#
-    // cleartool lshistory -directory -fmt
-    // "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\n" .
-    // 20101019.134211#--#.#--#directory version#--#\main\9#--#checkin#--#create
-    // directory version#--#Time delta meter#--#
     private boolean isValid;
     final Date date;
     final String path;
@@ -749,16 +755,7 @@ public class CTool {
         final String trim = line.trim();
         if (trim.startsWith(TAG_TOKEN)) {
           final String[] split = trim.split(" +");
-          myTag = getRest(String.format("%s %s", split[0], split[1]), TAG_TOKEN);// as
-          // far
-          // cleartool
-          // put
-          // the
-          // comment
-          // next
-          // to
-          // the
-          // tag
+          myTag = getRest(String.format("%s %s", split[0], split[1]), TAG_TOKEN);// as far as cleartool put the comment next to the tag
         } else if (trim.startsWith(GLOBAL_PATH_TOKEN)) {
           myGlobalPath = getRest(trim, GLOBAL_PATH_TOKEN);
         } else if (trim.startsWith(SERVER_HOST_TOKEN)) {
@@ -793,25 +790,17 @@ public class CTool {
 
   }
 
-  /*
-  Tag: buildagent_null_vcsroot_1_kdonskov_swiftteams_view "Clone of the kdonskov_swiftteams_view view"
-  Global path: \\ruspv-win2003-c\ccstg_c\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
-  Server host: ruspv-win2003-c
-  Region: swiftteams
-  Active: NO
-  View tag uuid:d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
-  View on host: ruspv-win2003-c
-  View server access path: c:\ClearCase_Storage\views\SWIFTTEAMS\kdonskov\kdonskov_swiftteams_view.1.vws
-  View uuid: d0f2f25d.eeba4c53.82fb.b5:d9:f5:54:88:8d
-  View attributes: snapshot
-  View owner: SWIFTTEAMS\kdonskov    
-   */
   static class ViewParser extends VobParser {
+
+    static final String ATTRIBUTE_SNAPSHOT = "snapshot";
+    static final String ATTRIBUTE_UCM = "ucmview";
 
     static final Pattern VIEW_VIEW_TAG_UID_PATTERN = Pattern.compile("View tag uuid: (.*)");
     static final Pattern VIEW_UID_PATTERN = Pattern.compile("View uuid: (.*)");
+    static final Pattern VIEW_ATTRIBUTES_PATTERN = Pattern.compile("View attributes: (.*)");
 
     private String myUUID;
+    private String myAttributes;
 
     protected ViewParser(String[] stdout) {
       super(stdout);
@@ -820,6 +809,11 @@ public class CTool {
         if (uidMatcher.matches()) {
           myUUID = uidMatcher.group(1);
         }
+        final Matcher attributeMatcher = VIEW_ATTRIBUTES_PATTERN.matcher(line.trim());
+        if (attributeMatcher.matches()) {
+          myAttributes = attributeMatcher.group(1);
+        }
+
       }
     }
 
@@ -827,6 +821,109 @@ public class CTool {
       return myUUID;
     }
 
+    public String getAttributes() {
+      return myAttributes;
+    }
+
+  }
+
+  /*
+  Z:\data\kdonskov_test_prj_int>cleartool lsstream -long -view kdonskov_test_prj_int
+  stream "test_prj_Integration"
+  2010-11-19T20:02:26+03 by kdonskov.Пользователи домена@ruspd-kdonskov
+  owner: SWIFTTEAMS\kdonskov
+  group: SWIFTTEAMS\Пользователи домена
+  project: test_prj@\swiftteams_ucm_project_vob (integration stream)
+  default deliver stream:
+  development streams:
+  contains activities:
+    testing_started@\swiftteams_ucm_project_vob
+    inner_added_activity@\swiftteams_ucm_project_vob
+  foundation baselines:
+    swiftteams_component_INITIAL@\swiftteams_ucm_project_vob (swiftteams_component@\swiftteams_ucm_project_vob) (non-modifiable
+
+    swiftteams_ucm_vob_INITIAL@\swiftteams_ucm_project_vob (swiftteams_ucm_vob@\swiftteams_ucm_project_vob) (modifiable)
+  recommended baselines:
+    swiftteams_component_INITIAL@\swiftteams_ucm_project_vob (swiftteams_component@\swiftteams_ucm_project_vob)
+    swiftteams_ucm_vob_INITIAL@\swiftteams_ucm_project_vob (swiftteams_ucm_vob@\swiftteams_ucm_project_vob)
+  views:
+    kdonskov_test_prj_int
+  policies:
+    POLICY_DELIVER_REQUIRE_REBASE disabled
+    POLICY_DELIVER_NCO_DEVSTR disabled
+    POLICY_INTRAPROJECT_DELIVER_FOUNDATION_CHANGES disabled
+    POLICY_INTRAPROJECT_DELIVER_ALLOW_MISSING_TGTCOMPS disabled
+    POLICY_INTERPROJECT_DELIVER disabled
+    POLICY_INTERPROJECT_DELIVER_FOUNDATION_CHANGES disabled
+    POLICY_INTERPROJECT_DELIVER_REQUIRE_TGTCOMP_VISIBILITY disabled
+    POLICY_INTERPROJECT_DELIVER_ALLOW_NONMOD_TGTCOMPS disabled
+    POLICY_CHSTREAM_UNRESTRICTED disabled
+  policies (effective):
+    POLICY_DELIVER_REQUIRE_REBASE enabled
+    POLICY_DELIVER_NCO_DEVSTR enabled
+    POLICY_INTRAPROJECT_DELIVER_FOUNDATION_CHANGES disabled
+    POLICY_INTRAPROJECT_DELIVER_ALLOW_MISSING_TGTCOMPS disabled
+    POLICY_INTERPROJECT_DELIVER disabled
+    POLICY_INTERPROJECT_DELIVER_FOUNDATION_CHANGES disabled
+    POLICY_INTERPROJECT_DELIVER_REQUIRE_TGTCOMP_VISIBILITY disabled
+    POLICY_INTERPROJECT_DELIVER_ALLOW_NONMOD_TGTCOMPS disabled
+    POLICY_CHSTREAM_UNRESTRICTED enabled
+  baseline naming template: basename    
+   */
+  static class StreamParser extends AbstractCCParser {
+    static final Pattern STREAM_NAME_PATTERN_WIN = Pattern.compile("stream \"(.*)\"");
+    static final Pattern STREAM_NAME_PATTERN_NIX = Pattern.compile("stream '(.*)'");
+    static final Pattern STREAM_PROJECT_PATTERN = Pattern.compile("project: (.*)");
+
+    private String myName;
+
+    private String myProject;
+
+    protected StreamParser(String[] stdout) {
+      super(stdout);
+      for (String line : stdout) {
+        final Matcher winNameMatcher = STREAM_NAME_PATTERN_WIN.matcher(line.trim());
+        if (winNameMatcher.matches()) {
+          myName = winNameMatcher.group(1);
+          continue;
+        }
+        final Matcher nixNameMatcher = STREAM_NAME_PATTERN_NIX.matcher(line.trim());
+        if (nixNameMatcher.matches()) {
+          myName = nixNameMatcher.group(1);
+          continue;
+        }
+        final Matcher projectMatcher = STREAM_PROJECT_PATTERN.matcher(line.trim());
+        if (projectMatcher.matches()) {
+          myProject = projectMatcher.group(1).split(" ")[0];//annotation can be here
+          continue;
+        }
+      }
+    }
+
+    public String getName() {
+      return myName;
+    }
+
+    public String getProject() {
+      return myProject;
+    }
+
+    public String getProjectSelector() {
+      String project = getProject();
+      final int winSlash = getProject().lastIndexOf("\\");
+      final int nixSlash = getProject().lastIndexOf("/");
+      final int slashIndex = Math.max(winSlash, nixSlash);
+      if (slashIndex > -1) {
+        return project.substring(slashIndex + 1, project.length());
+      }
+      return project;
+    }
+
+  }
+
+  static StreamParser lsStream(final @NotNull String viewTag) throws IOException, InterruptedException {
+    final String command = String.format(CMD_LSSTREAM, getCleartoolExecutable(), viewTag);
+    return new StreamParser(Util.execAndWait(command));
   }
 
   static ChangeParser[] setConfigSpecs(File myLocalPath, ArrayList<String> configSpecs) throws IOException, InterruptedException {
@@ -857,7 +954,6 @@ public class CTool {
           int firstQuotaIdx = message.indexOf("\"");
           int secondQuotaIdx = message.indexOf("\"", firstQuotaIdx + 1);
           final String absolutePath = message.substring(firstQuotaIdx + 1, secondQuotaIdx);
-          LOG.debug(String.format("Got update's log file: %s", absolutePath));
           return parseUpdateOut(new FileInputStream(absolutePath));
 
         } else {

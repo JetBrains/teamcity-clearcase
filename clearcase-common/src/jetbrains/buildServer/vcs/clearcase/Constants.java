@@ -35,6 +35,6 @@ public interface Constants {
   public static final String VOBS = "vobs/";
   public static final String MAIN = "main";
   
-  public static final String AGENT_CONFIGSPECS_SYS_PROP_PATTERN = "vcs.clearcase.configspec.%s";
+//  public static final String AGENT_CONFIGSPECS_SYS_PROP_PATTERN = "vcs.clearcase.configspec.%s";
   public static final String AGENT_SOURCE_VIEW_TAG_PROP_PATTERN = "vcs.clearcase.view.tag.%s";
 }

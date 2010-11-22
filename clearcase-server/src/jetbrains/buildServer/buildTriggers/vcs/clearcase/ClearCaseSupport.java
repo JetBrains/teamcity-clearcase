@@ -947,8 +947,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               for (String spec : ccView.getConfigSpec()) {
                 specsBuffer.append(spec).append("\n");
               }
-              //pass config spec to agents
-              out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
+//              //pass config spec to agents
+//              out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
               //pass tag to agents
               out.put(getOriginalViewTagParameterName(entry.getVcsRoot()), ccView.getTag().trim());
             } catch (CCException e) {
@@ -969,9 +969,9 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return String.format("system.%s", String.format(Constants.AGENT_SOURCE_VIEW_TAG_PROP_PATTERN, root.getId()));
   }
 
-  public static String getConfigSpecParameterName(VcsRoot root) {
-    return String.format("system.%s", String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
-  }
+//  public static String getConfigSpecParameterName(VcsRoot root) {
+//    return String.format("system.%s", String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
+//  }
 
   @NotNull
   public Collection<String> getParametersAvailableOnAgent(@NotNull SBuild build) {

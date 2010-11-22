@@ -24,11 +24,13 @@ import java.util.List;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.clearcase.CTool.ChangeParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
+import jetbrains.buildServer.vcs.clearcase.CTool.StreamParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class CCSnapshotView {
 
@@ -38,6 +40,10 @@ public class CCSnapshotView {
   protected File myLocalPath;
   protected File myGlobalPath;
   protected String myTag;
+
+  private boolean isUcm = false;
+
+  private String myStream;
 
   /**
    * @param localRoot
@@ -49,7 +55,7 @@ public class CCSnapshotView {
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
       final ViewParser parser = CTool.lsView(localRoot);
-      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()));
+      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()), parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM));
       view.myLocalPath = localRoot;
       return view;
     } catch (Exception e) {
@@ -57,9 +63,10 @@ public class CCSnapshotView {
     }
   }
 
-  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath) {
+  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath, final boolean isUcm) {
     myTag = tag;
     myGlobalPath = glolbalPath;
+    this.isUcm = isUcm;
   }
 
   public CCSnapshotView(final String tag, final File localPath) {
@@ -68,9 +75,14 @@ public class CCSnapshotView {
   }
 
   //TODO: review constructors 
-  public CCSnapshotView(String buildViewTag, File globalViewLocation, File localPath) {
+  public CCSnapshotView(String buildViewTag, @Nullable String stream, File globalViewLocation, File localPath) {
     this(buildViewTag, localPath);
     myGlobalPath = globalViewLocation;
+    myStream = stream;
+  }
+
+  public boolean isUcm() {
+    return isUcm;
   }
 
   public String getTag() {
@@ -85,6 +97,23 @@ public class CCSnapshotView {
     return myLocalPath;
   }
 
+  public String getStream() throws CCException {
+    if (isUcm() && myStream == null) {
+      try {
+        final StreamParser stream = CTool.lsStream(getTag());
+        if (stream == null) {
+          throw new CCException(String.format("Could not find stream for \"%s\"", getTag()));
+        }
+        myStream = String.format("%s@%s%s", stream.getName(), File.separator, stream.getProjectSelector());
+      } catch (InterruptedException e) {
+        throw new CCException(e);
+      } catch (IOException e) {
+        throw new CCException(e);
+      }
+    }
+    return myStream;
+  }
+
   public void create(String reason) throws CCException {
     try {
       if (exists()) {
@@ -92,9 +121,9 @@ public class CCSnapshotView {
       }
       final VobObjectParser result;
       if (myGlobalPath != null) {
-        result = CTool.createSnapshotView(getTag(), myGlobalPath.getAbsolutePath(), myLocalPath.getAbsolutePath(), reason);
+        result = CTool.createSnapshotView(getTag(), getStream(), myGlobalPath.getAbsolutePath(), myLocalPath.getAbsolutePath(), reason);
       } else {
-        result = CTool.createSnapshotView(getTag(), null, myLocalPath.getAbsolutePath(), reason);
+        result = CTool.createSnapshotView(getTag(), getStream(), null, myLocalPath.getAbsolutePath(), reason);
       }
       myGlobalPath = new File(result.getGlobalPath());
       setConfigSpec(myConfigSpecs);
@@ -191,7 +220,7 @@ public class CCSnapshotView {
       throw new CCException(e);
     }
   }
-  
+
   public CCDelta[] update(final @NotNull File path) throws CCException {
     try {
       final ChangeParser[] history = CTool.update(path, new Date());
@@ -251,7 +280,8 @@ public class CCSnapshotView {
       final ViewParser parser = CTool.lsView(getTag());
       final String viewUuid = parser.getUUID();
       final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
-      FileUtil.writeFile(new File(getLocalPath(), "view.dat"), content);
+      final File viewDataFile = new File(getLocalPath(), "view.dat");
+      FileUtil.writeFile(viewDataFile, content);
       return this;
     } catch (Exception e) {
       throw new CCException(e);
