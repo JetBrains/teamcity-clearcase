@@ -204,7 +204,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   }
 
   protected String getBuildViewTag(AgentRunningBuild build, VcsRoot root) throws CCException {
-    return String.format("buildagent_%s_vcsroot_%s", build.getAgentConfiguration().getName(), root.getId());
+    return String.format("tcbuildagent_%s_vcsroot_%s", build.getAgentConfiguration().getName(), root.getId());
   }
 
   protected String getOriginViewTag(VcsRoot root) {

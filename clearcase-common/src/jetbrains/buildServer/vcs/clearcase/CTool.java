@@ -800,7 +800,7 @@ public class CTool {
     static final Pattern VIEW_ATTRIBUTES_PATTERN = Pattern.compile("View attributes: (.*)");
 
     private String myUUID;
-    private String myAttributes;
+    private String myAttributes = "";
 
     protected ViewParser(String[] stdout) {
       super(stdout);
@@ -808,12 +808,13 @@ public class CTool {
         final Matcher uidMatcher = VIEW_UID_PATTERN.matcher(line.trim());
         if (uidMatcher.matches()) {
           myUUID = uidMatcher.group(1);
+          continue;
         }
         final Matcher attributeMatcher = VIEW_ATTRIBUTES_PATTERN.matcher(line.trim());
         if (attributeMatcher.matches()) {
           myAttributes = attributeMatcher.group(1);
+          continue;
         }
-
       }
     }
 
