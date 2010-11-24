@@ -31,8 +31,6 @@ import jetbrains.buildServer.vcs.clearcase.Constants;
 import org.apache.log4j.Logger;
 
 public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
-  
-  private static final String DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors";  //$NON-NLS-1$
 
   static final Logger LOG = Logger.getLogger(ConvensionBasedSourceProvider.class);
 
@@ -66,35 +64,28 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
     final File serverSidePathWithinAViewDirectory = new File(serverSidePathWithinAView);
     final File agentSideCheckoutDirectory = new File(checkoutToRelativePath);
     if (!serverSidePathWithinAViewDirectory.equals(agentSideCheckoutDirectory)) {
-      if(isDisableValidationErrors(build)){
-        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_warning_message"),  //$NON-NLS-1$
-            root.getName(), 
-            serverSidePathWithinAViewDirectory.getPath(), 
-            agentSideCheckoutDirectory));
+      if (isDisableValidationErrors(build)) {
+        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_warning_message"), //$NON-NLS-1$
+            root.getName(), serverSidePathWithinAViewDirectory.getPath(), agentSideCheckoutDirectory));
       } else {
-        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_error_message"),  //$NON-NLS-1$
-            root.getName(), 
-            serverSidePathWithinAViewDirectory.getPath(), 
-            agentSideCheckoutDirectory));        
-        LOG.error(validationException.getMessage(), validationException);        
+        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_error_message"), //$NON-NLS-1$
+            root.getName(), serverSidePathWithinAViewDirectory.getPath(), agentSideCheckoutDirectory));
+        LOG.error(validationException.getMessage(), validationException);
         throw validationException;
       }
     }
   }
 
   private void validateCheckoutRules(final AgentRunningBuild build, final VcsRoot root, final CheckoutRules rules) throws VcsException {
-    dumpRules(rules);    
-    if(rules != null && !CheckoutRules.DEFAULT.equals(rules)){
-      if(isDisableValidationErrors(build)){
+    dumpRules(rules);
+    if (rules != null && !CheckoutRules.DEFAULT.equals(rules)) {
+      if (isDisableValidationErrors(build)) {
         LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_warning_message"), //$NON-NLS-1$
-            root.getName(),
-            rules.toString().trim()));
+            root.getName(), rules.toString().trim()));
       } else {
-        final VcsException validationException = new VcsException(String.format(
-            Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_error_message"), //$NON-NLS-1$
-            root.getName(),
-            rules.toString().trim()));        
-        LOG.error(validationException.getMessage(), validationException);        
+        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_error_message"), //$NON-NLS-1$
+            root.getName(), rules.toString().trim()));
+        LOG.error(validationException.getMessage(), validationException);
         throw validationException;
       }
     }
@@ -135,15 +126,14 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   private boolean isAlive(final CCSnapshotView view) throws CCException {
     return view.isAlive();
   }
-  
+
   private boolean isDisableValidationErrors(AgentRunningBuild build) {
-    final String disableValidationError = build.getBuildParameters().getSystemProperties().get(DISABLE_VALIDATION_ERRORS);
-    LOG.debug(String.format("Found %s=\"%s\"", DISABLE_VALIDATION_ERRORS, disableValidationError));
-    if(Boolean.parseBoolean(disableValidationError)){
+    final String disableValidationError = build.getSharedConfigParameters().get(Constants.AGENT_DISABLE_VALIDATION_ERRORS);
+    LOG.debug(String.format("Found %s=\"%s\"", Constants.AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError));
+    if (Boolean.parseBoolean(disableValidationError)) {
       return true;
     }
     return false;
   }
-  
 
 }

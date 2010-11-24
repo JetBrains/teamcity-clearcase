@@ -44,13 +44,15 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLo
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.serverSide.BuildServerListener;
+import jetbrains.buildServer.serverSide.BuildStartContext;
+import jetbrains.buildServer.serverSide.BuildStartContextProcessor;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import jetbrains.buildServer.serverSide.PropertiesProcessor;
 import jetbrains.buildServer.serverSide.SBuild;
 import jetbrains.buildServer.serverSide.SBuildServer;
+import jetbrains.buildServer.serverSide.SRunningBuild;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
-import jetbrains.buildServer.serverSide.parameters.BuildParametersProvider;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
@@ -91,7 +93,8 @@ import org.jetbrains.annotations.Nullable;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 
-public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider, CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport, BuildParametersProvider {
+public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider, CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport, /*BuildParametersProvider*/BuildStartContextProcessor {
+  //  void addSharedParameter(@NotNull String key, @NotNull String value);
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
@@ -118,7 +121,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       myCache.register(server, dispatcher);
     }
 
-    server.registerExtension(BuildParametersProvider.class, this.getClass().getName(), this);
+    server.registerExtension(BuildStartContextProcessor/*BuildParametersProvider*/.class, this.getClass().getName(), this);
   }
 
   @NotNull
@@ -183,14 +186,17 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return sb.toString();
   }
 
+  @SuppressWarnings("unchecked")
   public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
     return doCreateConnection(root, includeRule, false, loadRule);
   }
 
+  @SuppressWarnings("unchecked")
   public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
     return doCreateConnection(root, includeRule, checkCSChange, loadRule);
   }
 
+  @SuppressWarnings("unchecked")
   private ClearCaseConnection doCreateConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
     final ViewPath viewPath = getViewPath(root);/*
                                                  * loadRule == null ?
@@ -930,9 +936,43 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     void process(@NotNull final ClearCaseConnection connection) throws VcsException;
   }
 
-  @NotNull
-  public Map<String, String> getParameters(@NotNull SBuild build, boolean emulationMode) {
-    final HashMap<String, String> out = new HashMap<String, String>();
+  //  @NotNull
+  //  public Map<String, String> getParameters(@NotNull SBuild build, boolean emulationMode) {
+  //    final HashMap<String, String> out = new HashMap<String, String>();
+  //    try {
+  //      //collect all clearcase's roots and populate current ConfigSpecs for each
+  //      for (final VcsRootEntry entry : build.getVcsRootEntries()) {
+  //        if (getName().equals(entry.getVcsRoot().getVcsName())) { //looking for clearcase only
+  //          final String viewPath = trim(entry.getVcsRoot().getProperty(Constants.CC_VIEW_PATH));
+  //          final File viewRoot = new File(viewPath);
+  //          if (viewRoot.exists()) {
+  //            try {
+  //              final CCSnapshotView ccView = CCSnapshotView.init(viewRoot);
+  //              LOG.debug(String.format("The \"%s\" view initialized", ccView));
+  //              final StringBuffer specsBuffer = new StringBuffer();
+  //              for (String spec : ccView.getConfigSpec()) {
+  //                specsBuffer.append(spec).append("\n");
+  //              }
+  ////              //pass config spec to agents
+  ////              out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
+  //              //pass tag to agents
+  //              out.put(getOriginalViewTagParameterName(entry.getVcsRoot()), ccView.getTag().trim());
+  //            } catch (CCException e) {
+  //              LOG.error(e.getMessage(), e);
+  //            }
+  //          } else {
+  //            LOG.error(String.format("The view's root directory \"%s\" does not exist. Could not get ConfigSpec of this VcsRoot", viewPath));
+  //          }
+  //        }
+  //      }
+  //    } catch (Throwable e) {
+  //      LOG.error(e.getMessage(), e);
+  //    }
+  //    return out;
+  //  }
+
+  public void updateParameters(BuildStartContext context) {
+    final SRunningBuild build = context.getBuild();
     try {
       //collect all clearcase's roots and populate current ConfigSpecs for each
       for (final VcsRootEntry entry : build.getVcsRootEntries()) {
@@ -947,10 +987,16 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               for (String spec : ccView.getConfigSpec()) {
                 specsBuffer.append(spec).append("\n");
               }
-//              //pass config spec to agents
-//              out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
+              //pass config spec to agents
+              final String configSpecParameterName = getConfigSpecParameterName(entry.getVcsRoot());
+              final String configSpecParameterValue = specsBuffer.toString();
+              context.addSharedParameter(configSpecParameterName, configSpecParameterValue);
+              LOG.debug(String.format("added SharedParameter: %s=\"%s\"", configSpecParameterName, configSpecParameterValue));
               //pass tag to agents
-              out.put(getOriginalViewTagParameterName(entry.getVcsRoot()), ccView.getTag().trim());
+              final String originalViewTagParameterName = getOriginalViewTagParameterName(entry.getVcsRoot());
+              String originalViewTagParameterValue = ccView.getTag().trim();
+              context.addSharedParameter(originalViewTagParameterName, originalViewTagParameterValue);
+              LOG.debug(String.format("added SharedParameter: %s=\"%s\"", originalViewTagParameterName, originalViewTagParameterValue));
             } catch (CCException e) {
               LOG.error(e.getMessage(), e);
             }
@@ -962,16 +1008,16 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     } catch (Throwable e) {
       LOG.error(e.getMessage(), e);
     }
-    return out;
+
   }
 
   public static String getOriginalViewTagParameterName(VcsRoot root) {
-    return String.format("system.%s", String.format(Constants.AGENT_SOURCE_VIEW_TAG_PROP_PATTERN, root.getId()));
+    return String.format("%s", String.format(Constants.AGENT_SOURCE_VIEW_TAG_PROP_PATTERN, root.getId()));
   }
 
-//  public static String getConfigSpecParameterName(VcsRoot root) {
-//    return String.format("system.%s", String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
-//  }
+  public static String getConfigSpecParameterName(VcsRoot root) {
+    return String.format("%s", String.format(Constants.AGENT_CONFIGSPECS_SYS_PROP_PATTERN, root.getId()));
+  }
 
   @NotNull
   public Collection<String> getParametersAvailableOnAgent(@NotNull SBuild build) {

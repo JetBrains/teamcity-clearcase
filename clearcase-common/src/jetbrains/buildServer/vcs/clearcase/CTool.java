@@ -828,49 +828,6 @@ public class CTool {
 
   }
 
-  /*
-  Z:\data\kdonskov_test_prj_int>cleartool lsstream -long -view kdonskov_test_prj_int
-  stream "test_prj_Integration"
-  2010-11-19T20:02:26+03 by kdonskov.Пользователи домена@ruspd-kdonskov
-  owner: SWIFTTEAMS\kdonskov
-  group: SWIFTTEAMS\Пользователи домена
-  project: test_prj@\swiftteams_ucm_project_vob (integration stream)
-  default deliver stream:
-  development streams:
-  contains activities:
-    testing_started@\swiftteams_ucm_project_vob
-    inner_added_activity@\swiftteams_ucm_project_vob
-  foundation baselines:
-    swiftteams_component_INITIAL@\swiftteams_ucm_project_vob (swiftteams_component@\swiftteams_ucm_project_vob) (non-modifiable
-
-    swiftteams_ucm_vob_INITIAL@\swiftteams_ucm_project_vob (swiftteams_ucm_vob@\swiftteams_ucm_project_vob) (modifiable)
-  recommended baselines:
-    swiftteams_component_INITIAL@\swiftteams_ucm_project_vob (swiftteams_component@\swiftteams_ucm_project_vob)
-    swiftteams_ucm_vob_INITIAL@\swiftteams_ucm_project_vob (swiftteams_ucm_vob@\swiftteams_ucm_project_vob)
-  views:
-    kdonskov_test_prj_int
-  policies:
-    POLICY_DELIVER_REQUIRE_REBASE disabled
-    POLICY_DELIVER_NCO_DEVSTR disabled
-    POLICY_INTRAPROJECT_DELIVER_FOUNDATION_CHANGES disabled
-    POLICY_INTRAPROJECT_DELIVER_ALLOW_MISSING_TGTCOMPS disabled
-    POLICY_INTERPROJECT_DELIVER disabled
-    POLICY_INTERPROJECT_DELIVER_FOUNDATION_CHANGES disabled
-    POLICY_INTERPROJECT_DELIVER_REQUIRE_TGTCOMP_VISIBILITY disabled
-    POLICY_INTERPROJECT_DELIVER_ALLOW_NONMOD_TGTCOMPS disabled
-    POLICY_CHSTREAM_UNRESTRICTED disabled
-  policies (effective):
-    POLICY_DELIVER_REQUIRE_REBASE enabled
-    POLICY_DELIVER_NCO_DEVSTR enabled
-    POLICY_INTRAPROJECT_DELIVER_FOUNDATION_CHANGES disabled
-    POLICY_INTRAPROJECT_DELIVER_ALLOW_MISSING_TGTCOMPS disabled
-    POLICY_INTERPROJECT_DELIVER disabled
-    POLICY_INTERPROJECT_DELIVER_FOUNDATION_CHANGES disabled
-    POLICY_INTERPROJECT_DELIVER_REQUIRE_TGTCOMP_VISIBILITY disabled
-    POLICY_INTERPROJECT_DELIVER_ALLOW_NONMOD_TGTCOMPS disabled
-    POLICY_CHSTREAM_UNRESTRICTED enabled
-  baseline naming template: basename    
-   */
   static class StreamParser extends AbstractCCParser {
     static final Pattern STREAM_NAME_PATTERN_WIN = Pattern.compile("stream \"(.*)\"");
     static final Pattern STREAM_NAME_PATTERN_NIX = Pattern.compile("stream '(.*)'");
