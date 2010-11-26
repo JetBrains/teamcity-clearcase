@@ -21,6 +21,7 @@ import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
+import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.CCDelta;
@@ -29,6 +30,7 @@ import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 
@@ -43,51 +45,80 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
   }
 
   public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
-    //check any CheckoutRules except Default exists and throw an exception if found
-    validateCheckoutRules(build, root, rules);
-    //check the "Checkout Directory" equals to "Relative Path within the View" setting
-    validateCheckoutDirectory(root, checkoutDirectory, build);
+    //check "Checkout Directory" & Checkout Rules matches to the ClearCase View structure
+    validatePaths(build, checkoutDirectory, root, rules);
     //perform update
     super.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
   }
 
-  private void validateCheckoutDirectory(VcsRoot root, File checkoutDirectory, AgentRunningBuild build) throws VcsException {
-    final String serverSidePathWithinAView = root.getProperty(Constants.RELATIVE_PATH);
-    //normalize relative paths 
-    final String checkoutToRelativePath;
-    if (!checkoutDirectory.isAbsolute()) {
-      checkoutToRelativePath = FileUtil.normalizeRelativePath(checkoutDirectory.getPath());
+  void validatePaths(final @NotNull AgentRunningBuild build, final @NotNull File configurationCheckoutDirectory, final @NotNull VcsRoot root, final @NotNull CheckoutRules rules) throws VcsValidationException {
+    //log configurationCheckoutDirectory
+    LOG.debug(String.format("build.checkoutDirectory=\"%s\"", build.getCheckoutDirectory())); //$NON-NLS-1$
+    LOG.debug(String.format("configurationCheckoutDirectory=\"%s\"", configurationCheckoutDirectory)); //$NON-NLS-1$
+    //make checkout directory relative due to validation issues
+    final File relativeCheckoutDirectory;
+    if (configurationCheckoutDirectory.isAbsolute()) {
+      relativeCheckoutDirectory = new File(FileUtil.getRelativePath(build.getAgentConfiguration().getWorkDirectory(), configurationCheckoutDirectory));
+      LOG.debug(String.format("make relative configurationCheckoutDirectory=\"%s\"", relativeCheckoutDirectory)); //$NON-NLS-1$      
     } else {
-      checkoutToRelativePath = FileUtil.normalizeRelativePath(FileUtil.getRelativePath(getCCRootDirectory(build, checkoutDirectory), checkoutDirectory));
+      relativeCheckoutDirectory = configurationCheckoutDirectory;
     }
-    //check configuration and warn if differs
-    final File serverSidePathWithinAViewDirectory = new File(serverSidePathWithinAView);
-    final File agentSideCheckoutDirectory = new File(checkoutToRelativePath);
-    if (!serverSidePathWithinAViewDirectory.equals(agentSideCheckoutDirectory)) {
-      if (isDisableValidationErrors(build)) {
-        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_warning_message"), //$NON-NLS-1$
-            root.getName(), serverSidePathWithinAViewDirectory.getPath(), agentSideCheckoutDirectory));
+    final File serverSideFullPathWithinTheView = new File(root.getProperty(Constants.CC_VIEW_PATH), root.getProperty(Constants.RELATIVE_PATH));
+    //log referencing path    
+    LOG.debug(String.format("serverSideFullPathWithinTheView=\"%s\"", serverSideFullPathWithinTheView)); //$NON-NLS-1$
+    LOG.debug(String.format("Validating rules {%s}", rules.toString().trim())); //$NON-NLS-1$
+    if (!CheckoutRules.DEFAULT.equals(rules)) {
+      if (rules.getIncludeRules().size() == 1) {
+        final IncludeRule rule = rules.getIncludeRules().get(0);
+        if (rule.getFrom().trim().length() == 0 || ".".equals(rule.getFrom())) { //$NON-NLS-1$
+          final File buildCheckoutDirectory = new File(FileUtil.normalizeRelativePath(new File(relativeCheckoutDirectory, rule.getTo()).getPath()));
+          //log buildCheckoutDirectory
+          LOG.debug(String.format("validating buildCheckoutDirectory=\"%s\"", buildCheckoutDirectory)); //$NON-NLS-1$
+          if (isAncestor(buildCheckoutDirectory, serverSideFullPathWithinTheView)) {
+            //match, log
+            LOG.debug(String.format("\"%s\" validated, accepted", buildCheckoutDirectory)); //$NON-NLS-1$
+          } else {
+            //report: rule doesn't match to expected, error
+            report(String.format(Messages.getString("ConvensionBasedSourceProvider.unmatched_checkout_root_error_message"), buildCheckoutDirectory, serverSideFullPathWithinTheView), isDisableValidationErrors(build)); //$NON-NLS-1$
+          }
+        } else {
+          //report: from is not ".", error
+          report(String.format(Messages.getString("ConvensionBasedSourceProvider.unsupported_rule_format_error_message"), rule.getFrom()), isDisableValidationErrors(build)); //$NON-NLS-1$
+        }
       } else {
-        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_directory_error_message"), //$NON-NLS-1$
-            root.getName(), serverSidePathWithinAViewDirectory.getPath(), agentSideCheckoutDirectory));
-        LOG.error(validationException.getMessage(), validationException);
-        throw validationException;
+        //report: multiple, error
+        report(String.format(Messages.getString("ConvensionBasedSourceProvider.multiple_checkout_root_error_message"), rules.toString().trim()), isDisableValidationErrors(build)); //$NON-NLS-1$
+      }
+    } else {
+      //default Checkout Rules
+      //log validation of configurationCheckoutDirectory, serverSideFullPathWithinTheView
+      LOG.debug(String.format("validating buildCheckoutDirectory=\"%s\"", relativeCheckoutDirectory)); //$NON-NLS-1$
+      if (isAncestor(relativeCheckoutDirectory, serverSideFullPathWithinTheView)) {
+        //match, log
+        LOG.debug(String.format("\"%s\" validated, accepted", relativeCheckoutDirectory)); //$NON-NLS-1$
+      } else {
+        //report: configurationCheckoutDirectory doesn't match to expected, error
+        report(String.format(Messages.getString("ConvensionBasedSourceProvider.unmatched_checkout_root_error_message"), relativeCheckoutDirectory, serverSideFullPathWithinTheView), isDisableValidationErrors(build)); //$NON-NLS-1$
       }
     }
   }
 
-  private void validateCheckoutRules(final AgentRunningBuild build, final VcsRoot root, final CheckoutRules rules) throws VcsException {
-    dumpRules(rules);
-    if (rules != null && !CheckoutRules.DEFAULT.equals(rules)) {
-      if (isDisableValidationErrors(build)) {
-        LOG.warn(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_warning_message"), //$NON-NLS-1$
-            root.getName(), rules.toString().trim()));
-      } else {
-        final VcsException validationException = new VcsException(String.format(Messages.getString("ConvensionBasedSourceProvider.wrong_checkout_rules_error_message"), //$NON-NLS-1$
-            root.getName(), rules.toString().trim()));
-        LOG.error(validationException.getMessage(), validationException);
-        throw validationException;
-      }
+  private boolean isAncestor(final @NotNull File ancestor, final @NotNull File parentCandidate) {
+    String nparent = parentCandidate.getPath().replace("\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
+    String nancestor = ancestor.getPath().replace("\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
+    return nparent.endsWith(nancestor);
+  }
+
+  void report(final String message, boolean trapException) throws VcsValidationException {
+    final StringBuffer out = new StringBuffer(message);
+    if (!trapException) {
+      out.append(Messages.getString("ConvensionBasedSourceProvider.validation_failed_error_message_tail")); //$NON-NLS-1$
+      final VcsValidationException validationException = new VcsValidationException(out.toString());
+      LOG.error(validationException.getMessage(), validationException);
+      throw validationException;
+    } else {
+      out.append(Messages.getString("ConvensionBasedSourceProvider.validation_failed_warning_message_tail")); //$NON-NLS-1$
+      LOG.warn(out.toString());
     }
   }
 
@@ -129,7 +160,7 @@ public class ConvensionBasedSourceProvider extends AbstractSourceProvider {
 
   private boolean isDisableValidationErrors(AgentRunningBuild build) {
     final String disableValidationError = build.getSharedConfigParameters().get(Constants.AGENT_DISABLE_VALIDATION_ERRORS);
-    LOG.debug(String.format("Found %s=\"%s\"", Constants.AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError));
+    LOG.debug(String.format("Found %s=\"%s\"", Constants.AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError)); //$NON-NLS-1$
     if (Boolean.parseBoolean(disableValidationError)) {
       return true;
     }
