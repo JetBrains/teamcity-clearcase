@@ -21,11 +21,25 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.vcs.clearcase.Constants;
+
+import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class HistoryElement {
-  
+
+  private static final Logger LOG = Logger.getLogger(HistoryElement.class);
+
+  private static final Pattern CC_LSHISTORY_VPATH_PATTERN = Pattern.compile("(.*?)[/\\\\](\\d*)[/\\\\](.*?)[/\\\\](.*)");
+  private static final Pattern CC_LSHISTORY_VFILE_PATTERN = Pattern.compile("(.*?)[/\\\\](\\d*)[/\\\\](.*)");
+  private static final Pattern CC_LSHISTORY_VEND_PATTERN =  Pattern.compile("(.*?)[/\\\\](.*?)[/\\\\](\\d*)");
+
   private final String myUser;
   private final String myDate;
   private final String myObjectName;
@@ -36,27 +50,16 @@ public class HistoryElement {
   private final String myComment;
   private final String myActivity;
   private final long myEventID;
-	
+
   private static final int EXPECTED_CHANGE_FIELD_COUNT = 9;
   private static final String EVENT = "event ";
   private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
 
-  public HistoryElement(
-                        final String eventId,
-                        final String user,
-                        final String date,
-                        final String objectName,
-                        final String objectKind,
-                        final String objectVersion,
-                        final String operation,
-                        final String event, 
-                        final String comment,
-                        final String activity
-                        ) {
-  	myEventID = Long.parseLong(eventId);
+  public HistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
+    myEventID = Long.parseLong(eventId);
     myUser = user;
     myDate = date;
-    myObjectName = objectName;
+    myObjectName = normalizeLsHistoryFileName(objectName);
     myObjectKind = objectKind;
     myObjectVersion = objectVersion;
     myOperation = operation;
@@ -65,17 +68,7 @@ public class HistoryElement {
     myActivity = activity;
   }
 
-	private static HistoryElement createHistoryElement(
-                                              final String eventId,	
-                                              final String user,
-                                              final String date,
-                                              final String objectName,
-                                              final String objectKind,
-                                              final String objectVersion,
-                                              final String operation,
-                                              final String event,
-                                              final String comment,
-                                              final String activity) {
+  private static HistoryElement createHistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
     String kind = objectKind, version = objectVersion;
     if ("rmver".equals(operation) && "destroy version on branch".equals(event)) {
       final String extractedVersion = extractVersion(comment);
@@ -109,32 +102,10 @@ public class HistoryElement {
     final String[] strings = parts[1].trim().split(ClearCaseConnection.DELIMITER, EXPECTED_CHANGE_FIELD_COUNT);
     if (strings.length < EXPECTED_CHANGE_FIELD_COUNT - 1) {
       return null;
-    }
-    else if (strings.length == EXPECTED_CHANGE_FIELD_COUNT - 1) {
-      return createHistoryElement(eventId,
-                                  strings[0],
-                                  strings[1],
-                                  strings[2],
-                                  strings[3],
-                                  strings[4],
-                                  strings[5],
-                                  strings[6],
-                                  strings[7],
-                                  ""
-                                  );
-    }
-    else {
-      return createHistoryElement(eventId,
-                                  strings[0],
-                                  strings[1],
-                                  strings[2],
-                                  strings[3],
-                                  strings[4],
-                                  strings[5],
-                                  strings[6],
-                                  strings[7],
-                                  strings[8]
-                                  );
+    } else if (strings.length == EXPECTED_CHANGE_FIELD_COUNT - 1) {
+      return createHistoryElement(eventId, strings[0], strings[1], strings[2], strings[3], strings[4], strings[5], strings[6], strings[7], "");
+    } else {
+      return createHistoryElement(eventId, strings[0], strings[1], strings[2], strings[3], strings[4], strings[5], strings[6], strings[7], strings[8]);
     }
   }
 
@@ -169,7 +140,6 @@ public class HistoryElement {
   public String getComment() {
     return myComment;
   }
-  
 
   public String getUser() {
     return myUser;
@@ -184,8 +154,8 @@ public class HistoryElement {
   }
 
   public long getEventID() {
-		return myEventID;
-	}
+    return myEventID;
+  }
 
   public String getPreviousVersion(final ClearCaseConnection connection, final boolean isDirPath) throws VcsException, IOException {
     return connection.getPreviousVersion(this, isDirPath);
@@ -203,9 +173,82 @@ public class HistoryElement {
     return "\"" + getObjectName() + "\", version \"" + getObjectVersion() + "\", date \"" + getDateString() + "\", operation \"" + getOperation() + "\", event \"" + getEvent() + "\"";
   }
 
-	@Override
-	public String toString() {
-		return String.format("%s: %s(%s)=>%s", getEventID(), getObjectName(), getOperation(), getEvent());
-	}
-  
+  @Override
+  public String toString() {
+    return String.format("%s: %s(%s)=>%s", getEventID(), getObjectName(), getOperation(), getEvent());
+  }
+
+  public static String normalizeLsHistoryFileName(final @NotNull String lsHistoryFileName, boolean dropVersions) {
+    if (!TeamCityProperties.getBoolean(Constants.DISABLE_HISTORY_ELEMENT_TRANSFORMATION)) {
+      final StringBuffer out = new StringBuffer();
+      final int vsepPos = lsHistoryFileName.indexOf(CCParseUtil.CC_VERSION_SEPARATOR);
+      if (vsepPos != -1) {
+        //looking for expected separator
+        final String targetPathSeparator;
+        if (lsHistoryFileName.indexOf("/") != -1) {
+          targetPathSeparator = "/";
+        } else {
+          targetPathSeparator = "\\";
+        }
+        //split...
+        String head = lsHistoryFileName.substring(0, vsepPos);
+        String tail = lsHistoryFileName.substring(vsepPos + 3, lsHistoryFileName.length());//exclude @@ and next slash
+        //drop versions    
+        out.append(head);
+        Matcher matcher;
+        while (true) {
+          matcher = CC_LSHISTORY_VPATH_PATTERN.matcher(tail);
+          if (matcher.matches()) {
+            //branch=matcher.group(1)
+            //version=matcher.group(2)            
+            final String pathElement = matcher.group(3);
+            tail = matcher.group(4);
+            if (dropVersions) {
+              out.append(targetPathSeparator).append(pathElement);
+            } else {
+              out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append(targetPathSeparator).append(matcher.group(1)).append(targetPathSeparator).append(matcher.group(2)).append(targetPathSeparator).append(pathElement);
+            }
+            continue;
+
+          } else {
+            matcher = CC_LSHISTORY_VFILE_PATTERN.matcher(tail);
+            if (matcher.matches()) {
+              //branch=matcher.group(1)
+              //version=matcher.group(2)            
+              final String fileElement = matcher.group(3);
+              if (dropVersions) {
+                out.append(targetPathSeparator).append(fileElement);
+              } else {
+                out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append(targetPathSeparator).append(matcher.group(1)).append(targetPathSeparator).append(matcher.group(2)).append(targetPathSeparator).append(fileElement);
+              }
+              
+            } else {
+              matcher = CC_LSHISTORY_VEND_PATTERN.matcher(tail);
+              if (matcher.matches()) {
+                if (!dropVersions) {
+                  out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append("/").append(tail);
+                }
+              }
+            }
+          }
+          break;
+        }
+        final String processed = out.toString().trim();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(String.format("Path element transformed: \"%s\"->\"%s\"", lsHistoryFileName, processed));
+        }
+        return processed;
+      }
+    }
+    return lsHistoryFileName;
+  }
+
+  /**
+   * according to TW-13359 the file name element can include versions segments if a change came from another branch.
+   * must drop its see also: TW-14378
+   */
+  public static String normalizeLsHistoryFileName(final @NotNull String lsHistoryFileName) {
+    return normalizeLsHistoryFileName(lsHistoryFileName, false);
+  }
+
 }

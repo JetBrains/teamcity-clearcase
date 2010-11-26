@@ -155,19 +155,31 @@ public class CCSnapshotView {
     }
   }
 
-  public void add(File file, String reason) throws CCException {
+  public boolean isCheckedout(final @NotNull File file) throws CCException {
     try {
-      // TODO: check the File inside the View
-      CTool.checkout(myLocalPath, file.getParentFile(), reason);
-      CTool.mkelem(myLocalPath, file, reason);
-      CTool.checkin(myLocalPath, file, reason);
-      CTool.checkin(myLocalPath, file.getParentFile(), reason);
+      return CTool.isCheckedout(myLocalPath, file);
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
 
-  public void checkout(File file, String reason) throws CCException {
+  //TODO: move to testing implementation
+  protected void add(final @NotNull File file, String reason) throws CCException {
+    try {
+      //check parent folder is checked out and checkout if no so
+      final File folder = file.getParentFile();
+      if (!CTool.isCheckedout(myLocalPath, folder)) {
+        CTool.checkout(myLocalPath, folder, reason);
+      }
+      CTool.mkelem(myLocalPath, file, reason);
+      CTool.checkin(myLocalPath, file, reason);
+      CTool.checkin(myLocalPath, folder, reason);
+    } catch (Exception e) {
+      throw new CCException(e);
+    }
+  }
+
+  protected void checkout(final @NotNull File file, String reason) throws CCException {
     try {
       // TODO: check the File inside the View
       CTool.checkout(myLocalPath, file, reason);
@@ -176,7 +188,7 @@ public class CCSnapshotView {
     }
   }
 
-  public void checkin(File file, String reason) throws CCException {
+  protected void checkin(final @NotNull File file, String reason) throws CCException {
     try {
       // TODO: check the File inside the View
       CTool.checkin(myLocalPath, file, reason);
@@ -185,7 +197,7 @@ public class CCSnapshotView {
     }
   }
 
-  public void remove(File file, String reason) throws CCException {
+  protected void remove(File file, String reason) throws CCException {
     try {
       // TODO: check the File inside the View
       CTool.checkout(myLocalPath, file.getParentFile(), reason);
@@ -196,7 +208,7 @@ public class CCSnapshotView {
     }
   }
 
-  public void remove(File file, String version, String reason) throws CCException {
+  protected void remove(File file, String version, String reason) throws CCException {
     try {
       CTool.rmver(myLocalPath, file, version, reason);
     } catch (Exception e) {

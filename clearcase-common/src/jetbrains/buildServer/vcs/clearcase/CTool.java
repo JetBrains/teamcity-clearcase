@@ -76,7 +76,9 @@ public class CTool {
 
   private static final Logger LOG = Logger.getLogger(CTool.class);
 
+  @SuppressWarnings("unused")
   private static String ourSessionUser;
+  @SuppressWarnings("unused")
   private static String ourSessionPassword;
   private static String ourCleartoolExecutable = "cleartool"; //$NON-NLS-1$
 
@@ -930,7 +932,22 @@ public class CTool {
     final String[] result = Util.execAndWait(command);
     return Arrays.asList(result);
   }
-
+  
+  static boolean isCheckedout(File root, File file) throws IOException, InterruptedException {
+    final String cmd;
+    if (file.isDirectory()) {
+      cmd = "%s lscheckout -long -directory %s";
+    } else {
+      cmd = "%s lscheckout -long %s";
+    }
+    final String[] response = Util.execAndWait(String.format(cmd, getCleartoolExecutable(), file.getAbsolutePath()), root);
+    if (response.length == 0 || (response.length == 1 && response[0].trim().length() == 0)) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+  
   static void checkout(File root, File file, String reason) throws IOException, InterruptedException {
     Util.execAndWait(String.format(CMD_CHECKOUT, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }

@@ -16,17 +16,21 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import jetbrains.buildServer.util.StringUtil;
-import jetbrains.buildServer.vcs.VcsException;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.vcs.clearcase.Constants;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 public class CCPathElement {
+
   private final String myPathElement;
   private String myVersion = null;
 
@@ -109,8 +113,54 @@ public class CCPathElement {
     return result;
 
   }
+  
+  public static List<CCPathElement> splitIntoPathElements(String objectName) {
+    if(useLegacySplitter()){
+      return split_Legacy(objectName);
+    }
+    return split_Treat_Main_As_Version_Selector(objectName);
+  }
+  
+  private static boolean useLegacySplitter() {
+    return !TeamCityProperties.getBoolean(Constants.TREAT_MAIN_AS_VERSION_IDENTIFIER);
+  }
 
-  public static List<CCPathElement> splitIntoPathElements(final String objectName) {
+  static List<CCPathElement> split_Legacy(String objectName) {
+    List<CCPathElement> result = new ArrayList<CCPathElement>();
+
+    List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
+
+    for (int i = 0; i < subNames.size(); i++) {
+
+      String currentViewPath = null;
+
+      final String subName = subNames.get(i);
+      final boolean beginOfVersion = subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR);
+
+      if (beginOfVersion) {
+        final CCPathElement currentPair =
+          new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
+
+        result.add(currentPair);
+
+        for (i += 1; i < subNames.size(); i++) {
+          currentPair.appendVersion(subNames.get(i));
+          try {
+            Integer.parseInt(subNames.get(i));
+            break;
+          } catch (NumberFormatException e) {
+            //ignore
+          }
+        }
+      } else {
+        result.add(new CCPathElement(subName, currentViewPath, false));
+      }
+    }
+    return removeDots(result);
+  }
+
+  static List<CCPathElement> split_Treat_Main_As_Version_Selector(String objectName) {
+
     final List<CCPathElement> result = new ArrayList<CCPathElement>();
 
     final List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
@@ -122,21 +172,18 @@ public class CCPathElement {
       final String subName = subNames.get(i);
 
       if (subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR)) {
-        final CCPathElement currentPair =
-          new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
+        final CCPathElement currentPair = new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
 
         result.add(currentPair);
 
         i = processVersion(currentPair, i, subNames);
-      }
-      else if (i + 1 < size && "main".equalsIgnoreCase(subNames.get(i + 1))) {
+      } else if (i + 1 < size && "main".equalsIgnoreCase(subNames.get(i + 1))) {
         final CCPathElement currentPair = new CCPathElement(subName, currentViewPath, true);
 
         result.add(currentPair);
 
         i = processVersion(currentPair, i, subNames);
-      }
-      else {
+      } else {
         result.add(new CCPathElement(subName, currentViewPath, false));
       }
     }
@@ -165,24 +212,24 @@ public class CCPathElement {
         final CCPathElement prevElement = result.get(i - 1);
         prevElement.setVersion(chooseVersion(prevElement.getVersion(), curElement.getVersion()));
         result.remove(i);
-      }
-      else i++;
+      } else
+        i++;
     }
     return result;
   }
 
   private static String chooseVersion(final String version1, final String version2) {
-    return version1 == null ? version2 : version1;    
+    return version1 == null ? version2 : version1;
   }
 
   private static void setInViewAttributes(List<CCPathElement> pathElements, String viewPath, int skipAtBeginCount) {
     final List<String> viewPathElements = createViewPathElementList(viewPath, pathElements);
 
     for (int i = 0; i < skipAtBeginCount; i++) {
-      if (viewPathElements.isEmpty()) break;
+      if (viewPathElements.isEmpty())
+        break;
       viewPathElements.remove(viewPathElements.size() - 1);
     }
-
 
     for (CCPathElement pathElement : pathElements) {
 
@@ -205,11 +252,7 @@ public class CCPathElement {
     return createPath(ccPathElements, 0, length, appentVersion);
   }
 
-  public static String createPath(final List<CCPathElement> ccPathElements,
-                                  final int startIndex,
-                                  int endIndex,
-                                  boolean appentVersion
-  ) {
+  public static String createPath(final List<CCPathElement> ccPathElements, final int startIndex, int endIndex, boolean appentVersion) {
     StringBuffer result = new StringBuffer();
     boolean first = true;
     for (int i = startIndex; i < endIndex; i++) {
@@ -263,11 +306,8 @@ public class CCPathElement {
     return removeFirstSeparatorIfNeeded(result.toString());
   }
 
-  public static String replaceLastVersionAndReturnFullPathWithVersions(final String parentDirFullPath,
-                                                                       final String viewName,
-                                                                       final String version) {
-    final List<CCPathElement> pathElements =
-      splitIntoPathAntVersions(parentDirFullPath, viewName, 0);
+  public static String replaceLastVersionAndReturnFullPathWithVersions(final String parentDirFullPath, final String viewName, final String version) {
+    final List<CCPathElement> pathElements = splitIntoPathAntVersions(parentDirFullPath, viewName, 0);
     pathElements.get(pathElements.size() - 1).setVersion(version);
     return createPath(pathElements, pathElements.size(), true);
 
@@ -278,14 +318,14 @@ public class CCPathElement {
     Stack<String> stack = new Stack<String>();
 
     for (String dir : dirs) {
-      if (".".equals(dir)) continue;
+      if (".".equals(dir))
+        continue;
       if ("..".equals(dir)) {
         if (stack.isEmpty()) {
           throw new VcsException("Invalid parent links balance: \"" + fullFileName + "\"");
         }
         stack.pop();
-      }
-      else {
+      } else {
         stack.push(dir);
       }
     }
@@ -327,4 +367,5 @@ public class CCPathElement {
     final List<CCPathElement> elementList = splitIntoPathElements(fullPath);
     return createPath(elementList, elementList.size(), true);
   }
+
 }

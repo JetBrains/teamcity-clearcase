@@ -39,4 +39,6 @@ public interface Constants {
   public static final String AGENT_SOURCE_VIEW_TAG_PROP_PATTERN = "vcs.clearcase.view.tag.%s";
   
   public static final String AGENT_DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors"; //$NON-NLS-1$  
+  public static final String TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.treat.main.as.version.identifier";
+  public static final String DISABLE_HISTORY_ELEMENT_TRANSFORMATION = "clearcase.disable.history.transformation";
 }
