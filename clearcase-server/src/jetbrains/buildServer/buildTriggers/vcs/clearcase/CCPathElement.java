@@ -159,7 +159,7 @@ public class CCPathElement {
     return removeDots(result);
   }
 
-  static List<CCPathElement> split_Treat_Main_As_Version_Selector(String objectName) {
+  public/*just for testing*/static List<CCPathElement> split_Treat_Main_As_Version_Selector(String objectName) {
 
     final List<CCPathElement> result = new ArrayList<CCPathElement>();
 
