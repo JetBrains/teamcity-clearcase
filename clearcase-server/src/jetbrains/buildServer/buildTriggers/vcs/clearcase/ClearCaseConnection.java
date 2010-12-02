@@ -54,8 +54,8 @@ import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.CTool;
-import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
+import jetbrains.buildServer.vcs.clearcase.Constants;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
@@ -78,14 +78,15 @@ public class ClearCaseConnection {
 
   private InteractiveProcessFacade myProcess;
   
-  private final static int CC_LOG_FILE_SIZE_LIMIT = getLogSizeLimit();
+
   private static final String UNIX_VIEW_PATH_PREFIX = "/view/";
 
-  private static int getLogSizeLimit() {
-    return TeamCityProperties.getInteger("cc.log.size.limit", 10);
-  }
+//  private final static int CC_LOG_FILE_SIZE_LIMIT = getLogSizeLimit();  
+//  private static int getLogSizeLimit() {
+//    return TeamCityProperties.getInteger("cc.log.size.limit", 10);
+//  }
 
-  private final static LoggerToFile ourLogger = new LoggerToFile(new File("ClearCase.log"), 1000 * 1000 * CC_LOG_FILE_SIZE_LIMIT );
+//  private final static LoggerToFile ourLogger = new LoggerToFile(new File("ClearCase.log"), 1000 * 1000 * CC_LOG_FILE_SIZE_LIMIT );
   private static final Logger LOG = Logger.getLogger(ClearCaseConnection.class);
 
   public final static String DELIMITER = "#--#";
@@ -190,11 +191,11 @@ public class ClearCaseConnection {
   }
 
   public void dispose() throws IOException {
-    try {
-      myProcess.destroy();
-    } finally {
-      ourLogger.close();
-    }
+//    try {
+    myProcess.destroy();
+//    } finally {
+//      ourLogger.close();
+//    }
   }
 
   public String getViewWholePath() {
@@ -466,16 +467,16 @@ public class ClearCaseConnection {
       commandLine.getParametersList().addParametersString(additionalArgumentsString);
     }
 
-    if (LOG_COMMANDS) {
-      LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
-      ourLogger.log("\n" + commandLine.getCommandLineString());
-    }
+//    if (LOG_COMMANDS) {
+//      LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
+//      ourLogger.log("\n" + commandLine.getCommandLineString());
+//    }
     LOG.debug("simple execute: " + commandLine.getCommandLineString());
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     final ByteArrayOutputStream err = new ByteArrayOutputStream();
-    if (LOG_COMMANDS) {
-      ourLogger.log("\n");
-    }
+//    if (LOG_COMMANDS) {
+//      ourLogger.log("\n");
+//    }
 
     final ExecResult execResult;
     try {
@@ -498,49 +499,62 @@ public class ClearCaseConnection {
         throw new VcsException("Process " + commandLine.getCommandLineString() + " returns " + processResult);
       }
     } else {
-      if (LOG_COMMANDS) {
-        ourLogger.log("\n" + new String(out.toByteArray()));
-      }
+//      if (LOG_COMMANDS) {
+//        ourLogger.log("\n" + new String(out.toByteArray()));
+//      }
       return new ByteArrayInputStream(out.toByteArray());
     }
   }
+  
 
-  private static ProcessListener createProcessHandlerListener(
-    final ByteArrayOutputStream out,
-    final ByteArrayOutputStream err
-  ) {
-    return new ProcessListener() {
-      public void onOutTextAvailable(final byte[] buff, final int offset, final int length, final OutputStream output) {
-        
+  private static class CCSingleProcessHandler implements ProcessListener{
+
+    private static final Logger LOG = Logger.getLogger(CCSingleProcessHandler.class);    
+    
+    final ByteArrayOutputStream out;
+    final ByteArrayOutputStream err;
+    
+    CCSingleProcessHandler(final ByteArrayOutputStream out, final ByteArrayOutputStream err){
+      this.out = out;
+      this.err = err;
+    }
+    
+    public void onOutTextAvailable(final byte[] buff, final int offset, final int length, final OutputStream output) {
+      
+    }
+
+    public void onErrTextAvailable(final byte[] buff, final int offset, final int length, final OutputStream output) {
+      
+    }
+
+    public void onOutTextAvailable(final String text, final OutputStream output){
+      LOG.debug(new StringBuilder("stdout:").append(text));
+//      if (LOG_COMMANDS) {
+//        ourLogger.log(text);
+//      }
+      try {
+        out.write(text.getBytes());
+      } catch (IOException e) {
+        //ignore
+      }
+    }
+
+    public void onErrTextAvailable(final String text, final OutputStream output) {
+      LOG.debug(new StringBuilder("stderr:").append(text));
+      try {
+        err.write(text.getBytes());
+        output.write('\n');
+        output.flush();
+      } catch (IOException e) {
+        //ignore
       }
 
-      public void onErrTextAvailable(final byte[] buff, final int offset, final int length, final OutputStream output) {
-        
-      }
+    }
+    
+  }
 
-      public void onOutTextAvailable(final String text, final OutputStream output){
-        if (LOG_COMMANDS) {
-          ourLogger.log(text);
-        }
-        try {
-          out.write(text.getBytes());
-        } catch (IOException e) {
-          //ignore
-        }
-      }
-
-      public void onErrTextAvailable(final String text, final OutputStream output) {
-        try {
-          err.write(text.getBytes());
-          output.write('\n');
-          output.flush();
-        } catch (IOException e) {
-          //ignore
-        }
-
-      }
-
-    };
+  private static ProcessListener createProcessHandlerListener(final ByteArrayOutputStream out, final ByteArrayOutputStream err) {
+    return new CCSingleProcessHandler(out, err);
   }
 
   public String getVersionDescription(final String fullPath, final boolean isDirPath) {
@@ -666,7 +680,7 @@ public class ClearCaseConnection {
     }
   }
 
-  public String getObjectRelativePathWithoutVersions(final String path, final boolean isFile) throws VcsException {
+  String getObjectRelativePathWithoutVersions(final String path, final boolean isFile) throws VcsException {
     return getRelativePathWithVersions(path, 0, 0, false, isFile);
   }
 
@@ -1140,10 +1154,10 @@ public class ClearCaseConnection {
         }
 
       }
-      if (LOG_COMMANDS) {
-        LOG.debug("ClearCase executing " + commandLine.toString());
-        ourLogger.log("\n" + commandLine.toString());
-      }
+//      if (LOG_COMMANDS) {
+//        LOG.debug("ClearCase executing " + commandLine.toString());
+//        ourLogger.log("\n" + commandLine.toString());
+//      }
       LOG.debug("interactive execute: " + commandLine.toString());
     }
 
@@ -1164,9 +1178,9 @@ public class ClearCaseConnection {
     @Override
     protected void lineRead(final String line) {
       super.lineRead(line);
-      if (LOG_COMMANDS) {
-        ourLogger.log("\n" + line);
-      }          
+//      if (LOG_COMMANDS) {
+//        ourLogger.log("\n" + line);
+//      }          
       LOG.debug("output line read: " + line);
     }
 

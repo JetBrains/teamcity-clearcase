@@ -108,7 +108,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
         changed++;
       } else if (Kind.DELETION.equals(change.getKind())) {
         removed++;
-      } else if (Kind.UNVERSION.equals(change.getKind())) {
+      } else if (Kind.DROP_ELEMENT.equals(change.getKind())) {
         removed++;
       }
     }

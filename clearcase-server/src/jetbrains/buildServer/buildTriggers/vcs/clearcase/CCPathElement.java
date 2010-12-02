@@ -367,5 +367,10 @@ public class CCPathElement {
     final List<CCPathElement> elementList = splitIntoPathElements(fullPath);
     return createPath(elementList, elementList.size(), true);
   }
+  
+  @Override
+  public String toString(){
+    return new StringBuilder().append(getPathElement()).append(getVersion()).toString();
+  }
 
 }

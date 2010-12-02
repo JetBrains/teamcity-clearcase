@@ -8,7 +8,7 @@ import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
 public class CCHistory {
 
   private CCSnapshotView myView;
-  
+
   private Kind myKind;
 
   private Date myDate;
@@ -21,29 +21,31 @@ public class CCHistory {
 
   public CCHistory(CCSnapshotView view, HistoryParser parser) {
     myView = view;
-    if("mkelem".equals(parser.operation)){
-      myKind = Kind.ADDITION; 
-      
+    if ("mkelem".equals(parser.operation)) {
+      myKind = Kind.ADDITION;
+
     } else if ("checkin".equals(parser.operation)) {
       myKind = Kind.MODIFICATION;
-      
+
     } else if ("rmname".equals(parser.operation)) {
       myKind = Kind.DELETION;
       
+    } else if ("rmver".equals(parser.operation)) {
+      myKind = Kind.DROP_VERSION;
+
     } else if ("rmelem".equals(parser.operation)) {
-      myKind = Kind.UNVERSION;
+      myKind = Kind.DROP_ELEMENT;
+
     }
-//  } else if ("rmver".equals(parser.operation)) {
-//  myKind = Kind.DELETION;
-    
+
     myDate = parser.date;
-    
+
     myFile = new File(parser.path);
-      
+
     myVersion = parser.version;
-    
+
     myComment = parser.comment;
-    
+
   }
 
   public CCSnapshotView getView() {

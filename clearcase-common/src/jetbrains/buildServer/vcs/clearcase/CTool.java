@@ -260,9 +260,9 @@ public class CTool {
   static HistoryParser[] lsHistory(File file, boolean isDirectory) throws IOException, InterruptedException {
     final String command;
     if (isDirectory) {
-      command = String.format(CMD_LSHISTORY_CONTAINER, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT, file.getAbsolutePath());
+      command = String.format(CMD_LSHISTORY_CONTAINER, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
     } else {
-      command = String.format(CMD_LSHISTORY_CONTAINING, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT, file.getAbsolutePath());
+      command = String.format(CMD_LSHISTORY_CONTAINING, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
     }
     final ArrayList<HistoryParser> buffer = new ArrayList<HistoryParser>();
     final String[] output = Util.execAndWait(command);
@@ -531,54 +531,72 @@ public class CTool {
   static class HistoryParser {
 
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyyMMddHHmmss");
-    static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
-    private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
+   
+//    static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
+//    static final String OUTPUT_FORMAT =                "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";    
+    static final String OUTPUT_FORMAT_WITHOUT_COMMENTS = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%[activity]p\\n";    
+    //private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
+    private static Pattern PATTERN_WITHOUT_COMMENTS =   Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
+    //private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
+    //    private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");    
+    //    private static Pattern ACTIVITY_PATTERN = Pattern.compile("(.*)#--#(.*)");
 
-    private boolean isValid;
+    final boolean isValid;
     final Date date;
     final String path;
     final String kind;
     final String version;
     final String operation;
     final String event;
-    final String comment;
+    final String comment = null;
     final String activity;
 
     HistoryParser(String line) throws IOException {
-      final Matcher matcher = PATTERN.matcher(line.trim());
+      line = line.trim();
+      Matcher matcher = PATTERN_WITHOUT_COMMENTS.matcher(line);
       if (matcher.matches()) {
         try {
+          isValid = true;
           // date
-          final String dateStr = String.format("%s%s%s%s%s%s", matcher.group(1), matcher.group(2), matcher.group(3), matcher.group(4), matcher.group(5), matcher.group(6));
+          final String dateStr = new StringBuilder(matcher.group(1)).append(matcher.group(2)).toString();
           date = DATE_FORMATTER.parse(dateStr);
           // relative path(object)
-          path = matcher.group(7);
+          path = matcher.group(3);
           // kind
-          kind = matcher.group(8);
+          kind = matcher.group(4);
           // version
-          version = matcher.group(9);
+          version = matcher.group(5);
           // operation
-          operation = matcher.group(10);
+          operation = matcher.group(6);
           // event
-          event = matcher.group(11);
-          // comment
-          comment = matcher.group(12);
-          // activity
-          activity = matcher.group(13);
-          // all parsed
-          isValid = true;
+          event = matcher.group(7);
+//          //comment          
+//          comment = matcher.group(8);
+          //activity
+          final String activityStr = matcher.group(8/*9*/);
+          activity = activityStr.length() > 0 ? activityStr : null;
+
+          //          // event
+          //          event = matcher.group(7);
+          //          // parse last group potentially contains activity
+          //          final String lastGroup = matcher.group(8);
+          //          final Matcher activityMatcher = ACTIVITY_PATTERN.matcher(lastGroup);
+          //          if (activityMatcher.matches()) {
+          //            comment = activityMatcher.group(1);
+          //            final String activityGroup = activityMatcher.group(2).trim();
+          //            activity = activityGroup.length() > 0 ? activityGroup : null;
+          //          } else {
+          //            comment = lastGroup;
+          //            activity = null;
+          //          }
           return;
 
         } catch (Exception e) {
           throw new IOException(e.getMessage());
-
         }
       }
-      throw new IOException(String.format("The \"%s\" output line is not matched", line));
-    }
 
-    boolean isValid() {
-      return isValid;
+      throw new IOException(String.format("The \"%s\" output line is not matched", line));
     }
 
   }
@@ -932,7 +950,7 @@ public class CTool {
     final String[] result = Util.execAndWait(command);
     return Arrays.asList(result);
   }
-  
+
   static boolean isCheckedout(File root, File file) throws IOException, InterruptedException {
     final String cmd;
     if (file.isDirectory()) {
@@ -947,7 +965,7 @@ public class CTool {
       return true;
     }
   }
-  
+
   static void checkout(File root, File file, String reason) throws IOException, InterruptedException {
     Util.execAndWait(String.format(CMD_CHECKOUT, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
