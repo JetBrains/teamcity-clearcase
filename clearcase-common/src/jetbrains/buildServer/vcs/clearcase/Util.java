@@ -38,6 +38,8 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import com.intellij.execution.configurations.ParametersList;
+
 public class Util {
 
   private static final Logger LOG = Logger.getLogger(Util.class);
@@ -101,30 +103,7 @@ public class Util {
   }
 
   public static String[] makeArguments(final @NotNull String command) {
-    final ArrayList<String> args = new ArrayList<String>();
-    final String trim = command.trim();
-    final StringBuilder buffer = new StringBuilder();
-    boolean quoting = false;
-    for (int i = 0; i < trim.length(); i++) {
-      final char currChar = trim.charAt(i);
-      if (currChar == '"') {
-        quoting = !quoting;
-      } else if (currChar == ' ' && !quoting) {
-        if(buffer.length() > 0){
-          args.add(buffer.toString());
-        }
-        buffer.setLength(0);
-      } else if (currChar == ' ' && quoting) {
-        buffer.append(currChar);
-      } else {
-        buffer.append(currChar);
-      }
-    }
-    //do not forget the rest
-    if (buffer.length() > 0) {
-      args.add(buffer.toString());
-    }
-    return args.toArray(new String[args.size()]);
+    return ParametersList.parse(command);
   }
 
   private static Thread pipe(final InputStream inStream, final PrintStream outStream, final StringBuffer out) {
