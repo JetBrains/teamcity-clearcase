@@ -109,16 +109,20 @@ public class Util {
       final char currChar = trim.charAt(i);
       if (currChar == '"') {
         quoting = !quoting;
-      } else if (currChar == ' ' && !quoting && buffer.length() > 0) {
-        args.add(buffer.toString().trim());
+      } else if (currChar == ' ' && !quoting) {
+        if(buffer.length() > 0){
+          args.add(buffer.toString());
+        }
         buffer.setLength(0);
+      } else if (currChar == ' ' && quoting) {
+        buffer.append(currChar);
       } else {
         buffer.append(currChar);
       }
     }
     //do not forget the rest
     if (buffer.length() > 0) {
-      args.add(buffer.toString().trim());
+      args.add(buffer.toString());
     }
     return args.toArray(new String[args.size()]);
   }
