@@ -36,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class Util {
 
@@ -45,7 +46,8 @@ public class Util {
    * @param command
    * @return
    */
-  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");  
+  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");
+
   //
 
   public static boolean canRun(String executable) {
@@ -76,7 +78,7 @@ public class Util {
 
   public static String[] execAndWait(String command, String[] envp, File dir) throws IOException, InterruptedException {
     LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
-    Process process = Runtime.getRuntime().exec(command, envp, dir);
+    Process process = Runtime.getRuntime().exec(makeArguments(command), envp, dir);
     process.getOutputStream().close();
     final StringBuffer errBuffer = new StringBuffer();
     final StringBuffer outBuffer = new StringBuffer();
@@ -92,10 +94,33 @@ public class Util {
       LOG.debug(String.format("Command stdout:\n%s", outBuffer.toString()));
     }
     if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
-      LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));      
+      LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));
       throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
     }
     return outBuffer.toString().split("\n+");
+  }
+
+  public static String[] makeArguments(final @NotNull String command) {
+    final ArrayList<String> args = new ArrayList<String>();
+    final String trim = command.trim();
+    final StringBuilder buffer = new StringBuilder();
+    boolean quoting = false;
+    for (int i = 0; i < trim.length(); i++) {
+      final char currChar = trim.charAt(i);
+      if (currChar == '"') {
+        quoting = !quoting;
+      } else if (currChar == ' ' && !quoting && buffer.length() > 0) {
+        args.add(buffer.toString().trim());
+        buffer.setLength(0);
+      } else {
+        buffer.append(currChar);
+      }
+    }
+    //do not forget the rest
+    if (buffer.length() > 0) {
+      args.add(buffer.toString().trim());
+    }
+    return args.toArray(new String[args.size()]);
   }
 
   private static Thread pipe(final InputStream inStream, final PrintStream outStream, final StringBuffer out) {
@@ -678,7 +703,7 @@ public class Util {
     }
 
   }
-  
+
   public static void main(String[] args) throws Exception {
     Runtime.getRuntime().exec("cleartool1.exe");
   }
