@@ -579,10 +579,6 @@ public class ClearCaseConnection {
   }
 
   private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
-    // file path must be quoted for interactive execution if it contains single ' (see http://devnet.jetbrains.net/thread/292758 for details)
-    for (int i = 0; i < params.length; i++) {
-      params[i] = "\"" + params[i] + "\"";
-    }
     return myProcess.executeAndReturnProcessInput(params);
   }
 

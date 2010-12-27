@@ -69,14 +69,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   protected void execute(String[] args) throws IOException {
     for (String arg : args) {
       myOutput.write(' ');
-      if (arg.contains(" ")) {
-        myOutput.write('"');
-        myOutput.write(arg.getBytes());
-        myOutput.write('"');
-      } else {
-        myOutput.write(arg.getBytes());
-      }
-
+      // file path must be quoted for interactive execution if it contains single ' (see http://devnet.jetbrains.net/thread/292758 for details)
+      myOutput.write('"');
+      myOutput.write(arg.getBytes());
+      myOutput.write('"');
     }
     myOutput.write('\n');
     myOutput.flush();
