@@ -289,6 +289,9 @@ public class CCSnapshotView {
    */
   public CCSnapshotView restore() throws CCException {
     try {
+      if (!getLocalPath().exists()) {
+        getLocalPath().mkdirs();
+      }
       final ViewParser parser = CTool.lsView(getTag());
       final String viewUuid = parser.getUUID();
       final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
