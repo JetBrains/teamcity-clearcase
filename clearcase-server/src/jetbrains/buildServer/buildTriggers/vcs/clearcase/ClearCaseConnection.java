@@ -105,7 +105,6 @@ public class ClearCaseConnection {
   private final MultiMap<String, HistoryElement> myChangesToIgnore = new MultiMap<String, HistoryElement>();
   private final MultiMap<String, HistoryElement> myDeletedVersions = new MultiMap<String, HistoryElement>();
   private static final Pattern END_OF_COMMAND_PATTERN = Pattern.compile("Command (.*) returned status (.*)");
-  private static final boolean LOG_COMMANDS = TeamCityProperties.getPropertyOrNull("cc.log.commands") != null;
 
   private final ConfigSpec myConfigSpec;
   private static final String UPDATE_LOG = "teamcity.clearcase.update.result.log";
