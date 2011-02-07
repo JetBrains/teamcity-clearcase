@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.Dates;
 import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.vcs.clearcase.Constants;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -59,7 +62,7 @@ public class CCParseUtil {
                                          final ChangedFilesProcessor fileProcessor) throws ParseException, IOException, VcsException {
     final @Nullable Date lastDate = currentVersion != null ? parseDate(currentVersion) : null;
 
-    final HistoryElementIterator iterator = connection.getChangesIterator(fromVersion);
+    final HistoryElementIterator iterator = getChangesIterator(connection, fromVersion);
 
     final ChangesInverter inverter = new ChangesInverter(fileProcessor);
 
@@ -93,6 +96,40 @@ public class CCParseUtil {
     }
 
     inverter.processCollectedChangesInInvertedOrder();
+  }
+
+  // see http://devnet.jetbrains.net/message/5273615
+  private static HistoryElementIterator getChangesIterator(final ClearCaseConnection connection, final String fromVersion) throws IOException, VcsException, ParseException {
+    final HistoryElementIterator iterator = connection.getChangesIterator(fromVersion);
+    if (!connection.isUCM()) {
+      return iterator;
+    }
+    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 10) * Dates.ONE_SECOND;
+    final long threshold = new Date().getTime();
+    int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
+    do {
+      try {
+        Thread.sleep(delay);
+      } catch (final InterruptedException ignore) {}
+      eventCount_1 = eventCount_2;
+      eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), threshold);
+    } while (eventCount_1 != eventCount_2);
+    return connection.getChangesIterator(fromVersion);
+  }
+
+  private static int getEventCount(final HistoryElementIterator iterator, final long threshold) throws IOException, ParseException {
+    try {
+      int count = 0;
+      while (iterator.hasNext()) {
+        if (iterator.next().getDate().getTime() < threshold) {
+          count++;
+        }
+      }
+      return count;
+    }
+    finally {
+      iterator.close();
+    }
   }
 
   private static Date parseDate(final String currentVersion) throws ParseException {

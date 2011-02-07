@@ -185,6 +185,10 @@ public class ClearCaseConnection {
     myProcess = ourProcessExecutor.createProcess(generalCommandLine);
   }
 
+  public boolean isUCM() {
+    return myUCMSupported;
+  }
+
   public static InteractiveProcess createInteractiveProcess(final Process process) {
     return new ClearCaseInteractiveProcess(process);
   }
