@@ -15,13 +15,19 @@
  */
 package jetbrains.buildServer.vcs.clearcase.agent;
 
+import java.io.File;
 import java.util.regex.Pattern;
 
 import jetbrains.buildServer.TextLogger;
+import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
 import jetbrains.buildServer.agent.vcs.AgentVcsSupport;
 import jetbrains.buildServer.agent.vcs.AgentVcsSupportCore;
+import jetbrains.buildServer.agent.vcs.UpdateByCheckoutRules2;
 import jetbrains.buildServer.agent.vcs.UpdatePolicy;
+import jetbrains.buildServer.vcs.CheckoutRules;
+import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
@@ -46,7 +52,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   }
 
   public UpdatePolicy getUpdatePolicy() {
-    return /* new LinkBasedSourceProvider() */new ConvensionBasedSourceProvider();
+    return new SourceProviderFactory();//new RuleBasedSourceProvider();///* new LinkBasedSourceProvider() */new ConvensionBasedSourceProvider();
   }
 
   public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
@@ -64,15 +70,15 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       return true;
     } catch (Exception e) {
       if (isCleartoolNotFound(e)) {
-        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" property is not defined.", CTool.CLEARTOOL_EXEC_PATH_PROP));        
+        LOG.info(String.format("ClearCase agent checkout is disabled: \"cleartool\" is not in PATH and \"%s\" property is not defined.", CTool.CLEARTOOL_EXEC_PATH_PROP));
       } else {
         LOG.info(String.format("ClearCase agent checkout is disabled: %s", e.getMessage()));
       }
       LOG.debug(String.format("User: %s", System.getProperty("user.name")));
       LOG.debug(String.format("Path: %s", System.getenv("PATH")));
-      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_PROP, config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP)));      
+      LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_PROP, config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP)));
       LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV)));
-      LOG.debug(String.format("Error message: %s", e.getMessage()));
+      LOG.debug(e.getMessage(), e);
       LOG.debug(e);
       return false;
     }
@@ -98,6 +104,22 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
 
   protected String getCheckExecutionCommand() {
     return String.format("%s hostinfo", CTool.getCleartoolExecutable());
+  }
+
+  static class SourceProviderFactory implements UpdateByCheckoutRules2 {
+
+    public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
+      final ISourceProvider delegate;
+      if (RuleBasedSourceProvider.accept(build, root, rules)) {
+        delegate = new RuleBasedSourceProvider();
+                
+      } else {
+        delegate = new CheckoutDirectoryBasedSourceProvider();
+      }
+      LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));      
+      delegate.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
+    }
+
   }
 
 }

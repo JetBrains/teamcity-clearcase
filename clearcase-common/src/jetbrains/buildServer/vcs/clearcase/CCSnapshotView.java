@@ -15,7 +15,10 @@
  */
 package jetbrains.buildServer.vcs.clearcase;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -295,8 +298,14 @@ public class CCSnapshotView {
       final ViewParser parser = CTool.lsView(getTag());
       final String viewUuid = parser.getUUID();
       final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
-      final File viewDataFile = new File(getLocalPath(), "view.dat");
-      FileUtil.writeFile(viewDataFile, content);
+      final File datFile = new File(getLocalPath(), "view.dat");
+      if (datFile.exists()) {
+        FileUtil.delete(datFile);
+      }
+      final BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(datFile));
+      FileUtil.copyStreams(new ByteArrayInputStream(content.getBytes()), out);
+      out.flush();
+      out.close();
       return this;
     } catch (Exception e) {
       throw new CCException(e);

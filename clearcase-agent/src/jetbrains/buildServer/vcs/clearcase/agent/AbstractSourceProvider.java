@@ -34,6 +34,7 @@ import jetbrains.buildServer.vcs.clearcase.Kind;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class AbstractSourceProvider implements ISourceProvider {
 
@@ -75,7 +76,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       // obtain cloned origin view
       final String pathWithinView = root.getProperty(Constants.RELATIVE_PATH);
       build.getBuildLogger().message(Messages.getString("AbstractSourceProvider.preparing_view_target_message")); //$NON-NLS-1$
-      final CCSnapshotView ccview = getView(build, root, checkoutDirectory, build.getBuildLogger());
+      final CCSnapshotView ccview = getView(build, root, checkoutDirectory, rules, build.getBuildLogger());
       build.getBuildLogger().message(String.format(Messages.getString("AbstractSourceProvider.updating_view_target_message"), toVersion)); //$NON-NLS-1$
       final CCDelta[] changes = setupConfigSpec(ccview, getConfigSpecs(build, root), toVersion);
       final String describe = describe(changes);
@@ -88,7 +89,10 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
     } catch (Exception e) {
       build.getBuildLogger().buildFailureDescription(Messages.getString("AbstractSourceProvider.update_root_target_error_message")); //$NON-NLS-1$
-      throw new VcsException(e);
+      if(!(e instanceof VcsException)){
+        throw new VcsException(e);  
+      }
+      throw (VcsException)e;
 
     } finally {
       build.getBuildLogger().targetFinished(Messages.getString("AbstractSourceProvider.update_root_target_started_message")); //$NON-NLS-1$
@@ -126,11 +130,11 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     return buffer.toString().trim();
   }
 
-  protected abstract File getCCRootDirectory(AgentRunningBuild build, File checkoutRoot);
+  protected abstract File getCCRootDirectory(final @NotNull AgentRunningBuild build, final @NotNull VcsRoot root, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules) throws VcsValidationException;
 
-  protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, File checkoutRoot, BuildProgressLogger logger) throws CCException {
+  protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, File checkoutRoot, final @NotNull CheckoutRules rules, BuildProgressLogger logger) throws VcsValidationException, CCException {
     // use tmp for build
-    final File ccCheckoutRoot = getCCRootDirectory(build, checkoutRoot);
+    final File ccCheckoutRoot = getCCRootDirectory(build, root, checkoutRoot, rules);
     // scan for exists
     final CCSnapshotView existingView = findView(build, root, ccCheckoutRoot, logger);
     if (existingView != null) {
@@ -261,5 +265,47 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       LOG.debug("Checkout is null"); //$NON-NLS-1$
     }
   }
+
+  protected CCSnapshotView restore(CCSnapshotView existingView) throws CCException {
+    return existingView.restore();
+  }
+
+  protected boolean isAlive(final CCSnapshotView view) throws CCException {
+    return view.isAlive();
+  }
+
+  protected static boolean isDisableValidationErrors(AgentRunningBuild build) {
+    final String disableValidationError = build.getSharedConfigParameters().get(Constants.AGENT_DISABLE_VALIDATION_ERRORS);
+    LOG.debug(String.format("Found %s=\"%s\"", Constants.AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError)); //$NON-NLS-1$
+    if (Boolean.parseBoolean(disableValidationError)) {
+      return true;
+    }
+    return false;
+  }
+
+  protected boolean isAncestor(final @NotNull File ancestor, final @NotNull File parentCandidate) {
+    String nparent = parentCandidate.getPath().replace("\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
+    String nancestor = ancestor.getPath().replace("\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
+    return nparent.endsWith(nancestor);
+  }
+
+  protected static void report(final String message, boolean trapException) throws VcsValidationException {
+    final StringBuffer out = new StringBuffer(message).append(". ");
+    if (!trapException) {
+      out.append(Messages.getString("ConvensionBasedSourceProvider.validation_failed_error_message_tail")); //$NON-NLS-1$
+      final VcsValidationException validationException = new VcsValidationException(out.toString());
+      LOG.error(validationException.getMessage(), validationException);
+      throw validationException;
+    } else {
+      out.append(Messages.getString("ConvensionBasedSourceProvider.validation_failed_warning_message_tail")); //$NON-NLS-1$
+      LOG.warn(out.toString());
+    }
+  }
+  
+  protected static File getRelativePathWithinAView(final @NotNull VcsRoot vcsRoot) {
+    final File file = new File(vcsRoot.getProperty(Constants.RELATIVE_PATH));
+    return file;
+  }
+  
 
 }

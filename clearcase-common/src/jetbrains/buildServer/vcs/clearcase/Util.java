@@ -139,7 +139,7 @@ public class Util {
   static String normalizeVobTag(final String tag) {
     return tag.startsWith("\\") || tag.startsWith("/") ? tag : String.format("\\%s", tag.trim());
   }
-
+  
   public static java.io.File createTempFile() throws IOException {
     return java.io.File.createTempFile("clearcase-agent", "tmp");
   }
