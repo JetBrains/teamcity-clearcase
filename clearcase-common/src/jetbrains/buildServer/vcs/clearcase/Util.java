@@ -50,6 +50,8 @@ public class Util {
    */
   private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");
 
+  private static long ourTotalSleepTime;
+
   //
 
   public static boolean canRun(String executable) {
@@ -139,7 +141,7 @@ public class Util {
   static String normalizeVobTag(final String tag) {
     return tag.startsWith("\\") || tag.startsWith("/") ? tag : String.format("\\%s", tag.trim());
   }
-  
+
   public static java.io.File createTempFile() throws IOException {
     return java.io.File.createTempFile("clearcase-agent", "tmp");
   }
@@ -687,8 +689,35 @@ public class Util {
 
   }
 
+  public static void sleep(long delay) throws InterruptedException {
+    ourTotalSleepTime += delay;
+    Thread.sleep(delay);
+  }
+
   public static void main(String[] args) throws Exception {
     Runtime.getRuntime().exec("cleartool1.exe");
+  }
+
+  @Override
+  protected void finalize() throws Throwable {
+    System.out.println(dump());
+    super.finalize();
+  }
+
+  public static String dump() {
+    return String.format("Total sleep time %d ms", ourTotalSleepTime);
+  }
+
+  public static boolean isDigit(final String str) {
+    if (str == null) {
+      return false;
+    }
+    for (int i = 0; i < str.length(); i++) {
+      if (!Character.isDigit(str.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
 }

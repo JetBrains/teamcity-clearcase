@@ -7,5 +7,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TC_DISTR"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TOMCAT"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/TC_AGENT_LIBS"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/server-openapi"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -25,6 +25,8 @@ import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.Dates;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.Util;
+
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -104,16 +106,17 @@ public class CCParseUtil {
     if (!connection.isUCM()) {
       return iterator;
     }
-    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 10) * Dates.ONE_SECOND;
+    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 1/*0*/) * Dates.ONE_SECOND;
     final long threshold = new Date().getTime();
     int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
     do {
       try {
-        Thread.sleep(delay);
+        Util.sleep(/*delay)Thread.sleep(*/delay);
       } catch (final InterruptedException ignore) {}
       eventCount_1 = eventCount_2;
       eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), threshold);
     } while (eventCount_1 != eventCount_2);
+    System.err.println(String.format("%s: %s", CCParseUtil.class.getSimpleName(), Util.dump()));
     return connection.getChangesIterator(fromVersion);
   }
 

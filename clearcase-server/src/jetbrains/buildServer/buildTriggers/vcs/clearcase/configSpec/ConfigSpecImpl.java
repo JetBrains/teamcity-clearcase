@@ -85,7 +85,7 @@ public class ConfigSpecImpl implements ConfigSpec {
   public List<ConfigSpecLoadRule> getLoadRules() {
     return myLoadRules;
   }
-
+  
   private boolean doIsVersionIsInsideView(final ClearCaseConnection connection, final String fullFileName, final Version version, final boolean isFile) throws VcsException, IOException {
     final String normalizedFullFileName = CCPathElement.normalizeFileName(fullFileName);
     if (!isUnderLoadRules(connection.getClearCaseViewPath(), normalizedFullFileName)) return false;

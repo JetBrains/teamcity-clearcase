@@ -29,6 +29,8 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.vcs.clearcase.Util;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,7 +52,7 @@ public class ConfigSpecStandardRule {
     final String versionNumber = versionFullName.substring(lastSepPos + 1);
     ResultType result;
 
-    if (StringUtil.isNumber(myVersion)) {
+    if (Util.isDigit(myVersion)/*StringUtil.isNumber(myVersion)*/) {
       result = myVersion.equals(versionNumber) ? ResultType.MATCHES : ResultType.DOES_NOT_MATCH;
     }
     else {
@@ -111,7 +113,7 @@ public class ConfigSpecStandardRule {
 
   @Nullable
   private Version processBranches(final String fullFileName, final Collection<Branch> branches) throws VcsException {
-    if (StringUtil.isNumber(myVersion)) {
+    if (Util.isDigit(myVersion)/*StringUtil.isNumber(myVersion)*/) {
       int versionNumber = Integer.parseInt(myVersion);
       return findVersionByNumber(branches, versionNumber, fullFileName);
     }
@@ -221,7 +223,7 @@ public class ConfigSpecStandardRule {
   }
 
   private boolean isLabelBasedSelector() {
-    return !StringUtil.isNumber(myVersion)
+    return !Util.isDigit(myVersion)/*StringUtil.isNumber(myVersion)*/
            && !ConfigSpecRuleTokens.CHECKEDOUT.equalsIgnoreCase(myVersion)
            && !ConfigSpecRuleTokens.LATEST.equalsIgnoreCase(myVersion);
   }

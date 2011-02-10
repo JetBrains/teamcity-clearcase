@@ -17,17 +17,15 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.vcs.clearcase.Util;
 
-import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vcs.VcsException;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
@@ -53,11 +51,11 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   protected abstract void destroyOSProcess();
 
   protected void executeQuitCommand() throws IOException {
-    
+
   }
 
   public InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
-  	cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
+    cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
     execute(params);
     try {
       return readFromProcessInput(params);
@@ -80,46 +78,31 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   private InputStream readFromProcessInput(final String[] params) throws IOException, VcsException {
     while (true) {
-      if (myInput.available() > 0) break;
+      if (myInput.available() > 0)
+        break;
       if (getErrorStream().available() > 0) {
         throw new VcsException(readError());
-      }      
-    }
-    final File tempFile = FileUtil.createTempFile("cc", "execution");
-    try {
-      final FileOutputStream fileOutput = new FileOutputStream(tempFile);
-      try {
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
-  
-        String line;
-        while ((line = reader.readLine()) != null) {
-          lineRead(line);
-          if (isEndOfCommandOutput(line, params)) {
-            break;
-          }
-          fileOutput.write(line.getBytes());
-          fileOutput.write('\n');
-        }
-        fileOutput.flush();
-      } finally {
-        fileOutput.close();
       }
-    } catch (IOException e) {
-      FileUtil.delete(tempFile);
-      throw e;
     }
-
-    final FileInputStream fileInput = new FileInputStream(tempFile);
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
+    StringBuilder buffer = new StringBuilder();
+    String line;
+    while ((line = reader.readLine()) != null) {
+      lineRead(line);
+      if (isEndOfCommandOutput(line, params)) {
+        break;
+      }
+      buffer.append(line).append("\n");
+    }
+    final ByteArrayInputStream out = new ByteArrayInputStream(buffer.toString().getBytes());
 
     return new InputStream() {
       public int read() throws IOException {
-        return fileInput.read();
+        return out.read();// fileInput.read();
       }
 
-
       public void close() throws IOException {
-        fileInput.close();
-        FileUtil.delete(tempFile);
+        out.close();
       }
     };
   }
@@ -153,13 +136,13 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       errorStream.read(read);
       result.append(new String(read));
       try {
-        Thread.sleep(ERROR_READING_SLEEP_MILLIS);
+        Util.sleep(/*delay)Thread.sleep(*/ERROR_READING_SLEEP_MILLIS);
       } catch (InterruptedException e) {
         //ignore
       }
       available = errorStream.available();
     } while (available > 0);
-
+    System.err.println(String.format("%s: %s", getClass().getSimpleName(), Util.dump()));
     return result.toString();
   }
 
