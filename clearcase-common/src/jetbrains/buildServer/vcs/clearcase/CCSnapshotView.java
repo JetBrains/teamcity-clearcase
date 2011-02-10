@@ -219,9 +219,9 @@ public class CCSnapshotView {
     }
   }
 
-  public void drop(File file, String reason) throws CCException {
+  public void drop(final @NotNull File folder, final @NotNull File[] files, String reason) throws CCException {
     try {
-      CTool.rmelem(myLocalPath, file, reason);
+      CTool.rmelem(folder/*myLocalPath*/, files, reason);
     } catch (Exception e) {
       throw new CCException(e);
     }

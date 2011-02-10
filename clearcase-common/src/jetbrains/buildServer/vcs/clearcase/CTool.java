@@ -531,12 +531,12 @@ public class CTool {
   static class HistoryParser {
 
     private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("yyyyMMddHHmmss");
-   
-//    static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
-//    static final String OUTPUT_FORMAT =                "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";    
-    static final String OUTPUT_FORMAT_WITHOUT_COMMENTS = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%[activity]p\\n";    
+
+    //    static final String OUTPUT_FORMAT = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";
+    //    static final String OUTPUT_FORMAT =                "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";    
+    static final String OUTPUT_FORMAT_WITHOUT_COMMENTS = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%[activity]p\\n";
     //private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
-    private static Pattern PATTERN_WITHOUT_COMMENTS =   Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
+    private static Pattern PATTERN_WITHOUT_COMMENTS = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
     //private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
     //    private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");    
     //    private static Pattern ACTIVITY_PATTERN = Pattern.compile("(.*)#--#(.*)");
@@ -570,8 +570,8 @@ public class CTool {
           operation = matcher.group(6);
           // event
           event = matcher.group(7);
-//          //comment          
-//          comment = matcher.group(8);
+          //          //comment          
+          //          comment = matcher.group(8);
           //activity
           final String activityStr = matcher.group(8/*9*/);
           activity = activityStr.length() > 0 ? activityStr : null;
@@ -982,8 +982,15 @@ public class CTool {
     Util.execAndWait(String.format(CMD_RMNAME, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
-  static void rmelem(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_RMELEM, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
+  static void rmelem(File root, File[] files, String reason) throws IOException, InterruptedException {
+    if (files != null && files.length > 0) {
+      final StringBuilder names = new StringBuilder();
+      for (File file : files) {
+        names.append("\"").append(file.getName()).append("\"").append(" ");
+      }
+      String command = String.format(CMD_RMELEM, getCleartoolExecutable(), reason, names.toString());
+      Util.execAndWait(command, root);
+    }
   }
 
   static void rmver(File root, File file, String version, String reason) throws IOException, InterruptedException {

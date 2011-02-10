@@ -74,8 +74,7 @@ public class ViewPath {
   public void setIncludeRuleFrom(@Nullable final FileRule includeRule) throws VcsException {
     if (includeRule == null) {
       myIncludeRuleFrom = null;
-    }
-    else {
+    } else {
       myIncludeRuleFrom = removeFirstSeparatorIfNeeded(CCPathElement.normalizeSeparators(includeRule.getFrom().trim()));
     }
 
@@ -96,5 +95,18 @@ public class ViewPath {
       sb.append(File.separatorChar);
       sb.append(additionalPath);
     }
+  }
+
+  @Override
+  public int hashCode() {
+    return getWholePath().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof ViewPath) {
+      return getWholePath().equals(((ViewPath) obj).getWholePath());
+    }
+    return super.equals(obj);
   }
 }

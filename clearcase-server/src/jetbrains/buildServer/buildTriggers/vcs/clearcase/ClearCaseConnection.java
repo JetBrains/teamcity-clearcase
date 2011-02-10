@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
-import java.util.regex.Pattern;
 
 import jetbrains.buildServer.CommandLineExecutor;
 import jetbrains.buildServer.ExecResult;
@@ -72,11 +71,10 @@ public class ClearCaseConnection {
   private static final String PATH = "%path%";
 
   private final ViewPath myViewPath;
+
   private final boolean myUCMSupported;
 
   private static final Map<String, Semaphore> viewName2Semaphore = new ConcurrentHashMap<String, Semaphore>();
-
-  private InteractiveProcessFacade myProcess;
 
   private static final String UNIX_VIEW_PATH_PREFIX = "/view/";
 
@@ -104,10 +102,14 @@ public class ClearCaseConnection {
       + LINE_END_DELIMITER + "\\n";
   private final MultiMap<String, HistoryElement> myChangesToIgnore = new MultiMap<String, HistoryElement>();
   private final MultiMap<String, HistoryElement> myDeletedVersions = new MultiMap<String, HistoryElement>();
-  private static final Pattern END_OF_COMMAND_PATTERN = Pattern.compile("Command (.*) returned status (.*)");
+  //  private static final Pattern END_OF_COMMAND_PATTERN = Pattern.compile("Command (.*) returned status (.*)");
 
   private final ConfigSpec myConfigSpec;
+
   private static final String UPDATE_LOG = "teamcity.clearcase.update.result.log";
+
+  private static HashMap<String, InteractiveProcessFacade> ourViewProcesses = new HashMap<String, InteractiveProcessFacade>();
+
   public static ClearCaseFacade ourProcessExecutor = new ClearCaseFacade() {
     public ExecResult execute(final GeneralCommandLine commandLine, final ProcessListener listener) throws ExecutionException {
       CommandLineExecutor commandLineConnection = new CommandLineExecutor(commandLine);
@@ -172,13 +174,54 @@ public class ClearCaseConnection {
       throw new VcsException("The path \"" + myViewPath.getWholePath() + "\" is not loaded by ClearCase view \"" + myViewPath.getClearCaseViewPath() + "\" according to its config spec.");
     }
 
+    //??
     updateCurrentView();
 
+    //create batch executor
+    final InteractiveProcessFacade cachedProcess = ourViewProcesses.get(getViewWholePath());
+    if (cachedProcess == null) {
+      ourViewProcesses.put(myViewPath.getWholePath(), createProcessFacade(myViewPath.getWholePath()));
+    }
+
+  }
+
+  public static InteractiveProcessFacade getInteractiveProcess(final @NotNull String viewPath) throws IOException {
+    InteractiveProcessFacade cached = ourViewProcesses.get(viewPath);
+    if (cached == null) {
+      //looking for parent executor
+      File parent = new File(viewPath).getParentFile();
+      while (parent != null) {
+        try {
+          cached = ourViewProcesses.get(CCPathElement.normalizePath(parent.getAbsolutePath().trim()));
+          if (cached != null) {
+            return cached;
+          }
+          parent = parent.getParentFile();
+        } catch (VcsException e) {
+          IOException io = new IOException(e.getMessage());
+          io.initCause(e);
+          throw io;
+        }
+      }
+      //create new
+      cached = createProcessFacade(viewPath);
+      ourViewProcesses.put(viewPath, cached);
+    }
+    return cached;
+  }
+
+  private static InteractiveProcessFacade createProcessFacade(final @NotNull String viewPath) throws IOException {
     final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
     generalCommandLine.setExePath("cleartool");
     generalCommandLine.addParameter("-status");
-    generalCommandLine.setWorkDirectory(getViewWholePath());
-    myProcess = ourProcessExecutor.createProcess(generalCommandLine);
+    generalCommandLine.setWorkDirectory(viewPath);
+    try {
+      return ourProcessExecutor.createProcess(generalCommandLine);
+    } catch (ExecutionException e) {
+      IOException io = new IOException(e.getMessage());
+      io.initCause(e);
+      throw io;
+    }
   }
 
   public boolean isUCM() {
@@ -190,11 +233,10 @@ public class ClearCaseConnection {
   }
 
   public void dispose() throws IOException {
-    //    try {
-    myProcess.destroy();
-    //    } finally {
-    //      ourLogger.close();
-    //    }
+    final InteractiveProcessFacade process = ourViewProcesses.remove(myViewPath);
+    if (process != null) {
+      process.destroy();
+    }
   }
 
   public String getViewWholePath() {
@@ -370,7 +412,7 @@ public class ClearCaseConnection {
   }
 
   public void loadFileContent(final File tempFile, final String line) throws ExecutionException, InterruptedException, IOException, VcsException {
-    myProcess.copyFileContentTo(this, line, tempFile);
+    getInteractiveProcess(myViewPath.getWholePath())/*myProcess*/.copyFileContentTo(this, line, tempFile);
   }
 
   public void collectChangesToIgnore(final String lastVersion) throws VcsException {
@@ -452,7 +494,7 @@ public class ClearCaseConnection {
     return executeSimpleProcess(viewPath, null, arguments);
   }
 
-  public static InputStream executeSimpleProcess(final String viewPath, final String additionalArgumentsString, final String[] arguments) throws VcsException {
+  private static InputStream executeSimpleProcess(final String viewPath, final String additionalArgumentsString, final String[] arguments) throws VcsException {
     final GeneralCommandLine commandLine = new GeneralCommandLine();
     commandLine.setExePath("cleartool");
     commandLine.setWorkDirectory(viewPath);
@@ -572,7 +614,15 @@ public class ClearCaseConnection {
   }
 
   private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
-    return myProcess.executeAndReturnProcessInput(params);
+    if (params != null && params.length > 0) {
+      final InteractiveProcessFacade interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
+      if (interactiveProcess != null) {
+        return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
+      } else {
+        LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
+      }
+    }
+    return new ByteArrayInputStream("".getBytes());
   }
 
   public String getObjectRelativePathWithVersions(final String path, final boolean isFile) throws VcsException {
@@ -835,53 +885,54 @@ public class ClearCaseConnection {
   }
 
   public void mklabel(final String version, final String pname, final String label, final boolean isDirPath) throws VcsException, IOException {
-    try {
-      InputStream inputStream = executeAndReturnProcessInput(new String[] { "mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath) });
-      try {
-        inputStream.close();
-      } catch (IOException e) {
-        //ignore
-      }
-    } catch (IOException e) {
-      if (!e.getLocalizedMessage().contains("already on element"))
-        throw e;
-      else {
         try {
-          myProcess.destroy();
-        } catch (Throwable e1) {
-          //ignore
+          InputStream inputStream = executeAndReturnProcessInput(new String[] { "mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath) });
+          try {
+            inputStream.close();
+          } catch (IOException e) {
+            //ignore
+          }
+        } catch (IOException e) {
+          if (!e.getLocalizedMessage().contains("already on element"))
+            throw e;
         }
-        try {
-          final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
-          generalCommandLine.setExePath("cleartool");
-          generalCommandLine.addParameter("-status");
-          generalCommandLine.setWorkDirectory(getViewWholePath());
-          myProcess = ourProcessExecutor.createProcess(generalCommandLine);
-        } catch (ExecutionException e1) {
-          throw new VcsException(e1.getLocalizedMessage(), e1);
-        }
-      }
-    } catch (VcsException e) {
-      if (!e.getLocalizedMessage().contains("already on element"))
-        throw e;
-      else {
-        try {
-          myProcess.destroy();
-        } catch (Throwable e1) {
-          //ignore
-        }
-        try {
-          final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
-          generalCommandLine.setExePath("cleartool");
-          generalCommandLine.addParameter("-status");
-          generalCommandLine.setWorkDirectory(getViewWholePath());
-          myProcess = ourProcessExecutor.createProcess(generalCommandLine);
-        } catch (ExecutionException e1) {
-          throw new VcsException(e1.getLocalizedMessage(), e1);
-        }
-
-      }
-    }
+    //      else {
+    //        try {
+    //          myProcess.destroy();
+    //        } catch (Throwable e1) {
+    //          //ignore
+    //        }
+    //        try {
+    //          final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
+    //          generalCommandLine.setExePath("cleartool");
+    //          generalCommandLine.addParameter("-status");
+    //          generalCommandLine.setWorkDirectory(getViewWholePath());
+    //          myProcess = ourProcessExecutor.createProcess(generalCommandLine);
+    //        } catch (ExecutionException e1) {
+    //          throw new VcsException(e1.getLocalizedMessage(), e1);
+    //        }
+    //      }
+    //    } catch (VcsException e) {
+    //      if (!e.getLocalizedMessage().contains("already on element"))
+    //        throw e;
+    //      else {
+    //        try {
+    //          myProcess.destroy();
+    //        } catch (Throwable e1) {
+    //          //ignore
+    //        }
+    //        try {
+    //          final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
+    //          generalCommandLine.setExePath("cleartool");
+    //          generalCommandLine.addParameter("-status");
+    //          generalCommandLine.setWorkDirectory(getViewWholePath());
+    //          myProcess = ourProcessExecutor.createProcess(generalCommandLine);
+    //        } catch (ExecutionException e1) {
+    //          throw new VcsException(e1.getLocalizedMessage(), e1);
+    //        }
+    //
+    //      }
+    //    }
   }
 
   public ClearCaseFileAttr loadFileAttr(final String path) throws VcsException {
