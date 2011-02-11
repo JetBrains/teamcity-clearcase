@@ -99,7 +99,11 @@
         </delete>
     </target>
 
-    <target name="check">
+    <target name="debug">
+        <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'"/>
+    </target>
+    
+    <target name="check" depends="debug">
         <condition property="not.configured">
             <not>
                 <and>
