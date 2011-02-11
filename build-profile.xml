@@ -75,14 +75,14 @@
 
     </target>
 
-    <target name="profileAll" depends="debug,profile">
+    <target name="profileAll" depends="profile-debug,profile">
     </target>
 
-    <target name="debug">
+    <target name="profile-debug">
         <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'"/>
     </target>
 
-    <target name="profile" depends="dist,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
+    <target name="profile" depends="debug,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
