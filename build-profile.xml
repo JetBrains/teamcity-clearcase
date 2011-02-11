@@ -15,7 +15,7 @@
   ~ limitations under the License.
   -->
 
-<project name="clearcase-profiling" default="profile" basedir=".">
+<project name="clearcase-profiling" default="profileAll" basedir=".">
 
     <import file="build.xml" />
 
@@ -73,6 +73,13 @@
             <classpath refid="tests.classpath" />
         </javac>
 
+    </target>
+
+    <target name="profileAll" depends="debug,profile">
+    </target>
+
+    <target name="debug">
+        <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'"/>
     </target>
 
     <target name="profile" depends="dist,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
