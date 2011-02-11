@@ -32,6 +32,8 @@
     <property name="profiler.agent.output" value="${tests.project.location}/profiles" />
     <property name="tests.testoutput.dir" value="${tests.project.location}/bin" />
     <property name="tests.testreports.output.dir" value="${tests.project.location}/test-reports" />
+    <property name="plugin.unpacked.lib" value="${dist}/unpacked" />
+    <property name="tests.profiling.output.dir" value="${dist}/profiles" />
 
     <path id="teamcity.agents.libs">
         <fileset dir="${path.variable.teamcitydistribution}/buildAgent/lib">
@@ -46,7 +48,7 @@
     </path>
 
     <path id="clearcase.plugin.jars">
-        <fileset dir="${dist}">
+        <fileset dir="${plugin.unpacked.lib}">
             <include name="*.jar" />
         </fileset>
     </path>
@@ -65,18 +67,18 @@
         <!--pathconvert pathsep="${line.separator}" property="echo.classpath" refid="tests.classpath" />
         <echo message="The following classpath is associated with junit: ${echo.classpath}" /-->
         <javac destdir="${tests.testoutput.dir}" debug="on">
-            <src path="${tests.project.location}/junitwrappers/src"/>
-            <src path="${tests.project.location}/src"/>
-            <exclude name="jetbrains/buildServer/vcs/clearcase/**/*Patch*.java"/>
+            <src path="${tests.project.location}/junitwrappers/src" />
+            <src path="${tests.project.location}/src" />
+            <exclude name="jetbrains/buildServer/vcs/clearcase/**/*Patch*.java" />
             <classpath refid="tests.classpath" />
         </javac>
 
     </target>
 
-    <target name="profile" depends="check,clean,init,dist-common,dist-agent,dist-server,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
+    <target name="profile" depends="dist,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
-            <jvmarg value="-javaagent:${profiler.agent.lib}"/>
-            <jvmarg value="-Dprofile.properties=${profiler.agent.config}"/>
+            <jvmarg value="-javaagent:${profiler.agent.lib}" />
+            <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
             <classpath>
                 <path refid="tests.classpath" />
             </classpath>
@@ -90,14 +92,31 @@
     </target>
 
     <target name="profile-clean">
+        <delete dir="${tests.profiling.output.dir}" failonerror="false" quiet="true" />
         <delete dir="${tests.project.location}/bin" failonerror="false" quiet="true" />
         <delete dir="${tests.testreports.output.dir}" failonerror="false" quiet="true" />
-        <delete dir="${profiler.agent.output}" failonerror="false" quiet="true" />        
+        <delete dir="${profiler.agent.output}" failonerror="false" quiet="true" />
     </target>
 
     <target name="profile-init">
+        <mkdir dir="${tests.project.location}/bin" />
+        <mkdir dir="${tests.testreports.output.dir}" />
+        <mkdir dir="${tests.profiling.output.dir}" />
+        <mkdir dir="${profiler.agent.output}" />
+        <mkdir dir="${plugin.unpacked.lib}" />
+        <!-- extract jars from the plugin's archive for testing and profiling -->
+        <unzip src="${dist}/clearcase.zip" dest="${dist}" overwrite="yes">
+            <patternset>
+                <include name="agent/clearcase-agent.zip" />
+                <include name="server/*.jar" />
+            </patternset>
+        </unzip>
+        <move todir="${dist}">
+            <fileset dir="${dist}/server" />
+            <fileset dir="${dist}/agent" />
+        </move>
         <echo message="clearcase-agent/lib/clearcase-agent.jar" />
-        <unzip src="${dist}/clearcase-agent.zip" dest="${dist}">
+        <unzip src="${dist}/clearcase-agent.zip" dest="${dist}" overwrite="yes">
             <patternset>
                 <include name="clearcase-agent/lib/clearcase-agent.jar" />
             </patternset>
@@ -105,9 +124,12 @@
         <move file="${dist}/clearcase-agent/lib/clearcase-agent.jar" todir="${dist}" />
         <delete dir="${dist}/clearcase-agent" failonerror="false" quiet="true" />
         <delete file="${dist}/clearcase-agent.zip" failonerror="false" quiet="true" />
-        <mkdir dir="${tests.project.location}/bin" />
-        <mkdir dir="${tests.testreports.output.dir}" />        
-        <mkdir dir="${profiler.agent.output}" />
+        <move todir="${plugin.unpacked.lib}">
+            <fileset dir="${dist}">
+                <include name="*.jar" />
+            </fileset>
+        </move>
+
     </target>
 
 
