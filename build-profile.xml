@@ -75,15 +75,20 @@
 
     </target>
 
-    <target name="profileAll" depends="profile-debug,profile">
-        
+    <target name="profileAll" depends="profile-debug">
+        <ant antfile="build.xml" dir="${basedir}" inheritall="true" inheritrefs="true" target="dist">
+            <!-- override these properties to get absolute paths -->
+            <property name="dist" location="${dist}" />
+            <property name="path.variable.teamcitydistribution" location="${path.variable.teamcitydistribution}" />
+        </ant>
+        <antcall target="profile"/>
     </target>
 
     <target name="profile-debug">
         <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'"/>
     </target>
 
-    <target name="profile" depends="dist,profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
+    <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
