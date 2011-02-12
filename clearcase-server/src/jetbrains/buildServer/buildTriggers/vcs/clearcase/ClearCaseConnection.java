@@ -210,6 +210,16 @@ public class ClearCaseConnection {
     return cached;
   }
 
+  private InteractiveProcessFacade renewProcess(final @NotNull String viewPath) throws IOException {
+    InteractiveProcessFacade cached = getInteractiveProcess(viewPath);
+    if (cached != null) {
+      cached.destroy();
+      ourViewProcesses.remove(viewPath);
+      LOG.debug(String.format("Interactive Process of '%s' has been dropt. Recreateed."));
+    }
+    return getInteractiveProcess(viewPath);
+  }
+
   private static InteractiveProcessFacade createProcessFacade(final @NotNull String viewPath) throws IOException {
     final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
     generalCommandLine.setExePath("cleartool");
@@ -617,7 +627,15 @@ public class ClearCaseConnection {
     if (params != null && params.length > 0) {
       final InteractiveProcessFacade interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
       if (interactiveProcess != null) {
-        return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
+        try {
+          return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
+        } catch (IOException e) {
+          if (e.getMessage().contains("pipe is being closed outside")) {
+            //process has been dropt. recreate
+            renewProcess(myViewPath.getWholePath());
+            return executeAndReturnProcessInput(params);
+          }
+        }
       } else {
         LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
       }
@@ -885,17 +903,17 @@ public class ClearCaseConnection {
   }
 
   public void mklabel(final String version, final String pname, final String label, final boolean isDirPath) throws VcsException, IOException {
-        try {
-          InputStream inputStream = executeAndReturnProcessInput(new String[] { "mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath) });
-          try {
-            inputStream.close();
-          } catch (IOException e) {
-            //ignore
-          }
-        } catch (IOException e) {
-          if (!e.getLocalizedMessage().contains("already on element"))
-            throw e;
-        }
+    try {
+      InputStream inputStream = executeAndReturnProcessInput(new String[] { "mklabel", "-replace", "-version", version, label, insertDots(pname, isDirPath) });
+      try {
+        inputStream.close();
+      } catch (IOException e) {
+        //ignore
+      }
+    } catch (IOException e) {
+      if (!e.getLocalizedMessage().contains("already on element"))
+        throw e;
+    }
     //      else {
     //        try {
     //          myProcess.destroy();

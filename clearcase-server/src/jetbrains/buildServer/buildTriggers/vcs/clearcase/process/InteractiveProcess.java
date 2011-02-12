@@ -26,6 +26,8 @@ import java.io.OutputStream;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
+import org.jfree.util.Log;
+
 import com.intellij.openapi.vcs.VcsException;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
@@ -38,11 +40,15 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     myOutput = outputStream;
   }
 
-  public void destroy() throws IOException {
+  public void destroy() {
     try {
       myInput.close();
       executeQuitCommand();
       myOutput.close();
+      
+    } catch (IOException e){
+      Log.warn(e.getMessage(), e);
+      
     } finally {
       destroyOSProcess();
     }

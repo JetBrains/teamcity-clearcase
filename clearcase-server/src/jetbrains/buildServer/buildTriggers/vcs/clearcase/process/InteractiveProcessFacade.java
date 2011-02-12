@@ -24,7 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public interface InteractiveProcessFacade {
-  void destroy() throws IOException;
+  
+  void destroy();
 
   InputStream executeAndReturnProcessInput(final String[] params) throws IOException;
 
