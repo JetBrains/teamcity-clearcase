@@ -66,7 +66,7 @@
     <target name="build-test" description="Building tests">
         <!--pathconvert pathsep="${line.separator}" property="echo.classpath" refid="tests.classpath" />
         <echo message="The following classpath is associated with junit: ${echo.classpath}" /-->
-        <javac destdir="${tests.testoutput.dir}" debug="on">
+        <javac destdir="${tests.testoutput.dir}" debug="true">
             <src path="${tests.project.location}/junitwrappers/src" />
             <src path="${tests.project.location}/src" />
             <exclude name="jetbrains/buildServer/vcs/clearcase/**/*Patch*.java" />
