@@ -81,11 +81,11 @@
             <property name="dist" location="${dist}" />
             <property name="path.variable.teamcitydistribution" location="${path.variable.teamcitydistribution}" />
         </ant>
-        <antcall target="profile"/>
+        <antcall target="profile" />
     </target>
 
     <target name="profile-debug">
-        <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'"/>
+        <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'" />
     </target>
 
     <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
@@ -99,6 +99,7 @@
             <batchtest todir="${tests.testreports.output.dir}">
                 <fileset dir="${tests.testoutput.dir}">
                     <include name="**/junit/**/*Test*.class" />
+                    <exclude name="**/junit/test/customdata/*Test*.class" />
                 </fileset>
             </batchtest>
         </junit>
