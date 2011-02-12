@@ -26,11 +26,14 @@ import java.io.OutputStream;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
-import org.jfree.util.Log;
+import org.apache.log4j.Logger;
 
 import com.intellij.openapi.vcs.VcsException;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
+
+  private static final Logger LOG = Logger.getLogger(InteractiveProcess.class);
+
   private final InputStream myInput;
   private final OutputStream myOutput;
   private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
@@ -45,10 +48,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       myInput.close();
       executeQuitCommand();
       myOutput.close();
-      
-    } catch (IOException e){
-      Log.warn(e.getMessage(), e);
-      
+
+    } catch (IOException e) {
+      LOG.warn(e.getMessage(), e);
+
     } finally {
       destroyOSProcess();
     }
