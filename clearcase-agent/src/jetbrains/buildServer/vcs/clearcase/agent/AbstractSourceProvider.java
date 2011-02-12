@@ -271,7 +271,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   }
 
   protected boolean isAlive(final CCSnapshotView view) throws CCException {
-    return view.isAlive();
+    return view.isRemoteAlive();
   }
 
   protected static boolean isDisableValidationErrors(AgentRunningBuild build) {
