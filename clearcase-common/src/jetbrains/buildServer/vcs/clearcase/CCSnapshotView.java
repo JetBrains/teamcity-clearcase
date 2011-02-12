@@ -275,7 +275,7 @@ public class CCSnapshotView {
     return false;
   }
 
-  public boolean isAlive() throws CCException {
+  public boolean isRemoteAlive() throws CCException {
     try {
       CTool.lsView(getTag());
       return true;
@@ -284,6 +284,17 @@ public class CCSnapshotView {
       return false;
     }
   }
+  
+  public boolean isLocalAlive() throws CCException {
+    try {
+      CTool.lsView(getLocalPath());
+      return true;
+    } catch (Exception e) {
+      LOG.debug(e);
+      return false;
+    }
+  }
+  
 
   /**
    * Regenerates view.dat from the CC Server
