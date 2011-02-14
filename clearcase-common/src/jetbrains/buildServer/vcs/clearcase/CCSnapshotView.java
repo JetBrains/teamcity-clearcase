@@ -167,7 +167,7 @@ public class CCSnapshotView {
   }
 
   //TODO: move to testing implementation
-  protected void add(final @NotNull File file, String reason) throws CCException {
+  protected CCHistory add(final @NotNull File file, String reason) throws CCException {
     try {
       //check parent folder is checked out and checkout if no so
       final File folder = file.getParentFile();
@@ -175,8 +175,9 @@ public class CCSnapshotView {
         CTool.checkout(myLocalPath, folder, reason);
       }
       CTool.mkelem(myLocalPath, file, reason);
-      CTool.checkin(myLocalPath, file, reason);
+      final CCHistory revision = checkin(file, reason);
       CTool.checkin(myLocalPath, folder, reason);
+      return revision;
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -191,10 +192,11 @@ public class CCSnapshotView {
     }
   }
 
-  protected void checkin(final @NotNull File file, String reason) throws CCException {
+  protected CCHistory checkin(final @NotNull File file, String reason) throws CCException {
     try {
       // TODO: check the File inside the View
       CTool.checkin(myLocalPath, file, reason);
+      return null;//TODO: 
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -229,7 +231,7 @@ public class CCSnapshotView {
 
   public CCHistory[] getHistory(File file) throws CCException {
     try {
-      final HistoryParser[] history = CTool.lsHistory(file, false);
+      final HistoryParser[] history = CTool.lsHistory(file, file.isDirectory());
       return wrap(history);
     } catch (Exception e) {
       throw new CCException(e);

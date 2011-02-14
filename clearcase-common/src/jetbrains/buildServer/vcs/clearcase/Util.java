@@ -101,7 +101,10 @@ public class Util {
       LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));
       throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
     }
-    return outBuffer.toString().split("\n+");
+    if (outBuffer.toString().trim().length() > 0) {
+      return outBuffer.toString().split("\n+");
+    }
+    return new String[0];
   }
 
   public static String[] makeArguments(final @NotNull String command) {

@@ -72,4 +72,17 @@ public class CCHistory {
     return myComment;
   }
 
+  @Override
+  public boolean equals(Object obj) {
+    if(obj instanceof CCHistory){
+      return getFile().equals(((CCHistory) obj).getFile()) && getVersion().equals(((CCHistory) obj).getVersion()); 
+    }
+    return super.equals(obj);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("date='%s' version='%s', file='%s' kind='%s'", getDate(), getVersion(), getFile(), getKind());
+  }
+
 }
