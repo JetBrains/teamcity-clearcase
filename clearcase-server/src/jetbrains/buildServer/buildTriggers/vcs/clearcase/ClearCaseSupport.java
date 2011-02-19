@@ -837,40 +837,39 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private void createLabel(final String label, final VcsRoot root) throws VcsException {
     final boolean useGlobalLabel = "true".equals(root.getProperty(Constants.USE_GLOBAL_LABEL));
-
-    final List<String> parameters = new ArrayList<String>();
-    parameters.add("mklbtype");
-    if (useGlobalLabel) {
-      parameters.add("-global");
-    }
-    if (ClearCaseConnection.isLabelExists(getViewPath(root).getWholePath(), label)) {
-      parameters.add("-replace");
-    }
-    parameters.add("-c");
-    parameters.add("Label created by TeamCity");
-    if (useGlobalLabel) {
-      final String globalLabelsVob = root.getProperty(Constants.GLOBAL_LABELS_VOB);
-      parameters.add(label + "@" + globalLabelsVob);
-    } else {
-      parameters.add(label);
-    }
-
     try {
-      final InputStream input = ClearCaseConnection.executeSimpleProcess(getViewPath(root).getWholePath(), makeArray(parameters));
+      final List<String> parameters = new ArrayList<String>();
+      parameters.add("mklbtype");
+      if (useGlobalLabel) {
+        parameters.add("-global");
+      }
+      if (ClearCaseConnection.isLabelExists(getViewPath(root).getWholePath(), label)) {
+        parameters.add("-replace");
+      }
+      parameters.add("-c");
+      parameters.add("Label created by TeamCity");
+      if (useGlobalLabel) {
+        final String globalLabelsVob = root.getProperty(Constants.GLOBAL_LABELS_VOB);
+        parameters.add(label + "@" + globalLabelsVob);
+      } else {
+        parameters.add(label);
+      }
+      final InputStream input = ClearCaseConnection.getInteractiveProcess(getViewPath(root).getWholePath()).executeAndReturnProcessInput(/*params)executeSimpleProcess(getViewPath(root).getWholePath(), */makeArray(parameters));
       try {
         input.close();
       } catch (IOException e) {
         //ignore
       }
-    } catch (VcsException e) {
+    } catch (/*Vcs*//*IO*/Exception e) {
       if (!e.getLocalizedMessage().contains("already exists")) {
-        throw e;
+        final VcsException ioe = new VcsException(e);
+        throw ioe;//e;
       }
     }
   }
 
   @NotNull
-  private String[] makeArray(@NotNull final List<String> parameters) {
+  public static String[] makeArray(@NotNull final List<String> parameters) {
     final String[] array = new String[parameters.size()];
     for (int i = 0; i < parameters.size(); i++) {
       array[i] = parameters.get(i);

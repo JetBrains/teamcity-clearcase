@@ -54,6 +54,7 @@ import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
@@ -362,10 +363,21 @@ public class ClearCaseConnection {
     return iterator;
   }
 
-  private InputStream getChanges(final String since, final String options) throws VcsException {
+  private InputStream getChanges(final String since, final String options) throws VcsException, IOException {
     final String viewWholePath = getViewWholePath();
     final String preparedOptions = options.replace(PATH, insertDots(viewWholePath, true));
-    return executeSimpleProcess(viewWholePath, preparedOptions, new String[] { "lshistory", "-eventid", "-since", since, "-fmt", FORMAT });
+    //    return executeSimpleProcess(viewWholePath, preparedOptions, new String[] { "lshistory", "-eventid", "-since", since, "-fmt", FORMAT });    
+    //    lshistory -eventid -since 19-FEBRUARY-2011.17:07:36 -recurse c:\test.folder\testview_ruspd-kdonskov_DataManipulationTestCase\testvob_ruspd-kdonskov -fmt %u#--#%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p###----###\n
+    final ArrayList<String> optionList = new ArrayList<String>();
+    optionList.add("lshistory");
+    optionList.add("-eventid");
+    optionList.add("-since");
+    optionList.add(since);
+    optionList.add("-fmt");
+    optionList.add(FORMAT);
+    optionList.addAll(Arrays.asList(Util.makeArguments(preparedOptions)));
+    return getInteractiveProcess(viewWholePath).executeAndReturnProcessInput(ClearCaseSupport.makeArray(optionList));    
+//    return getInteractiveProcess(viewWholePath).executeAndReturnProcessInput(/*params)executeSimpleProcess(viewWholePath, preparedOptions, */new String[] { "lshistory", "-eventid", "-since", since, "-fmt", /*String.format("'%s'", FORMAT)*/ , preparedOptions });
   }
 
   @NotNull
@@ -499,58 +511,79 @@ public class ClearCaseConnection {
 
     return result.toString();
   }
-
-  public static InputStream executeSimpleProcess(String viewPath, String[] arguments) throws VcsException {
-    return executeSimpleProcess(viewPath, null, arguments);
-  }
-
-  private static InputStream executeSimpleProcess(final String viewPath, final String additionalArgumentsString, final String[] arguments) throws VcsException {
-    final GeneralCommandLine commandLine = new GeneralCommandLine();
-    commandLine.setExePath("cleartool");
-    commandLine.setWorkDirectory(viewPath);
-    commandLine.addParameters(arguments);
-    if (additionalArgumentsString != null) {
-      commandLine.getParametersList().addParametersString(additionalArgumentsString);
-    }
-
-    //    if (LOG_COMMANDS) {
-    //      LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
-    //      ourLogger.log("\n" + commandLine.getCommandLineString());
-    //    }
-    LOG.debug("simple execute: " + commandLine.getCommandLineString());
-    final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    final ByteArrayOutputStream err = new ByteArrayOutputStream();
-    //    if (LOG_COMMANDS) {
-    //      ourLogger.log("\n");
-    //    }
-
-    final ExecResult execResult;
-    try {
-      execResult = ourProcessExecutor.execute(commandLine, createProcessHandlerListener(out, err));
-    } catch (ExecutionException e) {
-      throw new VcsException(e);
-    }
-    LOG.debug("result: " + execResult.toString());
-
-    final int processResult = execResult.getExitCode();
-    if (processResult != 0) {
-      if (err.size() > 0) {
-        final String errDescr = new String(err.toByteArray());
-        if (!errDescr.contains("A snapshot view update is in progress") && !errDescr.contains("An update is already in progress")) {
-          throw new VcsException(errDescr);
-        } else {
-          return new ByteArrayInputStream(out.toByteArray());
+  
+  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
+    if (params != null && params.length > 0) {
+      final InteractiveProcessFacade interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
+      if (interactiveProcess != null) {
+        try {
+          return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
+        } catch (IOException e) {
+          if (e.getMessage().contains("pipe is being closed outside")) {
+            //process has been dropt. recreate
+            renewProcess(myViewPath.getWholePath());
+            return executeAndReturnProcessInput(params);
+          }
         }
       } else {
-        throw new VcsException("Process " + commandLine.getCommandLineString() + " returns " + processResult);
+        LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
       }
-    } else {
-      //      if (LOG_COMMANDS) {
-      //        ourLogger.log("\n" + new String(out.toByteArray()));
-      //      }
-      return new ByteArrayInputStream(out.toByteArray());
     }
+    return new ByteArrayInputStream("".getBytes());
   }
+  
+
+//  public static InputStream executeSimpleProcess(String viewPath, String[] arguments) throws VcsException {
+//    return executeSimpleProcess(viewPath, null, arguments);
+//  }
+//
+//  private static InputStream executeSimpleProcess(final String viewPath, final String additionalArgumentsString, final String[] arguments) throws VcsException {
+//    final GeneralCommandLine commandLine = new GeneralCommandLine();
+//    commandLine.setExePath("cleartool");
+//    commandLine.setWorkDirectory(viewPath);
+//    commandLine.addParameters(arguments);
+//    if (additionalArgumentsString != null) {
+//      commandLine.getParametersList().addParametersString(additionalArgumentsString);
+//    }
+//
+//    //    if (LOG_COMMANDS) {
+//    //      LOG.debug("ClearCase executing " + commandLine.getCommandLineString());
+//    //      ourLogger.log("\n" + commandLine.getCommandLineString());
+//    //    }
+//    LOG.debug("simple execute: " + commandLine.getCommandLineString());
+//    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+//    final ByteArrayOutputStream err = new ByteArrayOutputStream();
+//    //    if (LOG_COMMANDS) {
+//    //      ourLogger.log("\n");
+//    //    }
+//
+//    final ExecResult execResult;
+//    try {
+//      execResult = ourProcessExecutor.execute(commandLine, createProcessHandlerListener(out, err));
+//    } catch (ExecutionException e) {
+//      throw new VcsException(e);
+//    }
+//    LOG.debug("result: " + execResult.toString());
+//
+//    final int processResult = execResult.getExitCode();
+//    if (processResult != 0) {
+//      if (err.size() > 0) {
+//        final String errDescr = new String(err.toByteArray());
+//        if (!errDescr.contains("A snapshot view update is in progress") && !errDescr.contains("An update is already in progress")) {
+//          throw new VcsException(errDescr);
+//        } else {
+//          return new ByteArrayInputStream(out.toByteArray());
+//        }
+//      } else {
+//        throw new VcsException("Process " + commandLine.getCommandLineString() + " returns " + processResult);
+//      }
+//    } else {
+//      //      if (LOG_COMMANDS) {
+//      //        ourLogger.log("\n" + new String(out.toByteArray()));
+//      //      }
+//      return new ByteArrayInputStream(out.toByteArray());
+//    }
+//  }
 
   private static class CCSingleProcessHandler implements ProcessListener {
 
@@ -623,26 +656,6 @@ public class ClearCaseConnection {
     }
   }
 
-  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
-    if (params != null && params.length > 0) {
-      final InteractiveProcessFacade interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
-      if (interactiveProcess != null) {
-        try {
-          return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
-        } catch (IOException e) {
-          if (e.getMessage().contains("pipe is being closed outside")) {
-            //process has been dropt. recreate
-            renewProcess(myViewPath.getWholePath());
-            return executeAndReturnProcessInput(params);
-          }
-        }
-      } else {
-        LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
-      }
-    }
-    return new ByteArrayInputStream("".getBytes());
-  }
-
   public String getObjectRelativePathWithVersions(final String path, final boolean isFile) throws VcsException {
     return getRelativePathWithVersions(path, 0, 1, true, isFile);
 
@@ -685,7 +698,7 @@ public class ClearCaseConnection {
   }
 
   public static boolean isViewIsDynamic(@NotNull final String viewPath) throws VcsException, IOException {
-    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] { "lsview", "-cview", "-long" });
+    final InputStream inputStream = getInteractiveProcess(viewPath).executeAndReturnProcessInput(/*params)executeSimpleProcess(viewPath, */new String[] { "lsview", "-cview", "-long" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -716,16 +729,16 @@ public class ClearCaseConnection {
     try {
       semaphore.acquire();
       final String log = writeLog ? UPDATE_LOG : (SystemInfo.isWindows ? "NUL" : "/dev/null");
-      executeSimpleProcess(viewPath, new String[] { "update", "-force", "-rename", "-log", log }).close();
-    } catch (VcsException e) {
+      getInteractiveProcess(viewPath).executeAndReturnProcessInput(/*params)executeSimpleProcess(viewPath, */new String[] { "update", "-force", "-rename", "-log", log }).close();
+    } catch (/*Vcs*/IOException e) {
       if (e.getLocalizedMessage().contains("is not a valid snapshot view path")) {
         //ignore, it is dynamic view
         LOG.debug("Please ignore the error above if you use dynamic view.");
       } else {
-        throw e;
+        throw new VcsException(e);
       }
-    } catch (IOException e) {
-      throw new VcsException(e);
+//    } catch (IOException e) {
+//      throw new VcsException(e);
     } catch (InterruptedException e) {
       throw new VcsException(e);
     } finally {
@@ -771,13 +784,15 @@ public class ClearCaseConnection {
     return myViewPath.getClearCaseViewPath();
   }
 
-  public static InputStream getConfigSpecInputStream(final String viewPath) throws VcsException {
+  public static InputStream getConfigSpecInputStream(final String viewPath) throws /*Vcs*/IOException {
+    final InteractiveProcessFacade executor = getInteractiveProcess(viewPath);
     try {
-      return executeSimpleProcess(viewPath, new String[] { "catcs" });
-    } catch (VcsException e) {
+      return executor.executeAndReturnProcessInput(/*params)executeSimpleProcess(viewPath, */new String[] { "catcs" });
+    } catch (IOException e) {
       final String tag = getViewTag(viewPath);
       if (tag != null) {
-        final InputStream stream = executeSimpleProcessByTag(new String[] { "catcs", "-tag", tag });
+        
+        final InputStream stream = executor.executeAndReturnProcessInput(/*params)executeSimpleProcessByTag(*/new String[] { "catcs", "-tag", tag });
         if (stream != null)
           return stream;
       }
@@ -785,23 +800,22 @@ public class ClearCaseConnection {
     }
   }
 
-  @Nullable
-  public static InputStream executeSimpleProcessByTag(final String[] arguments) {
-    for (final File root : File.listRoots()) {
-      try {
-        return executeSimpleProcess(root.getAbsolutePath(), arguments);
-      } catch (final Exception ignored) {
-      }
-    }
-    return null;
-  }
+//  @Nullable
+//  public static InputStream executeSimpleProcessByTag(final String[] arguments) {
+//    for (final File root : File.listRoots()) {
+//      try {
+//        return executeSimpleProcess(root.getAbsolutePath(), arguments);
+//      } catch (final Exception ignored) {
+//      }
+//    }
+//    return null;
+//  }
 
   @Nullable
-  public static String getViewTag(final String viewPath) throws VcsException {
-    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] { "lsview", "-cview" });
+  public static String getViewTag(final String viewPath) throws /*Vcs*/IOException {
+    final InputStream inputStream = getInteractiveProcess(viewPath).executeAndReturnProcessInput(/*params)executeSimpleProcess(viewPath, */new String[] { "lsview", "-cview" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
-    try {
+    //    try {
       try {
         String line = reader.readLine().trim();
         if (line != null) {
@@ -817,9 +831,9 @@ public class ClearCaseConnection {
       } finally {
         reader.close();
       }
-    } catch (IOException e) {
-      throw new VcsException(e);
-    }
+//    } catch (IOException e) {
+//      throw new VcsException(e);
+//    }
   }
 
   public void processAllVersions(final String version, final VersionProcessor versionProcessor, boolean processRoot, boolean useCache) throws VcsException {
@@ -1011,7 +1025,7 @@ public class ClearCaseConnection {
   public static String getClearCaseViewRoot(@NotNull final String viewPath) throws VcsException, IOException {
     final String normalPath = CCPathElement.normalizePath(viewPath);
 
-    final InputStream inputStream = executeSimpleProcess(normalPath, new String[] { "pwv", "-root" });
+    final InputStream inputStream = getInteractiveProcess(normalPath).executeAndReturnProcessInput(/*params)executeSimpleProcess(normalPath, */new String[] { "pwv", "-root" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -1070,7 +1084,7 @@ public class ClearCaseConnection {
       path = path + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
     }
 
-    final InputStream inputStream = executeSimpleProcess(getViewWholePath(), new String[] { "describe", "-s", "-pre", insertDots(path, isDirPath) });
+    final InputStream inputStream = getInteractiveProcess(getViewWholePath()).executeAndReturnProcessInput(/*params)executeSimpleProcess(getViewWholePath(), */new String[] { "describe", "-s", "-pre", insertDots(path, isDirPath) });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -1115,12 +1129,12 @@ public class ClearCaseConnection {
     return subfiles;
   }
 
-  public static boolean isLabelExists(@NotNull final String viewPath, @NotNull final String label) throws VcsException {
-    final InputStream inputStream = executeSimpleProcess(viewPath, new String[] { "lstype", "-kind", "lbtype", "-short" });
+  public static boolean isLabelExists(@NotNull final String viewPath, @NotNull final String label) throws /*Vcs*/IOException {
+    final InputStream inputStream = getInteractiveProcess(viewPath).executeAndReturnProcessInput(/*params)executeSimpleProcess(viewPath, */new String[] { "lstype", "-kind", "lbtype", "-short" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     String line;
-    try {
+//    try {
       try {
         while ((line = reader.readLine()) != null) {
           if (line.equals(label)) {
@@ -1131,9 +1145,9 @@ public class ClearCaseConnection {
       } finally {
         reader.close();
       }
-    } catch (IOException e) {
-      throw new VcsException(e);
-    }
+//    } catch (IOException e) {
+//      throw new VcsException(e);
+//    }
   }
 
   public void processAllParents(@NotNull final String version, @NotNull final VersionProcessor versionProcessor, @NotNull final String path) throws VcsException {
