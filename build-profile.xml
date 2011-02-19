@@ -92,8 +92,8 @@
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
-            <jvmarg value="-Xmx=512m" />
-            <jvmarg value="-Xms=128m" />
+            <jvmarg value="-Xmx=512M" />
+            <jvmarg value="-Xms=128M" />
             <classpath>
                 <path refid="tests.classpath" />
             </classpath>
