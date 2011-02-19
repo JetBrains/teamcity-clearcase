@@ -210,7 +210,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private ClearCaseConnection doCreateConnectionWithViewPath(final VcsRoot root, final boolean checkCSChange, final ViewPath viewPath) throws VcsException {
-    boolean isUCM = root.getProperty(Constants.TYPE, Constants.UCM).equals(Constants.UCM);
+    boolean isUCM = root.getProperty(Constants.TYPE, Constants.BASE).equals(Constants.UCM);
     try {
       return new ClearCaseConnection(viewPath, isUCM, myCache, root, checkCSChange);
     } catch (Exception e) {

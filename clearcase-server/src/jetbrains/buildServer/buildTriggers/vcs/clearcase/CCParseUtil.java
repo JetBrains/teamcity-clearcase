@@ -111,7 +111,7 @@ public class CCParseUtil {
     int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
     do {
       try {
-        Util.sleep(/*delay)Thread.sleep(*/delay);
+        Util.sleep("HistoryElementIterator: UCM events synchronizer", delay);
       } catch (final InterruptedException ignore) {}
       eventCount_1 = eventCount_2;
       eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), threshold);

@@ -26,6 +26,7 @@ public interface Constants {
   @NonNls public static final String RELATIVE_PATH = "rel-path";
   @NonNls public static final String TYPE = "TYPE";
   @NonNls public static final String UCM = "UCM";
+  @NonNls public static final String BASE = "BASE";
   @NonNls public static final String GLOBAL_LABELS_VOB = "global-labels-vob";
   @NonNls public static final String USE_GLOBAL_LABEL = "use-global-label";
   @NonNls public static final String LSHISTORY_DEFAULT_OPTIONS = "clearcase.lshistory.options.default";

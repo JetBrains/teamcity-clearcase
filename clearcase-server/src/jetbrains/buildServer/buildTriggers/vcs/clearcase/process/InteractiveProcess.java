@@ -145,7 +145,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       errorStream.read(read);
       result.append(new String(read));
       try {
-        Util.sleep(/*delay)Thread.sleep(*/ERROR_READING_SLEEP_MILLIS);
+        Util.sleep("InteractiveProcess: Error reading", ERROR_READING_SLEEP_MILLIS);
       } catch (InterruptedException e) {
         //ignore
       }

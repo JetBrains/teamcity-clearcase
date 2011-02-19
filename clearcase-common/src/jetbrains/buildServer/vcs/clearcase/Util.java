@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import java.nio.channels.FileChannel;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
@@ -51,8 +52,8 @@ public class Util {
   private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");
 
   private static long ourTotalSleepTime;
-
-  //
+  
+  private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();;
 
   public static boolean canRun(String executable) {
     try {
@@ -692,8 +693,14 @@ public class Util {
 
   }
 
-  public static void sleep(long delay) throws InterruptedException {
+  public static void sleep(final String sleepClass, long delay) throws InterruptedException {
     ourTotalSleepTime += delay;
+    final Long classCounter = ourClassesSleepTime.get(sleepClass);
+    if(classCounter == null){
+      ourClassesSleepTime.put(sleepClass, new Long(delay));
+    } else {
+      ourClassesSleepTime.put(sleepClass, new Long(delay + classCounter));
+    }
     Thread.sleep(delay);
   }
 
@@ -708,7 +715,7 @@ public class Util {
   }
 
   public static String dump() {
-    return String.format("Total sleep time %d ms", ourTotalSleepTime);
+    return String.format("Total sleep time %d ms: %s", ourTotalSleepTime, ourClassesSleepTime);
   }
 
   public static boolean isDigit(final String str) {

@@ -92,6 +92,8 @@
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
+            <jvmarg value="-Xmx=512m" />
+            <jvmarg value="-Xms=128m" />
             <classpath>
                 <path refid="tests.classpath" />
             </classpath>
@@ -99,7 +101,7 @@
             <batchtest todir="${tests.testreports.output.dir}">
                 <fileset dir="${tests.testoutput.dir}">
                     <include name="**/junit/**/*Test*.class" />
-                    <exclude name="**/junit/test/customdata/*Test*.class" />
+                    <!--exclude name="**/junit/test/customdata/*Test*.class" /-->
                 </fileset>
             </batchtest>
         </junit>
