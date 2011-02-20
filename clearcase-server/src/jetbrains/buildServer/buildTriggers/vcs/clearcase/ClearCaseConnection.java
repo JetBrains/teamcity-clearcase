@@ -1061,13 +1061,13 @@ public class ClearCaseConnection {
       return false;
     }
 
-    @Override
-    protected void lineRead(final String line) {
-      super.lineRead(line);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("output line read: " + line);
-      }
-    }
+//    @Override
+//    protected void lineRead(final String line) {
+//      super.lineRead(line);
+//      if (LOG.isDebugEnabled()) {
+//        LOG.debug("output line read: " + line);
+//      }
+//    }
 
     @Override
     protected InputStream getErrorStream() {

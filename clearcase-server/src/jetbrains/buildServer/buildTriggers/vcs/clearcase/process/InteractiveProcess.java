@@ -97,13 +97,17 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     StringBuilder buffer = new StringBuilder();
     String line;
     while ((line = reader.readLine()) != null) {
-      lineRead(line);
+//      lineRead(line);
       if (isEndOfCommandOutput(line, params)) {
         break;
       }
       buffer.append(line).append("\n");
     }
-    final ByteArrayInputStream out = new ByteArrayInputStream(buffer.toString().getBytes());
+    final String response = buffer.toString();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("output line read:\n" + response);
+    }
+    final ByteArrayInputStream out = new ByteArrayInputStream(response.getBytes());
 
     return new InputStream() {
       public int read() throws IOException {
@@ -130,8 +134,8 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   protected abstract boolean isEndOfCommandOutput(final String line, final String[] params) throws IOException;
 
-  protected void lineRead(final String line) {
-  }
+//  protected void lineRead(final String line) {
+//  }
 
   protected String readError() throws IOException {
     final InputStream errorStream = getErrorStream();
