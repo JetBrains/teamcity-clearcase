@@ -88,12 +88,11 @@
         <echo message="path.variable.teamcitydistribution: '${path.variable.teamcitydistribution}'" />
     </target>
 
-    <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and runs JIP profiling">
-        <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true">
+    <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and run JIP profiling">
+        <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true"
+            maxmemory="512m">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
-            <jvmarg value="-Xmx=512M" />
-            <jvmarg value="-Xms=128M" />
             <classpath>
                 <path refid="tests.classpath" />
             </classpath>
