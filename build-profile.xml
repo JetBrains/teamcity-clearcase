@@ -66,13 +66,17 @@
     <target name="build-test" description="Building tests">
         <!--pathconvert pathsep="${line.separator}" property="echo.classpath" refid="tests.classpath" />
         <echo message="The following classpath is associated with junit: ${echo.classpath}" /-->
-        <javac destdir="${tests.testoutput.dir}" debug="true" debuglevel="${debuglevel}" >
+        <javac destdir="${tests.testoutput.dir}" debug="true" debuglevel="${debuglevel}">
             <src path="${tests.project.location}/junitwrappers/src" />
             <src path="${tests.project.location}/src" />
             <exclude name="jetbrains/buildServer/vcs/clearcase/**/*Patch*.java" />
             <classpath refid="tests.classpath" />
         </javac>
-
+        <copy todir="${tests.testoutput.dir}">
+            <fileset dir="${tests.project.location}/src">
+                <include name="*.prop*" />
+            </fileset>
+        </copy>
     </target>
 
     <target name="profileAll" depends="profile-debug">
@@ -89,8 +93,7 @@
     </target>
 
     <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and run JIP profiling">
-        <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true"
-            maxmemory="512m">
+        <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true" maxmemory="512m">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
             <classpath>
