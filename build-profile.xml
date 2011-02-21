@@ -103,10 +103,24 @@
             <batchtest todir="${tests.testreports.output.dir}">
                 <fileset dir="${tests.testoutput.dir}">
                     <include name="**/junit/**/*Test*.class" />
-                    <!--exclude name="**/junit/test/customdata/*Test*.class" /-->
                 </fileset>
             </batchtest>
         </junit>
+        <zip destfile="${tests.profiling.output.dir}/profiles.zip">
+            <fileset dir="${tests.profiling.output.dir}">
+                <include name="**/*-profile.*" />
+            </fileset>
+        </zip>
+        <zip destfile="${tests.profiling.output.dir}/logs.zip">
+            <fileset dir="${tests.profiling.output.dir}">
+                <include name="**/*.log" />
+            </fileset>
+        </zip>
+        <delete>
+            <fileset dir="${tests.profiling.output.dir}">
+                <exclude name="**/*.zip" />
+            </fileset>
+        </delete>
     </target>
 
     <target name="profile-clean">
