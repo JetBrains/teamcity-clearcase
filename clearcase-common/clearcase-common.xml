@@ -51,7 +51,7 @@
         <path refid="SERVERSIDE.userclasspath" />
     </path>
     
-    <target name="init">
+    <target name="init" depends="clean">
         <mkdir dir="classes" />
         <copy includeemptydirs="false" todir="classes">
             <fileset dir="src">
@@ -62,8 +62,8 @@
     </target>
     
     <target name="clean">
-        <delete dir="bin" />
-        <delete dir="${tmp.path}" />
+        <delete dir="bin" quiet="true"/>
+        <delete dir="${tmp.path}" quiet="true" />
     </target>
     
     <target depends="clean" name="cleanall" />

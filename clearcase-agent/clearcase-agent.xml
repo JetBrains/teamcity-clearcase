@@ -48,7 +48,8 @@
         <path refid="TC_DISTR.userclasspath" />
         <path refid="SERVERSIDE.userclasspath" />
     </path>
-    <target name="init">
+
+    <target name="init" depends="clean,cleanall">
         <mkdir dir="classes" />
         <copy includeemptydirs="false" todir="classes">
             <fileset dir="src">

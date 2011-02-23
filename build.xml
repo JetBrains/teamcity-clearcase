@@ -73,16 +73,16 @@
         <!-- create proper plugin structure -->
         <mkdir dir="${tmp}/agent" />
         <mkdir dir="${tmp}/server" />
-        <move todir="${tmp}/agent">
+        <copy todir="${tmp}/agent">
             <fileset dir="${dist}">
                 <include name="*.zip" />
             </fileset>
-        </move>
-        <move todir="${tmp}/server">
+        </copy>
+        <copy todir="${tmp}/server">
             <fileset dir="${dist}">
                 <include name="*.jar" />
             </fileset>
-        </move>
+        </copy>
         <copy todir="${tmp}">
             <fileset dir="${basedir}">
                 <include name="teamcity-plugin.xml" />
