@@ -66,7 +66,8 @@ public class CCParseUtil {
 
     final HistoryElementIterator iterator = getChangesIterator(connection, fromVersion);
 
-    final ChangesInverter inverter = new ChangesInverter(fileProcessor);
+    final ChangesInverter actualChangesProcessor = new ChangesInverter(fileProcessor),
+                          ignoringChangesProcessor = lastDate == null ? null : new ChangesInverter(connection.createIgnoringChangesProcessor());
 
     try {
       while (iterator.hasNext()) {
@@ -74,21 +75,12 @@ public class CCParseUtil {
         LOG.debug("Processing event: " + element.getLogRepresentation());
         if (connection.isInsideView(element.getObjectName())) {
           if (lastDate == null || element.getDate().before(lastDate)) {
-            if ("checkin".equals(element.getOperation())) {
-              if ("create directory version".equals(element.getEvent())) {
-                if (element.versionIsInsideView(connection, false) && connection.fileExistsInParents(element, false)) {
-                  inverter.processChangedDirectory(element);
-                }
-              } else if ("create version".equals(element.getEvent())) {
-                if (element.versionIsInsideView(connection, true) && connection.fileExistsInParents(element, true)) {
-                  inverter.processChangedFile(element);
-                }
-              }
-            } else if ("rmver".equals(element.getOperation())) {
-              if ("destroy version on branch".equals(element.getEvent()) && connection.fileExistsInParents(element, true)) {
-                inverter.processDestroyedFileVersion(element);
-              }
-            }
+            LOG.debug("Actual change");
+            processHistoryElement(element, connection, actualChangesProcessor);
+          }
+          else {
+            LOG.debug("Change to ignore");
+            processHistoryElement(element, connection, ignoringChangesProcessor);
           }
         }
       }
@@ -97,7 +89,30 @@ public class CCParseUtil {
       iterator.close();
     }
 
-    inverter.processCollectedChangesInInvertedOrder();
+    if (ignoringChangesProcessor != null) {
+      ignoringChangesProcessor.processCollectedChangesInInvertedOrder();
+    }
+    actualChangesProcessor.processCollectedChangesInInvertedOrder();
+  }
+
+  private static void processHistoryElement(@NotNull final HistoryElement element,
+                                            @NotNull final ClearCaseConnection connection,
+                                            @NotNull final ChangedFilesProcessor processor) throws IOException, VcsException {
+    if ("checkin".equals(element.getOperation())) {
+      if ("create directory version".equals(element.getEvent())) {
+        if (element.versionIsInsideView(connection, false) && connection.fileExistsInParents(element, false)) {
+          processor.processChangedDirectory(element);
+        }
+      } else if ("create version".equals(element.getEvent())) {
+        if (element.versionIsInsideView(connection, true) && connection.fileExistsInParents(element, true)) {
+          processor.processChangedFile(element);
+        }
+      }
+    } else if ("rmver".equals(element.getOperation())) {
+      if ("destroy version on branch".equals(element.getEvent()) && connection.fileExistsInParents(element, true)) {
+        processor.processDestroyedFileVersion(element);
+      }
+    }
   }
 
   // see http://devnet.jetbrains.net/message/5273615
@@ -106,7 +121,7 @@ public class CCParseUtil {
     if (!connection.isUCM()) {
       return iterator;
     }
-    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 1/*0*/) * Dates.ONE_SECOND;
+    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 5) * Dates.ONE_SECOND;
     final long threshold = new Date().getTime();
     int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
     do {

@@ -229,15 +229,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes, final Set<String> addFileActivities, final Set<VcsChange> zeroToOneChangedFiles, final ClearCaseConnection connection) {
     return new ChangedFilesProcessor() {
 
-      public void processChangedDirectory(final HistoryElement element) throws IOException, VcsException {
+      public void processChangedDirectory(@NotNull final HistoryElement element) throws IOException, VcsException {
         LOG.debug("Processing changed directory " + element.getLogRepresentation());
         CCParseUtil.processChangedDirectory(element, connection, createChangedStructureProcessor(element, key2changes, addFileActivities, connection));
       }
 
-      public void processDestroyedFileVersion(final HistoryElement element) {
+      public void processDestroyedFileVersion(@NotNull final HistoryElement element) {
       }
 
-      public void processChangedFile(final HistoryElement element) throws VcsException, IOException {
+      public void processChangedFile(@NotNull final HistoryElement element) throws VcsException, IOException {
         if (element.getObjectVersionInt() > getMaxVersionToIgnore(element)) {
           String pathWithoutVersion = connection.getParentRelativePathWithVersions(element.getObjectName(), true);
 
@@ -693,13 +693,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private List<ModificationData> collectChangesWithConnection(VcsRoot root, String fromVersion, String currentVersion, ClearCaseConnection connection) throws VcsException {
     try {
-      try {
-        LOG.debug("Collecting changes to ignore...");
-        connection.collectChangesToIgnore(currentVersion);
-      } catch (Exception e) {
-        throw new VcsException(e);
-      }
-
       final ArrayList<ModificationData> list = new ArrayList<ModificationData>();
       final MultiMap<CCModificationKey, VcsChange> key2changes = new MultiMap<CCModificationKey, VcsChange>();
       final Set<String> addFileActivities = new HashSet<String>();
@@ -708,9 +701,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       final ChangedFilesProcessor fileProcessor = createCollectingChangesFileProcessor(key2changes, addFileActivities, zeroToOneChangedFiles, connection);
 
       try {
-
         LOG.debug("Collecting changes...");
-
         CCParseUtil.processChangedFiles(connection, fromVersion, currentVersion, fileProcessor);
 
         for (CCModificationKey key : key2changes.keySet()) {

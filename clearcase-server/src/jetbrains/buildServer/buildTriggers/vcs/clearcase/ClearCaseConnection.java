@@ -428,28 +428,32 @@ public class ClearCaseConnection {
 
   public void collectChangesToIgnore(final String lastVersion) throws VcsException {
     try {
-      CCParseUtil.processChangedFiles(this, lastVersion, null, new ChangedFilesProcessor() {
-        public void processChangedFile(final HistoryElement element) {
-          myChangesToIgnore.putValue(element.getObjectName(), element);
-          LOG.debug("Change was ignored: changed file " + element.getLogRepresentation());
-        }
-
-        public void processChangedDirectory(final HistoryElement element) {
-          myChangesToIgnore.putValue(element.getObjectName(), element);
-          LOG.debug("Change was ignored: changed directory " + element.getLogRepresentation());
-        }
-
-        public void processDestroyedFileVersion(final HistoryElement element) {
-          myDeletedVersions.putValue(element.getObjectName(), element);
-          LOG.debug("Change was ignored: deleted version of " + element.getLogRepresentation());
-        }
-      });
+      CCParseUtil.processChangedFiles(this, lastVersion, null, createIgnoringChangesProcessor());
     } catch (ParseException e) {
       throw new VcsException(e);
     } catch (IOException e) {
       throw new VcsException(e);
     }
+  }
 
+  @NotNull
+  public ChangedFilesProcessor createIgnoringChangesProcessor() {
+    return new ChangedFilesProcessor() {
+      public void processChangedFile(@NotNull final HistoryElement element) {
+        myChangesToIgnore.putValue(element.getObjectName(), element);
+        LOG.debug("Change was ignored: changed file " + element.getLogRepresentation());
+      }
+
+      public void processChangedDirectory(@NotNull final HistoryElement element) {
+        myChangesToIgnore.putValue(element.getObjectName(), element);
+        LOG.debug("Change was ignored: changed directory " + element.getLogRepresentation());
+      }
+
+      public void processDestroyedFileVersion(@NotNull final HistoryElement element) {
+        myDeletedVersions.putValue(element.getObjectName(), element);
+        LOG.debug("Change was ignored: deleted version of " + element.getLogRepresentation());
+      }
+    };
   }
 
   @Nullable
@@ -753,7 +757,7 @@ public class ClearCaseConnection {
     }
   }
 
-  public Version prepare(final String lastVersion) throws VcsException {
+  private Version prepare(final String lastVersion) throws VcsException {
     collectChangesToIgnore(lastVersion);
     try {
       final Version viewLastVersion = findVersionFor(lastVersion);

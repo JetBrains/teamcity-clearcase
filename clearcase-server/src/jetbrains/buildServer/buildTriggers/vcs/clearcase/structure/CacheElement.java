@@ -150,8 +150,7 @@ public class CacheElement {
 
   private List<ChangedElementInfo> loadChangesWithConnection(CacheElement nearestCache, ClearCaseConnection tempConnection) throws VcsException, ParseException, IOException {
     try {
-      tempConnection.prepare(myVersionString);
-      CollectingChangedFilesProcessor processor = new CollectingChangedFilesProcessor(tempConnection);
+      final CollectingChangedFilesProcessor processor = new CollectingChangedFilesProcessor(tempConnection);
       CCParseUtil.processChangedFiles(tempConnection, nearestCache.getVersionString(), myVersionString, processor);
       return processor.getChanges();
     } finally {

@@ -34,7 +34,7 @@ class CollectingChangedFilesProcessor implements ChangedFilesProcessor {
     myChangedElements = new ArrayList<ChangedElementInfo>();
   }
 
-  public void processChangedFile(final HistoryElement element) throws VcsException {
+  public void processChangedFile(@NotNull final HistoryElement element) throws VcsException {
     final String path = element.getObjectName();
     final Version lastVersion = myConnection.getLastVersion(path, true);
     if (lastVersion != null) {
@@ -45,12 +45,12 @@ class CollectingChangedFilesProcessor implements ChangedFilesProcessor {
     }
   }
 
-  public void processDestroyedFileVersion(final HistoryElement element) {
+  public void processDestroyedFileVersion(@NotNull final HistoryElement element) {
     final String path = element.getObjectName();
     myChangedElements.add(new ChangedElementInfo(getRelativePath(path), element.getObjectVersion(), ChangedElementInfo.ChangeType.DELETED_VERSION));
   }
 
-  public void processChangedDirectory(final HistoryElement element) throws
+  public void processChangedDirectory(@NotNull final HistoryElement element) throws
                                                                     IOException, VcsException {
     final String path = element.getObjectName();
     final String elementVersion = element.getObjectVersion();

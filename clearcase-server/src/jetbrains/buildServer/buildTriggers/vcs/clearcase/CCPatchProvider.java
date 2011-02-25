@@ -59,9 +59,8 @@ public class CCPatchProvider {
         }
       }
       else if (!myConnection.isConfigSpecWasChanged()) {
-        myConnection.prepare(lastVersion);
         CCParseUtil.processChangedFiles(myConnection, fromVersion, lastVersion, new ChangedFilesProcessor() {
-            public void processChangedFile(final HistoryElement element) throws VcsException {
+            public void processChangedFile(@NotNull final HistoryElement element) throws VcsException {
                 final String path = element.getObjectName();
                 final Version version = myConnection.getLastVersion(path, true);
                 final String elementLastVersion = version == null ? null : version.getWholeName();
@@ -70,7 +69,7 @@ public class CCPatchProvider {
                 }
             }
 
-            public void processChangedDirectory(final HistoryElement element) throws IOException, VcsException {
+            public void processChangedDirectory(@NotNull final HistoryElement element) throws IOException, VcsException {
             CCParseUtil.processChangedDirectory(element, myConnection, new ChangedStructureProcessor() {
               public void fileAdded(@NotNull final SimpleDirectoryChildElement simpleChild) throws VcsException {
                 final DirectoryChildElement child = simpleChild.createFullElement(myConnection);
@@ -97,7 +96,7 @@ public class CCPatchProvider {
             });
           }
 
-          public void processDestroyedFileVersion(final HistoryElement element) throws VcsException {
+          public void processDestroyedFileVersion(@NotNull final HistoryElement element) throws VcsException {
             processChangedFile(element);
           }
         });

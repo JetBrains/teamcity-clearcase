@@ -18,9 +18,10 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import java.io.IOException;
 import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.NotNull;
 
 public interface ChangedFilesProcessor {
-  void processChangedFile(final HistoryElement element) throws VcsException, IOException;
-  void processChangedDirectory(final HistoryElement element) throws IOException, VcsException;
-  void processDestroyedFileVersion(final HistoryElement element) throws VcsException;
+  void processChangedFile(@NotNull HistoryElement element) throws VcsException, IOException;
+  void processChangedDirectory(@NotNull HistoryElement element) throws IOException, VcsException;
+  void processDestroyedFileVersion(@NotNull HistoryElement element) throws VcsException;
 }
