@@ -93,6 +93,20 @@
     </target>
 
     <target name="profile" depends="profile-clean,profile-init,build-test" description="Build underlying resources and run JIP profiling">
+        <!-- clean first-->
+        <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true" maxmemory="512m">
+            <jvmarg value="-javaagent:${profiler.agent.lib}" />
+            <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />
+            <classpath>
+                <path refid="tests.classpath" />
+            </classpath>
+            <formatter type="xml" />
+            <batchtest todir="${tests.testreports.output.dir}">
+                <fileset dir="${tests.testoutput.dir}">
+                    <include name="**/junit/**/*Cleanup.class" />
+                </fileset>
+            </batchtest>
+        </junit>
         <junit printsummary="on" fork="true" haltonfailure="false" haltonerror="false" failureproperty="failure_found" showoutput="true" maxmemory="512m">
             <jvmarg value="-javaagent:${profiler.agent.lib}" />
             <jvmarg value="-Dprofile.properties=${profiler.agent.config}" />

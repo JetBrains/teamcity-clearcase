@@ -21,7 +21,6 @@ public class CCVob {
 
   private String myTag;
   private String myGlobalPath;
-  private boolean isAvailable;
   private String myRegion;
   private String myServerHost;
 
@@ -61,7 +60,6 @@ public class CCVob {
     try {
       final VobObjectParser result = CTool.createVob(myTag, reason);
       myGlobalPath = result.getGlobalPath();
-      isAvailable = true;
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -81,10 +79,7 @@ public class CCVob {
 
   public void drop() throws CCException {
     try {
-      if (isAvailable()) {
-        CTool.dropVob(getGlobalPath());
-        isAvailable = false;
-      }
+      CTool.dropVob(getGlobalPath());
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -98,10 +93,6 @@ public class CCVob {
       }
     }
     return false;
-  }
-
-  public boolean isAvailable() {
-    return isAvailable;
   }
 
 }

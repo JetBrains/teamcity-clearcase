@@ -48,6 +48,8 @@ public class CCSnapshotView {
 
   private String myStream;
 
+  private String myOwner;
+
   /**
    * @param localRoot
    *          folder where a CC view root is
@@ -58,7 +60,7 @@ public class CCSnapshotView {
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
       final ViewParser parser = CTool.lsView(localRoot);
-      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()), parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM));
+      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()), parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM), parser.getOwner());
       view.myLocalPath = localRoot;
       return view;
     } catch (Exception e) {
@@ -66,10 +68,11 @@ public class CCSnapshotView {
     }
   }
 
-  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath, final boolean isUcm) {
+  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath, final boolean isUcm, String owner) {
     myTag = tag;
     myGlobalPath = glolbalPath;
     this.isUcm = isUcm;
+    myOwner = owner;
   }
 
   public CCSnapshotView(final String tag, final File localPath) {
@@ -86,6 +89,10 @@ public class CCSnapshotView {
 
   public boolean isUcm() {
     return isUcm;
+  }
+
+  public String getOwner() {
+    return myOwner;
   }
 
   public String getTag() {
@@ -121,6 +128,10 @@ public class CCSnapshotView {
     try {
       if (exists()) {
         throw new CCException(String.format("The view \"%s\" already exists", getTag()));
+      }
+      if(myLocalPath.exists()){
+        FileUtil.delete(myLocalPath);
+        LOG.debug(String.format("View's local folder '%s' has been dropt", myLocalPath));        
       }
       final VobObjectParser result;
       if (myGlobalPath != null) {
@@ -286,7 +297,7 @@ public class CCSnapshotView {
       return false;
     }
   }
-  
+
   public boolean isLocalAlive() throws CCException {
     try {
       CTool.lsView(getLocalPath());
@@ -296,7 +307,6 @@ public class CCSnapshotView {
       return false;
     }
   }
-  
 
   /**
    * Regenerates view.dat from the CC Server
@@ -328,6 +338,9 @@ public class CCSnapshotView {
   public CCSnapshotView drop() throws CCException {
     try {
       CTool.dropView(getGlobalPath().getAbsolutePath());
+      if (getLocalPath() != null && getLocalPath().exists()) {
+        FileUtil.delete(getLocalPath());
+      }
       return this;
     } catch (Exception e) {
       throw new CCException(e);
@@ -336,7 +349,7 @@ public class CCSnapshotView {
 
   @Override
   public String toString() {
-    return String.format("{CCSnapshotView: tag=\"%s\", global=\"%s\" local=\"%s\"}", getTag(), getGlobalPath(), getLocalPath());
+    return String.format("{CCSnapshotView: tag='%s' global='%s' local='%s' owner='%s'}", getTag(), getGlobalPath(), getLocalPath(), getOwner());
   }
 
 }

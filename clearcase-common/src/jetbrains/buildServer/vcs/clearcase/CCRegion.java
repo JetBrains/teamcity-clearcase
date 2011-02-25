@@ -68,7 +68,7 @@ public class CCRegion {
     try {
       final ArrayList<CCSnapshotView> out = new ArrayList<CCSnapshotView>();
       for (ViewParser result : CTool.lsView()) {
-        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), new File(result.getGlobalPath()), result.getAttributes() != null ? result.getAttributes().contains(ViewParser.ATTRIBUTE_UCM) : false));
+        out.add(new CCSnapshotView(result.getRegion(), result.getServerHost(), result.getTag(), new File(result.getGlobalPath()), result.getAttributes() != null ? result.getAttributes().contains(ViewParser.ATTRIBUTE_UCM) : false, result.getOwner()));
       }
       return out.toArray(new CCSnapshotView[out.size()]);
 

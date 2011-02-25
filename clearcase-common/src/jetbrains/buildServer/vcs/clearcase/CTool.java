@@ -817,10 +817,12 @@ public class CTool {
 
     static final Pattern VIEW_VIEW_TAG_UID_PATTERN = Pattern.compile("View tag uuid: (.*)");
     static final Pattern VIEW_UID_PATTERN = Pattern.compile("View uuid: (.*)");
+    static final Pattern VIEW_OWNER_PATTERN = Pattern.compile("View owner: (.*)");
     static final Pattern VIEW_ATTRIBUTES_PATTERN = Pattern.compile("View attributes: (.*)");
 
     private String myUUID;
     private String myAttributes = "";
+    private String myOwner;
 
     protected ViewParser(String[] stdout) {
       super(stdout);
@@ -828,6 +830,11 @@ public class CTool {
         final Matcher uidMatcher = VIEW_UID_PATTERN.matcher(line.trim());
         if (uidMatcher.matches()) {
           myUUID = uidMatcher.group(1);
+          continue;
+        }
+        final Matcher viewOwnerMatcher = VIEW_OWNER_PATTERN.matcher(line.trim());
+        if (viewOwnerMatcher.matches()) {
+          myOwner = viewOwnerMatcher.group(1);
           continue;
         }
         final Matcher attributeMatcher = VIEW_ATTRIBUTES_PATTERN.matcher(line.trim());
@@ -844,6 +851,10 @@ public class CTool {
 
     public String getAttributes() {
       return myAttributes;
+    }
+    
+    public String getOwner() {
+      return myOwner;
     }
 
   }
