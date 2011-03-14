@@ -129,9 +129,9 @@ public class CCSnapshotView {
       if (exists()) {
         throw new CCException(String.format("The view \"%s\" already exists", getTag()));
       }
-      if(myLocalPath.exists()){
+      if (myLocalPath.exists()) {
         FileUtil.delete(myLocalPath);
-        LOG.debug(String.format("View's local folder '%s' has been dropt", myLocalPath));        
+        LOG.debug(String.format("View's local folder '%s' has been dropt", myLocalPath));
       }
       final VobObjectParser result;
       if (myGlobalPath != null) {
@@ -177,18 +177,11 @@ public class CCSnapshotView {
     }
   }
 
-  //TODO: move to testing implementation
-  protected CCHistory add(final @NotNull File file, String reason) throws CCException {
+  protected CCHistory[] add(final @NotNull File file, String reason) throws CCException {
     try {
-      //check parent folder is checked out and checkout if no so
-      final File folder = file.getParentFile();
-      if (!CTool.isCheckedout(myLocalPath, folder)) {
-        CTool.checkout(myLocalPath, folder, reason);
-      }
       CTool.mkelem(myLocalPath, file, reason);
       final CCHistory revision = checkin(file, reason);
-      CTool.checkin(myLocalPath, folder, reason);
-      return revision;
+      return new CCHistory[] { revision };
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -213,20 +206,21 @@ public class CCSnapshotView {
     }
   }
 
-  protected void remove(File file, String reason) throws CCException {
+  protected CCHistory remove(File file, String reason) throws CCException {
     try {
-      // TODO: check the File inside the View
-      CTool.checkout(myLocalPath, file.getParentFile(), reason);
+      //      CTool.checkout(myLocalPath, file.getParentFile(), reason);
       CTool.rmname(myLocalPath, file, reason);
-      CTool.checkin(myLocalPath, file.getParentFile(), reason);
+      //      CTool.checkin(myLocalPath, file.getParentFile(), reason);
+      return null;
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
 
-  protected void remove(File file, String version, String reason) throws CCException {
+  protected CCHistory remove(File file, String version, String reason) throws CCException {
     try {
       CTool.rmver(myLocalPath, file, version, reason);
+      return null;
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -240,9 +234,9 @@ public class CCSnapshotView {
     }
   }
 
-  public CCHistory[] getHistory(File file) throws CCException {
+  public CCHistory[] getHistory(File file, boolean useAll) throws CCException {
     try {
-      final HistoryParser[] history = CTool.lsHistory(file, file.isDirectory());
+      final HistoryParser[] history = CTool.lsHistory(file, file.isDirectory(), useAll);
       return wrap(history);
     } catch (Exception e) {
       throw new CCException(e);

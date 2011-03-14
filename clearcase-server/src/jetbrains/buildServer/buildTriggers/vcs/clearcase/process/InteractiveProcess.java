@@ -155,7 +155,6 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       }
       available = errorStream.available();
     } while (available > 0);
-    System.err.println(String.format("%s: %s", getClass().getSimpleName(), Util.dump()));
     return result.toString();
   }
 

@@ -18,6 +18,15 @@ public class CCHistory {
   private String myVersion;
 
   private String myComment;
+  
+  public CCHistory(CCSnapshotView view, File file, Kind kind, Date date, String version, String comment) {
+    myView = view;
+    myKind = kind;
+    myDate = date;
+    myFile = file;
+    myVersion = version;
+    myComment = comment;
+  }
 
   public CCHistory(CCSnapshotView view, HistoryParser parser) {
     myView = view;
@@ -82,7 +91,7 @@ public class CCHistory {
 
   @Override
   public String toString() {
-    return String.format("date='%s' version='%s', file='%s' kind='%s'", getDate(), getVersion(), getFile(), getKind());
+    return String.format("date='%s' version='%s', kind='%s', file='%s' ", getDate(), getVersion(), getKind(), getFile());
   }
 
 }

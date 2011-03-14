@@ -53,6 +53,7 @@ public class CTool {
   private static final String CMD_LSVOB = Messages.getString("CTool.cmd_lsvob"); //$NON-NLS-1$
   private static final String CMD_LSHISTORY_CONTAINING = Messages.getString("CTool.cmd_lshistory"); //$NON-NLS-1$
   private static final String CMD_LSHISTORY_CONTAINER = Messages.getString("CTool.cmd_lshistory_inplace"); //$NON-NLS-1$
+  private static final String CMD_LSHISTORY_CONTAINER_ALL = Messages.getString("CTool.cmd_lshistory_inplace_all"); //$NON-NLS-1$  
   private static final String CMD_LSCHANGE = Messages.getString("CTool.cmd_lschanges"); //$NON-NLS-1$
   private static final String CMD_UPDATE = Messages.getString("CTool.cmd_update"); //$NON-NLS-1$
   private static final String CMD_MKVIEW_AUTOLOC = Messages.getString("CTool.cmd_mkview_autoloc"); //$NON-NLS-1$
@@ -257,10 +258,10 @@ public class CTool {
 
   }
 
-  static HistoryParser[] lsHistory(File file, boolean isDirectory) throws IOException, InterruptedException {
+  static HistoryParser[] lsHistory(File file, boolean isDirectory, boolean useAll) throws IOException, InterruptedException {
     final String command;
     if (isDirectory) {
-      command = String.format(CMD_LSHISTORY_CONTAINER, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
+      command = String.format(useAll ? CMD_LSHISTORY_CONTAINER_ALL : CMD_LSHISTORY_CONTAINER, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
     } else {
       command = String.format(CMD_LSHISTORY_CONTAINING, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
     }
@@ -852,7 +853,7 @@ public class CTool {
     public String getAttributes() {
       return myAttributes;
     }
-    
+
     public String getOwner() {
       return myOwner;
     }

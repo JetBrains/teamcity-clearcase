@@ -102,7 +102,7 @@ public class ClearCaseConnection {
 
   private static final String UPDATE_LOG = "teamcity.clearcase.update.result.log";
 
-  private static HashMap<String, InteractiveProcessFacade> ourViewProcesses = new HashMap<String, InteractiveProcessFacade>();
+  private static HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
   public static ClearCaseFacade ourProcessExecutor = new ClearCaseFacade() {
     public ExecResult execute(final GeneralCommandLine commandLine, final ProcessListener listener) throws ExecutionException {
@@ -111,7 +111,7 @@ public class ClearCaseConnection {
       return commandLineConnection.runProcess();
     }
 
-    public InteractiveProcessFacade createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
+    public ClearCaseInteractiveProcess createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
       return createInteractiveProcess(generalCommandLine.createProcess());
     }
   };
@@ -176,9 +176,9 @@ public class ClearCaseConnection {
 
   }
 
-  public static InteractiveProcessFacade getInteractiveProcess(final @NotNull String viewPath) throws IOException {
+  public static ClearCaseInteractiveProcess getInteractiveProcess(final @NotNull String viewPath) throws IOException {
     synchronized (ourViewProcesses) {
-      InteractiveProcessFacade cached = ourViewProcesses.get(viewPath);
+      ClearCaseInteractiveProcess cached = ourViewProcesses.get(viewPath);
       if (cached == null) {
         //looking for parent executor
         File parent = new File(viewPath).getParentFile();
@@ -213,13 +213,13 @@ public class ClearCaseConnection {
     return getInteractiveProcess(viewPath);
   }
 
-  private static InteractiveProcessFacade createProcessFacade(final @NotNull String viewPath) throws IOException {
+  private static ClearCaseInteractiveProcess createProcessFacade(final @NotNull String viewPath) throws IOException {
     final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
     generalCommandLine.setExePath("cleartool");
     generalCommandLine.addParameter("-status");
     generalCommandLine.setWorkDirectory(viewPath);
     try {
-      return ourProcessExecutor.createProcess(generalCommandLine);
+      return (ClearCaseInteractiveProcess) ourProcessExecutor.createProcess(generalCommandLine);
     } catch (ExecutionException e) {
       IOException io = new IOException(e.getMessage());
       io.initCause(e);
@@ -231,7 +231,7 @@ public class ClearCaseConnection {
     return myUCMSupported;
   }
 
-  private static InteractiveProcess createInteractiveProcess(final Process process) {
+  private static ClearCaseInteractiveProcess createInteractiveProcess(final Process process) {
     return new ClearCaseInteractiveProcess(process);
   }
 
@@ -507,15 +507,20 @@ public class ClearCaseConnection {
 
   private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
     if (params != null && params.length > 0) {
-      final InteractiveProcessFacade interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
+      final ClearCaseInteractiveProcess interactiveProcess = getInteractiveProcess(myViewPath.getWholePath());
       if (interactiveProcess != null) {
         try {
           return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
-        } catch (IOException e) {
-          if (e.getMessage().contains("pipe is being closed outside")) {
-            //process has been dropt. recreate
+        } catch (IOException ioe) {
+          //check the process is alive and recreate if not so
+          try{
+            int retCode = interactiveProcess.getProcess().exitValue();
+            LOG.debug(String.format("Interactive Process terminated with code '%d', create new one for the view", retCode));
             renewProcess(myViewPath.getWholePath());
             return executeAndReturnProcessInput(params);
+          } catch (IllegalThreadStateException ite){
+            //process is still running. do not trap IOException
+            throw ioe;
           }
         }
       } else {
@@ -1024,6 +1029,10 @@ public class ClearCaseConnection {
 
   public static class ClearCaseInteractiveProcess extends InteractiveProcess {
     private final Process myProcess;
+    
+    public Process getProcess() {
+      return myProcess;
+    }
 
     public ClearCaseInteractiveProcess(final Process process) {
       super(process.getInputStream(), process.getOutputStream());
@@ -1100,7 +1109,7 @@ public class ClearCaseConnection {
    */
   public static void cleanup() {
     synchronized (ourViewProcesses) {
-      for (Map.Entry<String, InteractiveProcessFacade> entry : ourViewProcesses.entrySet()) {
+      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
         entry.getValue().destroy();
         System.out.println(String.format("Interactive process for '%s' disposed", entry.getKey()));
       }

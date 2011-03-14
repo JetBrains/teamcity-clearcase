@@ -55,7 +55,7 @@ public class HistoryElement {
   private static final String EVENT = "event ";
   private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
 
-  public HistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
+  private HistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
     myEventID = Long.parseLong(eventId);
     myUser = user;
     myDate = date;

@@ -131,7 +131,6 @@ public class CCParseUtil {
       eventCount_1 = eventCount_2;
       eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), threshold);
     } while (eventCount_1 != eventCount_2);
-    System.err.println(String.format("%s: %s", CCParseUtil.class.getSimpleName(), Util.dump()));
     return connection.getChangesIterator(fromVersion);
   }
 
