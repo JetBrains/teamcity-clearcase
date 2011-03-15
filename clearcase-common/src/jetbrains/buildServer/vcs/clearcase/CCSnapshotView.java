@@ -206,7 +206,7 @@ public class CCSnapshotView {
     }
   }
 
-  protected CCHistory remove(File file, String reason) throws CCException {
+  protected CCHistory[] remove(File file, String reason) throws CCException {
     try {
       //      CTool.checkout(myLocalPath, file.getParentFile(), reason);
       CTool.rmname(myLocalPath, file, reason);
