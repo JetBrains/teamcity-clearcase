@@ -207,7 +207,7 @@ public class ClearCaseStructureCache {
 
   @Nullable
   public File getCacheDir(final VcsRoot root, final boolean createDirs) {
-    final File cacheDir = new File(myBaseDir, root.getId() + "." + root.getRootVersion());
+    final File cacheDir = new File(myBaseDir, String.valueOf(root.getId()));
 
     if (createDirs && !cacheDir.exists() && !cacheDir.mkdirs()) return null;
 
