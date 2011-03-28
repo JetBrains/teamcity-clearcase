@@ -77,7 +77,7 @@
 <tr>
   <th><label for="use-global-label">Global labeling:</label></th>
   <td>
-    <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'" />
+    <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility($('mainContent'));" />
     <label for="use-global-label">Use global labels</label>
   </td>
 </tr>
