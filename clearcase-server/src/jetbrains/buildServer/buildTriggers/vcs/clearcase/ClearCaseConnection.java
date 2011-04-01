@@ -16,26 +16,15 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.SystemInfo;
+import com.intellij.openapi.util.io.FileUtil;
+import java.io.*;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
-
-import jetbrains.buildServer.CommandLineExecutor;
-import jetbrains.buildServer.ExecResult;
-import jetbrains.buildServer.ProcessListener;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseFacade;
@@ -53,16 +42,10 @@ import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.CTool.VersionParser;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.configurations.GeneralCommandLine;
-import com.intellij.openapi.util.SystemInfo;
-import com.intellij.openapi.util.io.FileUtil;
 
 @SuppressWarnings({ "SimplifiableIfStatement" })
 public class ClearCaseConnection {
@@ -102,15 +85,9 @@ public class ClearCaseConnection {
 
   private static final String UPDATE_LOG = "teamcity.clearcase.update.result.log";
 
-  private static HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
+  private static final HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
   public static ClearCaseFacade ourProcessExecutor = new ClearCaseFacade() {
-    public ExecResult execute(final GeneralCommandLine commandLine, final ProcessListener listener) throws ExecutionException {
-      CommandLineExecutor commandLineConnection = new CommandLineExecutor(commandLine);
-      commandLineConnection.addListener(listener);
-      return commandLineConnection.runProcess();
-    }
-
     public ClearCaseInteractiveProcess createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
       return createInteractiveProcess(generalCommandLine.createProcess());
     }
