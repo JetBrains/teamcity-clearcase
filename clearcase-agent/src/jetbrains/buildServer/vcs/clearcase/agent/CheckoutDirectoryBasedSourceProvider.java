@@ -22,7 +22,6 @@ import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.clearcase.CCDelta;
 import jetbrains.buildServer.vcs.clearcase.CCException;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 
@@ -40,16 +39,16 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
   protected File getCCRootDirectory(AgentRunningBuild build, final @NotNull VcsRoot vcsRoot, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules) throws VcsValidationException {
     final File pathWithinAView = getRelativePathWithinAView(vcsRoot);
     LOG.debug(String.format("Relative Path within a View: '%s'", pathWithinAView)); //$NON-NLS-1$    
-    final File checkoutDirectory = build.getCheckoutDirectory();
-    LOG.debug(String.format("Checkout directory: '%s'", checkoutDirectory.getPath())); //$NON-NLS-1$      
+    //    final File checkoutDirectory = build.getCheckoutDirectory();
+    LOG.debug(String.format("Checkout directory: '%s'", checkoutRoot/*checkoutDirectory*/.getPath())); //$NON-NLS-1$      
     final File workDirectory = build.getAgentConfiguration().getWorkDirectory();//641457143173266e ...
     LOG.debug(String.format("Work directory: '%s'", workDirectory.getPath())); //$NON-NLS-1$      
-    if (!checkoutDirectory.equals(new File(workDirectory, pathWithinAView.getPath()))) {
+    if (!checkoutRoot/*checkoutDirectory*/.equals(new File(workDirectory, pathWithinAView.getPath()))) {
       final String relativePath;
-      if (workDirectory.getAbsoluteFile().equals(checkoutDirectory.getAbsoluteFile())) {
+      if (workDirectory.getAbsoluteFile().equals(checkoutRoot/*checkoutDirectory*/.getAbsoluteFile())) {
         relativePath = ".";
       } else {
-        relativePath = FileUtil.getRelativePath(workDirectory.getPath(), checkoutDirectory.getPath(), File.separatorChar);
+        relativePath = FileUtil.getRelativePath(workDirectory.getPath(), checkoutRoot/*checkoutDirectory*/.getPath(), File.separatorChar);
       }
       final String errorMessage = String.format("Wrong checkout directory: expected '%s' but found '%s'.\n Set \"VersionControl Settings\\Checkout directory\" equals to \"Relative path within the view\" of \"%s\" Vcs Root", pathWithinAView, relativePath, vcsRoot.getName());
       report(errorMessage, isDisableValidationErrors(build));
@@ -115,10 +114,10 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
   //      }
   //    }
   //  }
-
-  public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
-    //do nothing. all data already should be in the checkout directory
-  }
+  //
+  //  public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
+  //    //do nothing. all data already should be in the checkout directory
+  //  }
 
   @Override
   protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules, BuildProgressLogger logger) throws VcsValidationException, CCException {
@@ -138,7 +137,7 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
         createNew(build, root, tmpViewRoot, logger);
         FileUtil.delete(tmpViewRoot);
         //try lookup again
-        return getView(build, root, ccCheckoutRoot, rules, logger);
+        return getView(build, root, checkoutRoot, rules, logger);
       }
     }
     return createNew(build, root, ccCheckoutRoot, logger);

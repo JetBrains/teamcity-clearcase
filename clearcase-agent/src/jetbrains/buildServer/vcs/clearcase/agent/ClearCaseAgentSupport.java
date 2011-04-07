@@ -109,14 +109,10 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   static class SourceProviderFactory implements UpdateByCheckoutRules2 {
 
     public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
-      final ISourceProvider delegate;
-      if (RuleBasedSourceProvider.accept(build, root, rules)) {
-        delegate = new RuleBasedSourceProvider();
-                
-      } else {
-        delegate = new CheckoutDirectoryBasedSourceProvider();
-      }
-      LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));      
+      final ISourceProvider delegate = new RuleBasedSourceProvider();
+      delegate.validate(build.getCheckoutDirectory(), root, rules);
+      LOG.debug(String.format("Passed paremeters accepted by '%s' for checkout", delegate.getClass().getSimpleName()));
+      LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));
       delegate.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
     }
 

@@ -18,18 +18,20 @@ package jetbrains.buildServer.vcs.clearcase.agent;
 import java.io.File;
 
 import jetbrains.buildServer.agent.AgentRunningBuild;
-import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.agent.vcs.UpdateByCheckoutRules2;
+import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.clearcase.CCDelta;
 import jetbrains.buildServer.vcs.clearcase.CCException;
-import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
+
+import org.jetbrains.annotations.NotNull;
 
 
 interface ISourceProvider extends UpdateByCheckoutRules2 {
   
-  String[] getConfigSpecs(AgentRunningBuild build, VcsRoot root) throws CCException; 
+  String[] getConfigSpecs(final @NotNull AgentRunningBuild build, final @NotNull VcsRoot root) throws CCException; 
   
-  void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException;
+//  void publish(final @NotNull AgentRunningBuild build, final @NotNull CCSnapshotView ccview, final @NotNull CCDelta[] changes, final @NotNull File publishTo, final @NotNull String pathWithinView, final @NotNull BuildProgressLogger logger) throws CCException;
+  
+  void validate(final @NotNull File checkoutRoot, final @NotNull VcsRoot vcsRoot, final @NotNull CheckoutRules rules) throws VcsValidationException;
   
 }

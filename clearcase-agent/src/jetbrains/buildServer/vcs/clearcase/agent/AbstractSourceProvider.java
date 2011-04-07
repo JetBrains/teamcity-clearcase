@@ -73,8 +73,13 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
 
     build.getBuildLogger().targetStarted(Messages.getString("AbstractSourceProvider.update_root_target_started_message")); //$NON-NLS-1$
     try {
+      // make absolute
+      if (!checkoutDirectory.isAbsolute()) {
+        final String relativeCheckoutPath = checkoutDirectory.getPath();
+        checkoutDirectory = new File(build.getAgentConfiguration().getWorkDirectory(), relativeCheckoutPath);
+        LOG.debug(String.format("Relative Checkout path '%s' was expanded to '%s'", relativeCheckoutPath, checkoutDirectory));
+      }
       // obtain cloned origin view
-      final String pathWithinView = root.getProperty(Constants.RELATIVE_PATH);
       build.getBuildLogger().message(Messages.getString("AbstractSourceProvider.preparing_view_target_message")); //$NON-NLS-1$
       final CCSnapshotView ccview = getView(build, root, checkoutDirectory, rules, build.getBuildLogger());
       build.getBuildLogger().message(String.format(Messages.getString("AbstractSourceProvider.updating_view_target_message"), toVersion)); //$NON-NLS-1$
@@ -85,19 +90,23 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       } else {
         build.getBuildLogger().message(String.format(Messages.getString("AbstractSourceProvider.no_changes_loaded_target_message"), describe)); //$NON-NLS-1$
       }
-      publish(build, ccview, changes, checkoutDirectory, pathWithinView, build.getBuildLogger());
+      //      publish(build, ccview, changes, checkoutDirectory, pathWithinView, build.getBuildLogger());
 
     } catch (Exception e) {
       build.getBuildLogger().buildFailureDescription(Messages.getString("AbstractSourceProvider.update_root_target_error_message")); //$NON-NLS-1$
-      if(!(e instanceof VcsException)){
-        throw new VcsException(e);  
+      if (!(e instanceof VcsException)) {
+        throw new VcsException(e);
       }
-      throw (VcsException)e;
+      throw (VcsException) e;
 
     } finally {
       build.getBuildLogger().targetFinished(Messages.getString("AbstractSourceProvider.update_root_target_started_message")); //$NON-NLS-1$
     }
 
+  }
+
+  public void validate(final @NotNull File checkoutRoot, final @NotNull VcsRoot vcsRoot, final @NotNull CheckoutRules rules) throws VcsValidationException {
+    //do nothing
   }
 
   private String describe(CCDelta[] changes) {
@@ -301,11 +310,10 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       LOG.warn(out.toString());
     }
   }
-  
+
   protected static File getRelativePathWithinAView(final @NotNull VcsRoot vcsRoot) {
     final File file = new File(vcsRoot.getProperty(Constants.RELATIVE_PATH));
     return file;
   }
-  
 
 }
