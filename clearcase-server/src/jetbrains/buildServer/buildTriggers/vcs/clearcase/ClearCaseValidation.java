@@ -238,9 +238,11 @@ public class ClearCaseValidation {
       try {
         CCPathElement.normalizePath(ccViewRootPath);
       } catch (VcsException e) {
-        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
-        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
-        return false;
+        if (!mayContainReference(ccViewRootPath)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
+          return false;
+        }
       }
       //check path is directory? 
       final int countBefore = validationResultBuffer.size();
@@ -283,9 +285,11 @@ public class ClearCaseValidation {
           validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, Messages.getString("ClearCaseValidation.clearcase_view_relative_path_does_not_point_to_inner_folder"))); //$NON-NLS-1$
         }
       } catch (VcsException e) {
-        validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getMessage()));
-        debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
-        return false;
+        if (!mayContainReference(ccViewRelativePath)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getMessage()));
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
+          return false;
+        }
       }
       //check path is directory? 
       final int countBefore = validationResultBuffer.size();
