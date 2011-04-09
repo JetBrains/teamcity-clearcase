@@ -73,7 +73,7 @@ public class CCParseUtil {
       while (iterator.hasNext()) {
         final HistoryElement element = iterator.next();
         LOG.debug("Processing event: " + element.getLogRepresentation());
-        if (connection.isInsideView(element.getObjectName())) {
+        if (CCPathElement.isInsideView(element.getObjectName(), connection.getViewWholePath())) {
           if (lastDate == null || element.getDate().before(lastDate)) {
             LOG.debug("Actual change");
             processHistoryElement(element, connection, actualChangesProcessor);

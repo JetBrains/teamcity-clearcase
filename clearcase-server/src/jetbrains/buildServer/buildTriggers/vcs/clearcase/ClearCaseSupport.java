@@ -34,6 +34,7 @@ import java.util.Set;
 
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseInteractiveProcessPool.ClearCaseInteractiveProcess;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseGlobalLabelingValidator;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRelativePathValidator;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRootPathValidator;
@@ -43,6 +44,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
+import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.BuildStartContext;
 import jetbrains.buildServer.serverSide.BuildStartContextProcessor;
@@ -93,8 +95,8 @@ import org.jetbrains.annotations.Nullable;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 
-public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider, CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport, /*BuildParametersProvider*/BuildStartContextProcessor {
-  //  void addSharedParameter(@NotNull String key, @NotNull String value);
+public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider, CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport, BuildStartContextProcessor {
+
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
@@ -110,7 +112,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
-  public ClearCaseSupport(SBuildServer server, ServerPaths serverPaths, EventDispatcher<BuildServerListener> dispatcher) {
+  public ClearCaseSupport(final @NotNull SBuildServer server, final @NotNull ServerPaths serverPaths, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
+    
     File cachesRootDir = new File(new File(serverPaths.getCachesDir()), "clearCase");
     if (!cachesRootDir.exists() && !cachesRootDir.mkdirs()) {
       myCache = null;
@@ -121,7 +124,17 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       myCache.register(server, dispatcher);
     }
 
-    server.registerExtension(BuildStartContextProcessor/*BuildParametersProvider*/.class, this.getClass().getName(), this);
+    server.registerExtension(BuildStartContextProcessor.class, this.getClass().getName(), this);
+    
+    //listen server shutdown for cleaning purpose
+    dispatcher.addListener(new BuildServerAdapter() {
+      @Override
+      public void serverShutdownComplete() {
+        LOG.debug(String.format("Invoke ClearCaseConnection shutdown..."));
+        ClearCaseConnection.shutdown();
+      }
+    });
+    
   }
 
   @NotNull
@@ -186,33 +199,21 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return sb.toString();
   }
 
-  @SuppressWarnings("unchecked")
   public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
-    return doCreateConnection(root, includeRule, false, loadRule);
+    return createConnection/*doCreateConnection*/(root, includeRule, false, loadRule);
   }
 
-  @SuppressWarnings("unchecked")
   public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
-    return doCreateConnection(root, includeRule, checkCSChange, loadRule);
-  }
-
-  @SuppressWarnings("unchecked")
-  private ClearCaseConnection doCreateConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
-    final ViewPath viewPath = getViewPath(root);/*
-                                                 * loadRule == null ?
-                                                 * getViewPath(root) :
-                                                 * getViewPath(root, loadRule);
-                                                 */
+    final ViewPath viewPath = getViewPath(root);
     if (includeRule.getFrom().length() > 0) {
       viewPath.setIncludeRuleFrom(includeRule);
     }
     return doCreateConnectionWithViewPath(root, checkCSChange, viewPath);
   }
-
+  
   private ClearCaseConnection doCreateConnectionWithViewPath(final VcsRoot root, final boolean checkCSChange, final ViewPath viewPath) throws VcsException {
-    boolean isUCM = root.getProperty(Constants.TYPE, Constants.BASE).equals(Constants.UCM);
     try {
-      return new ClearCaseConnection(viewPath, isUCM, myCache, root, checkCSChange);
+      return new ClearCaseConnection(viewPath, /*isUCM, */myCache, root, checkCSChange);
     } catch (Exception e) {
       if (e instanceof VcsException) {
         throw (VcsException) e;
@@ -221,11 +222,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
     }
   }
-
-  private ClearCaseConnection createRootConnection(final VcsRoot root) throws VcsException {
-    return doCreateConnectionWithViewPath(root, false, getRootPath(root));
-  }
-
+  
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes, final Set<String> addFileActivities, final Set<VcsChange> zeroToOneChangedFiles, final ClearCaseConnection connection) {
     return new ChangedFilesProcessor() {
 
@@ -342,27 +339,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public void buildPatch(VcsRoot root, String fromVersion, String toVersion, PatchBuilder builder, final IncludeRule includeRule) throws IOException, VcsException {
-    /*
-     * if (isViewPathIsExactlyCCViewPath(root, includeRule)) { final
-     * List<ConfigSpecLoadRule> loadRules =
-     * ConfigSpecParseUtil.getConfigSpec(getViewPath(root)).getLoadRules(); if
-     * (loadRules.isEmpty()) { throw newVcsException(
-     * "There is no neither 'relative path' setting nor checkout rules nor config spec load rules"
-     * ); } for (ConfigSpecLoadRule loadRule : loadRules) {
-     * buildPatchForConnection(builder, fromVersion, toVersion,
-     * createConnection(root, includeRule, true, loadRule)); } } else {
-     */
     buildPatchForConnection(builder, fromVersion, toVersion, createConnection(root, includeRule, true, null));
-    //    }
   }
-
-  /*
-   * public boolean isViewPathIsExactlyCCViewPath(final VcsRoot root, final
-   * IncludeRule includeRule) throws VcsException { return
-   * "".equals(CCPathElement.normalizePath(root.getProperty(RELATIVE_PATH, "")))
-   * && "".equals(CCPathElement.normalizePath(includeRule.getFrom())); } todo
-   * support empty RELATIVE_PATH
-   */
 
   private void buildPatchForConnection(PatchBuilder builder, String fromVersion, String toVersion, ClearCaseConnection connection) throws IOException, VcsException {
     try {
@@ -453,64 +431,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           validationResult.addAll(entry.getValue());
         }
         return validationResult;
-
-        //        final List<InvalidProperty> result = new ArrayList<InvalidProperty>();
-        //        if (isEmpty(properties.get(Constants.CC_VIEW_PATH))) {
-        //          result.add(new InvalidProperty(Constants.CC_VIEW_PATH, "ClearCase view path must be specified"));
-        //        } else {
-        //          try {
-        //            CCPathElement.normalizePath(Constants.CC_VIEW_PATH);
-        //            CCPathElement.normalizePath(Constants.RELATIVE_PATH);
-        //          } catch (VcsException e) {
-        //            result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
-        //            return result;
-        //          }
-        //
-        //          final int countBefore = result.size();
-        //          checkDirectoryProperty(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
-
-        //----------        
-        //          if (result.size() == countBefore) {
-        //            try {
-        //              checkClearCaseView(Constants.CC_VIEW_PATH, properties.get(Constants.CC_VIEW_PATH), result);
-        //            } catch (final IOException e) {
-        //              result.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getLocalizedMessage()));
-        //            }
-        //          }
-        //
-        //          try {
-        //            if (isEmpty(CCPathElement.normalizePath(properties.get(Constants.RELATIVE_PATH)))) {
-        //              result.add(new InvalidProperty(Constants.RELATIVE_PATH, "Relative path must not be equal to \".\". At least VOB name must be specified."));
-        //            } else {
-        //              final ViewPath viewPath = new ViewPath(properties.get(Constants.CC_VIEW_PATH), properties.get(Constants.RELATIVE_PATH));
-        //              checkDirectoryProperty(Constants.RELATIVE_PATH, viewPath.getWholePath(), result);
-        //            }
-        //          } catch (VcsException e) {
-        //            result.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getLocalizedMessage()));
-        //          }
-        //
-        //          checkGlobalLabelsVOBProperty(properties, result);
-        //
-        //        }
-        //
-        //        return result;
       }
-
-      //      private void checkClearCaseView(String propertyName, String ccViewPath, List<InvalidProperty> result) throws IOException {
-      //        if (!ClearCaseConnection.isClearCaseView(ccViewPath)) {
-      //          result.add(new InvalidProperty(propertyName, "\"" + ccViewPath + "\" is not a path to ClearCase view"));
-      //        }
-      //      }
-      //
-      //      private void checkGlobalLabelsVOBProperty(final Map<String, String> properties, final List<InvalidProperty> result) {
-      //        final boolean useGlobalLabel = "true".equals(properties.get(Constants.USE_GLOBAL_LABEL));
-      //        if (!useGlobalLabel)
-      //          return;
-      //        final String globalLabelsVOB = properties.get(Constants.GLOBAL_LABELS_VOB);
-      //        if (globalLabelsVOB == null || "".equals(globalLabelsVOB.trim())) {
-      //          result.add(new InvalidProperty(Constants.GLOBAL_LABELS_VOB, "Global labels VOB must be specified"));
-      //        }
-      //      }
     };
   }
 
@@ -674,21 +595,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return this;
   }
 
-  public List<ModificationData> collectChanges(final VcsRoot root, final String fromVersion, final String currentVersion, final IncludeRule includeRule) throws VcsException, IOException {
-    /*
-     * if (isViewPathIsExactlyCCViewPath(root, includeRule)) { final
-     * List<ConfigSpecLoadRule> loadRules =
-     * ConfigSpecParseUtil.getConfigSpec(getViewPath(root)).getLoadRules(); if
-     * (loadRules.isEmpty()) { throw newVcsException(
-     * "There is no neither 'relative path' setting nor checkout rules nor config spec load rules"
-     * ); } Set<ModificationData> set = new HashSet<ModificationData>(); for
-     * (ConfigSpecLoadRule loadRule : loadRules) {
-     * set.addAll(collectChangesWithConnection(root, fromVersion,
-     * currentVersion, createConnection(root, includeRule, loadRule))); } return
-     * Collections.list(Collections.enumeration(set)); } else {
-     */
-    return collectChangesWithConnection(root, fromVersion, currentVersion, createConnection(root, includeRule, null));
-    //    }
+  public List<ModificationData> collectChanges(final VcsRoot root, final String fromVersion, final String currentVersion, final IncludeRule includeRule) throws VcsException {
+    LOG.debug(String.format("Attempt connect to '%s'", root.convertToPresentableString()));
+    try{
+      final ClearCaseConnection connection = createConnection(root, includeRule, null);
+      return collectChangesWithConnection(root, fromVersion, currentVersion, connection);    
+    } catch (VcsException e){
+      LOG.debug(String.format("Could not establish connection: %s", e.getMessage()));
+      throw e;
+    }
   }
 
   private List<ModificationData> collectChangesWithConnection(VcsRoot root, String fromVersion, String currentVersion, ClearCaseConnection connection) throws VcsException {
@@ -786,7 +701,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private void doWithRootConnection(@NotNull final VcsRoot root, @NotNull final ConnectionProcessor processor) throws VcsException {
-    final ClearCaseConnection connection = createRootConnection(root);
+    final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getRootPath(root));//createRootConnection(root);
     processConnection(processor, connection);
   }
 
@@ -845,9 +760,11 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       } else {
         parameters.add(label);
       }
-      final InputStream input = ClearCaseConnection.getInteractiveProcess(getViewPath(root).getWholePath()).executeAndReturnProcessInput(/*params)executeSimpleProcess(getViewPath(root).getWholePath(), */makeArray(parameters));
+      final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(root);
+      final InputStream input = process.executeAndReturnProcessInput(makeArray(parameters));
       try {
         input.close();
+        process.destroy();
       } catch (IOException e) {
         //ignore
       }
@@ -891,11 +808,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return new IncludeRuleChangeCollector() {
       @NotNull
       public List<ModificationData> collectChanges(@NotNull final IncludeRule includeRule) throws VcsException {
-        try {
-          return ClearCaseSupport.this.collectChanges(root, fromVersion, currentVersion, includeRule);
-        } catch (IOException e) {
-          throw new VcsException(e);
-        }
+        return ClearCaseSupport.this.collectChanges(root, fromVersion, currentVersion, includeRule);
       }
 
       public void dispose() {
@@ -925,41 +838,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private static interface ConnectionProcessor {
     void process(@NotNull final ClearCaseConnection connection) throws VcsException;
   }
-
-  //  @NotNull
-  //  public Map<String, String> getParameters(@NotNull SBuild build, boolean emulationMode) {
-  //    final HashMap<String, String> out = new HashMap<String, String>();
-  //    try {
-  //      //collect all clearcase's roots and populate current ConfigSpecs for each
-  //      for (final VcsRootEntry entry : build.getVcsRootEntries()) {
-  //        if (getName().equals(entry.getVcsRoot().getVcsName())) { //looking for clearcase only
-  //          final String viewPath = trim(entry.getVcsRoot().getProperty(Constants.CC_VIEW_PATH));
-  //          final File viewRoot = new File(viewPath);
-  //          if (viewRoot.exists()) {
-  //            try {
-  //              final CCSnapshotView ccView = CCSnapshotView.init(viewRoot);
-  //              LOG.debug(String.format("The \"%s\" view initialized", ccView));
-  //              final StringBuffer specsBuffer = new StringBuffer();
-  //              for (String spec : ccView.getConfigSpec()) {
-  //                specsBuffer.append(spec).append("\n");
-  //              }
-  ////              //pass config spec to agents
-  ////              out.put(getConfigSpecParameterName(entry.getVcsRoot()), specsBuffer.toString());
-  //              //pass tag to agents
-  //              out.put(getOriginalViewTagParameterName(entry.getVcsRoot()), ccView.getTag().trim());
-  //            } catch (CCException e) {
-  //              LOG.error(e.getMessage(), e);
-  //            }
-  //          } else {
-  //            LOG.error(String.format("The view's root directory \"%s\" does not exist. Could not get ConfigSpec of this VcsRoot", viewPath));
-  //          }
-  //        }
-  //      }
-  //    } catch (Throwable e) {
-  //      LOG.error(e.getMessage(), e);
-  //    }
-  //    return out;
-  //  }
 
   public void updateParameters(BuildStartContext context) {
     final SRunningBuild build = context.getBuild();
@@ -1020,5 +898,5 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     return null;
   }
-
+  
 }

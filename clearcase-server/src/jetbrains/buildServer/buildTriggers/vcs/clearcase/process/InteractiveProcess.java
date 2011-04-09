@@ -46,20 +46,20 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   public void destroy() {
     try {
       myInput.close();
-      executeQuitCommand();
+      quit();
       myOutput.close();
 
     } catch (IOException e) {
       LOG.warn(e.getMessage(), e);
 
     } finally {
-      destroyOSProcess();
+      forceDestroy();
     }
   }
 
-  protected abstract void destroyOSProcess();
+  protected abstract void forceDestroy();
 
-  protected void executeQuitCommand() throws IOException {
+  protected void quit() throws IOException {
 
   }
 

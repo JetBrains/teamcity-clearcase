@@ -52,7 +52,7 @@ public class Util {
   private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");
 
   private static long ourTotalSleepTime;
-  
+
   private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();;
 
   public static boolean canRun(String executable) {
@@ -696,7 +696,7 @@ public class Util {
   public static void sleep(final String sleepClass, long delay) throws InterruptedException {
     ourTotalSleepTime += delay;
     final Long classCounter = ourClassesSleepTime.get(sleepClass);
-    if(classCounter == null){
+    if (classCounter == null) {
       ourClassesSleepTime.put(sleepClass, new Long(delay));
     } else {
       ourClassesSleepTime.put(sleepClass, new Long(delay + classCounter));
@@ -728,6 +728,21 @@ public class Util {
       }
     }
     return true;
+  }
+
+  public static boolean isUnderPath(@NotNull String childCandidatePath, @NotNull String patentCandidatePath) {
+    childCandidatePath = trimLastSeparator(childCandidatePath);
+    patentCandidatePath = trimLastSeparator(patentCandidatePath);
+    return patentCandidatePath.equals(childCandidatePath)
+        || (patentCandidatePath.length() < childCandidatePath.length() && childCandidatePath.startsWith(patentCandidatePath) && (childCandidatePath.charAt(patentCandidatePath.length()) == '\\' || childCandidatePath.charAt(patentCandidatePath.length()) == '/'));
+  }
+
+  private static String trimLastSeparator(@NotNull String path) {
+    path = path.trim();
+    if (path.charAt(path.length() - 1) == '/' || path.charAt(path.length() - 1) == '\\') {
+      path = path.substring(0, path.length() - 1);
+    }
+    return path;
   }
 
 }
