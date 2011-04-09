@@ -15,6 +15,7 @@
  */
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
+import com.intellij.openapi.util.io.StreamUtil;
 
 public class ClearCaseInteractiveProcessPool {
 
@@ -65,6 +67,18 @@ public class ClearCaseInteractiveProcessPool {
     public ClearCaseInteractiveProcess(final Process process) {
       super(process.getInputStream(), process.getOutputStream());
       myProcess = process;
+    }
+
+    /**
+     * @return true if the Process is still running
+     */
+    public boolean isRunning() {
+      try {
+        myProcess.exitValue();
+        return false;
+      } catch (Throwable t) {
+        return true;
+      }
     }
 
     @Override
@@ -141,7 +155,10 @@ public class ClearCaseInteractiveProcessPool {
       input.close();
     }
 
-    private void release() {
+    /**
+     * the most graceful termination
+     */
+    private void shutdown() {
       super.destroy();
     }
 
@@ -199,19 +216,41 @@ public class ClearCaseInteractiveProcessPool {
   private ClearCaseInteractiveProcess createProcess(final @NotNull String viewPath) throws IOException {
     //create new
     if (ClearCaseConnection.LOG.isDebugEnabled()) {
-      ClearCaseConnection.LOG.debug(String.format("Create new ClearCaseInteractiveProcess for '%s'", viewPath));
+      ClearCaseConnection.LOG.debug(String.format("Creating new ClearCaseInteractiveProcess for '%s'...", viewPath));
     }
-    final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
-    generalCommandLine.setExePath("cleartool");
-    generalCommandLine.addParameter("-status");
-    generalCommandLine.setWorkDirectory(viewPath);
+    final GeneralCommandLine rootDetectionCommandLine = createCommandLine(viewPath, "-status");
     try {
-      return (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(generalCommandLine);
+      //have to detect View's root for proper caching
+      final ClearCaseInteractiveProcess rootDetectionProcess = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(rootDetectionCommandLine);
+      final InputStream response = rootDetectionProcess.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
+      final ByteArrayOutputStream content = new ByteArrayOutputStream();
+      StreamUtil.copyStreamContent(response, content);
+      response.close();
+      rootDetectionProcess.shutdown();
+      final String viewRoot = content.toString().trim();
+      //create persistent process in the view root for caching
+      final ClearCaseInteractiveProcess process = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(createCommandLine(viewRoot, "-status"));
+      synchronized (ourViewProcesses) {
+        ourViewProcesses.put(viewRoot, process);
+        ClearCaseConnection.LOG.debug(String.format("ClearCaseInteractiveProcess cached for '%s'", viewRoot));
+      }
+      return rootDetectionProcess;
     } catch (ExecutionException e) {
       IOException io = new IOException(e.getMessage());
       io.initCause(e);
       throw io;
     }
+  }
+
+  @NotNull
+  private GeneralCommandLine createCommandLine(final @NotNull String workingDirectory, final String... parameters) {
+    final GeneralCommandLine generalCommandLine = new GeneralCommandLine();
+    generalCommandLine.setExePath("cleartool");
+    generalCommandLine.setWorkDirectory(workingDirectory);
+    for (final String parameter : parameters) {
+      generalCommandLine.addParameter(parameter);
+    }
+    return generalCommandLine;
   }
 
   public InteractiveProcessFacade renewProcess(final @NotNull VcsRoot root) throws IOException {
@@ -234,14 +273,47 @@ public class ClearCaseInteractiveProcessPool {
     return new ClearCaseInteractiveProcess(process);
   }
 
-  void dispose() {
-    synchronized (ourViewProcesses) {
-      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
-        entry.getValue().release();
-        LOG.debug(String.format("Interactive process for '%s' disposed", entry.getKey()));
+  public void dispose() {
+    new Thread(new Runnable() {
+      public void run() {
+        synchronized (ourViewProcesses) {
+          for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
+            ClearCaseInteractiveProcess process = entry.getValue();
+            destroy(process, 100);
+            LOG.debug(String.format("Interactive process for '%s' disposed", entry.getKey()));
+          }
+          ourViewProcesses.clear();
+        }
       }
-      ourViewProcesses.clear();
+
+      private void destroy(final @NotNull ClearCaseInteractiveProcess process, final long timeout) {
+        //start new timeout watcher
+        new Thread(new Runnable() {
+          public void run() {
+            try {
+              Thread.sleep(timeout);
+              if (process.isRunning()) {
+                LOG.debug(String.format("Process is still running. Terminating."));//TODO: add working directory to ClearCaseInteractiveProcess                
+                process.getProcess().destroy();
+              }
+            } catch (Throwable t) {
+              //noop
+            }
+          }
+        }, String.format("%s: shutdown: wait for process termination", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
+        //attempt to shutdown gracefully
+        process.shutdown();
+      }
+    }, String.format("%s: shutdown", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
+    
+    //waiting for complete subprocess shutdown
+    try {
+      LOG.debug(String.format("%s: Waiting for the complete shutdown...", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+      Thread.sleep(2000);
+      LOG.debug(String.format("%s: Shutdown completed.", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+    } catch (InterruptedException e) {
+      //do nothing
     }
   }
-  
+
 }

@@ -113,7 +113,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public ClearCaseSupport(final @NotNull SBuildServer server, final @NotNull ServerPaths serverPaths, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
-    
+
     File cachesRootDir = new File(new File(serverPaths.getCachesDir()), "clearCase");
     if (!cachesRootDir.exists() && !cachesRootDir.mkdirs()) {
       myCache = null;
@@ -125,16 +125,20 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
 
     server.registerExtension(BuildStartContextProcessor.class, this.getClass().getName(), this);
-    
+
     //listen server shutdown for cleaning purpose
     dispatcher.addListener(new BuildServerAdapter() {
       @Override
-      public void serverShutdownComplete() {
-        LOG.debug(String.format("Invoke ClearCaseConnection shutdown..."));
-        ClearCaseConnection.shutdown();
+      public void serverShutdown() {
+        LOG.debug(String.format("Invoke ClearCaseInteractiveProcessPool shutdown..."));
+        try {
+          ClearCaseInteractiveProcessPool.getDefault().dispose();
+        } catch (Throwable t) {
+          LOG.error(t.getMessage(), t);
+        }
       }
     });
-    
+
   }
 
   @NotNull
@@ -210,7 +214,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     return doCreateConnectionWithViewPath(root, checkCSChange, viewPath);
   }
-  
+
   private ClearCaseConnection doCreateConnectionWithViewPath(final VcsRoot root, final boolean checkCSChange, final ViewPath viewPath) throws VcsException {
     try {
       return new ClearCaseConnection(viewPath, /*isUCM, */myCache, root, checkCSChange);
@@ -222,7 +226,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
     }
   }
-  
+
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes, final Set<String> addFileActivities, final Set<VcsChange> zeroToOneChangedFiles, final ClearCaseConnection connection) {
     return new ChangedFilesProcessor() {
 
@@ -597,10 +601,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   public List<ModificationData> collectChanges(final VcsRoot root, final String fromVersion, final String currentVersion, final IncludeRule includeRule) throws VcsException {
     LOG.debug(String.format("Attempt connect to '%s'", root.convertToPresentableString()));
-    try{
+    try {
       final ClearCaseConnection connection = createConnection(root, includeRule, null);
-      return collectChangesWithConnection(root, fromVersion, currentVersion, connection);    
-    } catch (VcsException e){
+      return collectChangesWithConnection(root, fromVersion, currentVersion, connection);
+    } catch (VcsException e) {
       LOG.debug(String.format("Could not establish connection: %s", e.getMessage()));
       throw e;
     }
@@ -898,5 +902,5 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     return null;
   }
-  
+
 }

@@ -63,7 +63,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   }
 
-  public InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
+  public synchronized InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
     cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
     execute(params);
     try {

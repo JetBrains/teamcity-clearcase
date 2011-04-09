@@ -958,7 +958,4 @@ public class ClearCaseConnection {
     return (type == DirectoryChildElement.Type.FILE) == isFile;
   }
 
-  public static void shutdown() {
-    ClearCaseInteractiveProcessPool.getDefault().dispose();
-  }
 }
