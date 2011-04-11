@@ -162,9 +162,7 @@ public class CCSnapshotView {
 
   public List<String> getConfigSpec() throws CCException {
     try {
-      if (myConfigSpecs == null) {
-        myConfigSpecs = new ArrayList<String>(CTool.getConfigSpecs(getTag()));
-      }
+      myConfigSpecs = new ArrayList<String>(CTool.getConfigSpecs(getTag()));
       return myConfigSpecs;
     } catch (Exception e) {
       throw new CCException(e);
