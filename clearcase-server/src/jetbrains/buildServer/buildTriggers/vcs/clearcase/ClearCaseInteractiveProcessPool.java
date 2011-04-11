@@ -154,7 +154,7 @@ public class ClearCaseInteractiveProcessPool {
       final InputStream input = executeAndReturnProcessInput(new String[] { "get", "-to", destFileFqn, versionFqn });
       input.close();
     }
-    
+
     /**
      * the most graceful termination
      */
@@ -286,13 +286,13 @@ public class ClearCaseInteractiveProcessPool {
   private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
     synchronized (ourViewProcesses) {
       String processKeyToReniew = null;
-      for(Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()){
-        if(entry.getValue().equals(process)){
-          processKeyToReniew = entry.getKey(); 
+      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
+        if (entry.getValue().equals(process)) {
+          processKeyToReniew = entry.getKey();
         }
       }
-      if(processKeyToReniew != null){
-      InteractiveProcessFacade cached = getProcess(processKeyToReniew);
+      if (processKeyToReniew != null) {
+        InteractiveProcessFacade cached = getProcess(processKeyToReniew);
         cached.destroy();
         ourViewProcesses.remove(processKeyToReniew);
         LOG.debug(String.format("Interactive Process of '%s' has been dropt. Will be recreated.", processKeyToReniew));
@@ -301,9 +301,8 @@ public class ClearCaseInteractiveProcessPool {
       }
       return getProcess(processKeyToReniew);
     }
-    
+
   }
-  
 
   protected String getVcsRootProcessKey(final @NotNull VcsRoot root) {
     return root.getProperty(Constants.CC_VIEW_PATH);//TODO: is it right?
@@ -345,7 +344,7 @@ public class ClearCaseInteractiveProcessPool {
         process.shutdown();
       }
     }, String.format("%s: shutdown", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
-    
+
     //waiting for complete subprocess shutdown
     try {
       LOG.debug(String.format("%s: Waiting for the complete shutdown...", ClearCaseInteractiveProcessPool.class.getSimpleName()));
