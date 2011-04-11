@@ -291,7 +291,7 @@ public class ClearCaseConnection {
     optionList.add("-fmt");
     optionList.add(FORMAT);
     optionList.addAll(Arrays.asList(Util.makeArguments(preparedOptions)));
-    return ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot).executeAndReturnProcessInput(ClearCaseSupport.makeArray(optionList));
+    return executeAndReturnProcessInput(ClearCaseSupport.makeArray(optionList));
   }
 
   @NotNull
@@ -436,20 +436,7 @@ public class ClearCaseConnection {
     if (params != null && params.length > 0) {
       final ClearCaseInteractiveProcess interactiveProcess = ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot);
       if (interactiveProcess != null) {
-        try {
-          return interactiveProcess/*myProcess*/.executeAndReturnProcessInput(params);
-        } catch (IOException ioe) {
-          //check the process is alive and recreate if not so
-          try {
-            int retCode = interactiveProcess.getProcess().exitValue();
-            LOG.debug(String.format("Interactive Process terminated with code '%d', create new one for the view", retCode));
-            ClearCaseInteractiveProcessPool.getDefault().renewProcess(myRoot);
-            return executeAndReturnProcessInput(params);
-          } catch (IllegalThreadStateException ite) {
-            //process is still running. do not trap IOException
-            throw ioe;
-          }
-        }
+        return interactiveProcess.executeAndReturnProcessInput(params);
       } else {
         LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
       }
@@ -524,7 +511,7 @@ public class ClearCaseConnection {
     try {
       semaphore.acquire();
       //      final String log = writeLog ? UPDATE_LOG : (SystemInfo.isWindows ? "NUL" : "/dev/null");
-      ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot).executeAndReturnProcessInput(new String[] { "update", "-force", "-rename", "-log", UPDATE_LOG /*log*/}).close();
+      executeAndReturnProcessInput(new String[] { "update", "-force", "-rename", "-log", UPDATE_LOG /*log*/}).close();
     } catch (IOException e) {
       if (e.getLocalizedMessage().contains("is not a valid snapshot view path")) {
         //ignore, it is dynamic view
@@ -793,7 +780,7 @@ public class ClearCaseConnection {
     final String normalPath = CCPathElement.normalizePath(viewPath);
 
     final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(normalPath);
-    final InputStream inputStream = process.executeAndReturnProcessInput(/*params)executeSimpleProcess(normalPath, */new String[] { "pwv", "-root" });
+    final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {
@@ -853,7 +840,7 @@ public class ClearCaseConnection {
       path = path + CCParseUtil.CC_VERSION_SEPARATOR + element.getObjectVersion();
     }
 
-    final InputStream inputStream = ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot).executeAndReturnProcessInput(/*params)executeSimpleProcess(getViewWholePath(), */new String[] { "describe", "-s", "-pre", insertDots(path, isDirPath) });
+    final InputStream inputStream = executeAndReturnProcessInput(new String[] { "describe", "-s", "-pre", insertDots(path, isDirPath) });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
     try {

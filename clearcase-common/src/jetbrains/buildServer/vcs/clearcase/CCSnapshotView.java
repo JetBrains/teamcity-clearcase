@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -147,7 +148,7 @@ public class CCSnapshotView {
     }
   }
 
-  public CCDelta[] setConfigSpec(final List<String> configSpec) throws CCException {
+  public CCDelta[] setConfigSpec(final Collection<String> configSpec) throws CCException {
     try {
       LOG.debug(String.format("", getTag(), configSpec));
       myConfigSpecs = new ArrayList<String>(configSpec);
@@ -161,9 +162,10 @@ public class CCSnapshotView {
 
   public List<String> getConfigSpec() throws CCException {
     try {
-      myConfigSpecs = new ArrayList<String>(CTool.getConfigSpecs(getTag()));
+      if (myConfigSpecs == null) {
+        myConfigSpecs = new ArrayList<String>(CTool.getConfigSpecs(getTag()));
+      }
       return myConfigSpecs;
-
     } catch (Exception e) {
       throw new CCException(e);
     }
