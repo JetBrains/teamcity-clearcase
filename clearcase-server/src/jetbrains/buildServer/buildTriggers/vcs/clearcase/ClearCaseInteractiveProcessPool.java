@@ -51,10 +51,10 @@ public class ClearCaseInteractiveProcessPool {
   private ClearCaseFacade myProcessExecutor = new ClearCaseFacade() {
 
     @SuppressWarnings("serial")
-    public ClearCaseInteractiveProcess createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
+    public ClearCaseInteractiveProcess createProcess(final @NotNull String workingDirectory, final GeneralCommandLine generalCommandLine) throws ExecutionException {
       try {
         final Process osProcess = generalCommandLine.createProcess();
-        return ClearCaseInteractiveProcessPool.this.createProcess(osProcess);
+        return ClearCaseInteractiveProcessPool.this.createProcess(workingDirectory, osProcess);
       } catch (ExecutionException e) {
         if (Util.isExecutableNotFoundException(e)) {
           throw new Util.ExecutableNotFoundException(generalCommandLine.getCommandLineString(), e.getMessage()) {
@@ -99,18 +99,24 @@ public class ClearCaseInteractiveProcessPool {
     private final Process myProcess;
     private LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
     private ILineFilter myErrorFilter;
+    private String myWorkingDirectory;
 
     public Process getProcess() {
       return myProcess;
+    }
+    
+    public String getWorkingDirrectory() {
+      return myWorkingDirectory;
     }
 
     public void destroy() {
       //do nothing
     }
 
-    public ClearCaseInteractiveProcess(final Process process) {
+    public ClearCaseInteractiveProcess(final String workingDirectory, final Process process) {
       super(process.getInputStream(), process.getOutputStream());
       myProcess = process;
+      myWorkingDirectory = workingDirectory;
     }
 
     /**
@@ -298,7 +304,7 @@ public class ClearCaseInteractiveProcessPool {
     final GeneralCommandLine rootDetectionCommandLine = createCommandLine(viewPath, "-status");
     try {
       //have to detect View's root for proper caching
-      final ClearCaseInteractiveProcess rootDetectionProcess = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(rootDetectionCommandLine);
+      final ClearCaseInteractiveProcess rootDetectionProcess = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(viewPath, rootDetectionCommandLine);
       final InputStream response = rootDetectionProcess.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
       final ByteArrayOutputStream content = new ByteArrayOutputStream();
       StreamUtil.copyStreamContent(response, content);
@@ -306,7 +312,7 @@ public class ClearCaseInteractiveProcessPool {
       rootDetectionProcess.shutdown();
       final String viewRoot = content.toString().trim();
       //create persistent process in the view root for caching
-      final ClearCaseInteractiveProcess process = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(createCommandLine(viewRoot, "-status"));
+      final ClearCaseInteractiveProcess process = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(viewPath, createCommandLine(viewRoot, "-status"));
       synchronized (ourViewProcesses) {
         ourViewProcesses.put(viewRoot, process);
         LOG.debug(String.format("ClearCaseInteractiveProcess cached for '%s'", viewRoot));
@@ -355,8 +361,8 @@ public class ClearCaseInteractiveProcessPool {
     return root.getProperty(Constants.CC_VIEW_PATH);//TODO: is it right?
   }
 
-  private ClearCaseInteractiveProcess createProcess(final Process process) {
-    return new ClearCaseInteractiveProcess(process);
+  private ClearCaseInteractiveProcess createProcess(String workingDirectory, final Process process) {
+    return new ClearCaseInteractiveProcess(workingDirectory, process);
   }
 
   public void dispose(final @NotNull VcsRoot root) {

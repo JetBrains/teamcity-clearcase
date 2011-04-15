@@ -16,37 +16,21 @@
 
 package jetbrains.buildServer.controllers;
 
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
-import jetbrains.buildServer.log.Loggers;
-import jetbrains.buildServer.web.openapi.ControllerAction;
-import jetbrains.buildServer.web.openapi.WebControllerManager;
-import jetbrains.buildServer.vcs.VcsException;
-import org.jdom.Element;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.springframework.web.servlet.ModelAndView;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
+import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.vcs.VcsException;
+import jetbrains.buildServer.web.openapi.ControllerAction;
+import jetbrains.buildServer.web.openapi.WebControllerManager;
+
+import org.jdom.Element;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 public class EditClearcaseSettingsController extends BaseAjaxActionController {
-  
-  /*
-    <!-- c:if test="${showClearCaseNotFound}">
-  <tr class="noBorder" id ="psexecPathNoteContainer" style="display:none;">
-    <td colspan="2">
-      <div class="attentionComment">
-        Could not find Sysinternals <a showdiscardchangesmessage="false" target="_blank" href="http://technet.microsoft.com/en-us/sysinternals/bb897553.aspx">psexec.exe</a> tool on the server.<br/>
-        Please ensure it is available in the system PATH or specify path to psexec.exe in teamcity.psexec.path server internal property
-        <bs:help file="Configuring+TeamCity+Server+Startup+Properties#ConfiguringTeamCityServerStartupProperties-internal.properties"/>.<br/>
-      </div>
-    </td>
-  </tr>
-</c:if-->
-
-
-   */
   
   public EditClearcaseSettingsController(@NotNull final WebControllerManager controllerManager) {
     super(controllerManager);

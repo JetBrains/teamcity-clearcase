@@ -16,9 +16,13 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
+import org.jetbrains.annotations.NotNull;
+
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 
 public interface ClearCaseFacade {
-  InteractiveProcessFacade createProcess(GeneralCommandLine generalCommandLine) throws ExecutionException;
+  InteractiveProcessFacade createProcess(final @NotNull String workingDirectory, final @NotNull GeneralCommandLine generalCommandLine) throws ExecutionException;
+
+  //  InteractiveProcessFacade createProcess(GeneralCommandLine generalCommandLine) throws ExecutionException;
 }

@@ -922,21 +922,14 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public Pattern[] getIgnoreErrorPatterns() {
-    //        //TW-14154 "Permission denied" error is considered critical error for ClearCase integration 
-    //        if (line.contains("Permission denied")) {
-    //
-    //        } else if (line.contains("Unable to resolve symlink")) {
-    //          LOG.warn(String.format(WARN_LOG_MESSAGE_PATTERN, line));
-    //          return Constants.EMPTY;
-    //        }
     if (myIgnoreErrorPatterns == null) {
       final ArrayList<Pattern> patterns = new ArrayList<Pattern>();
-      final String prop = TeamCityProperties.getProperty(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
+      final String prop = TeamCityProperties.getPropertyOrNull(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
       if (prop != null && prop.trim().length() > 0) {
         for (String pstr : prop.split("[;:]")) {
           if (pstr.trim().length() > 0) {
             try {
-              patterns.add(Pattern.compile(pstr));
+              patterns.add(Pattern.compile(pstr, Pattern.DOTALL | Pattern.MULTILINE));
             } catch (PatternSyntaxException e) {
               LOG.error(e.getMessage());
             }
