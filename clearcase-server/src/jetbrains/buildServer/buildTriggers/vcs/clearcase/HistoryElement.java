@@ -179,7 +179,7 @@ public class HistoryElement {
   }
 
   public static String normalizeLsHistoryFileName(final @NotNull String lsHistoryFileName, boolean dropVersions) {
-    if (!TeamCityProperties.getBoolean(Constants.DISABLE_HISTORY_ELEMENT_TRANSFORMATION)) {
+    if (!TeamCityProperties.getBoolean(Constants.TEAMCITY_PROPERTY_DISABLE_HISTORY_ELEMENT_TRANSFORMATION)) {
       final StringBuffer out = new StringBuffer();
       final int vsepPos = lsHistoryFileName.indexOf(CCParseUtil.CC_VERSION_SEPARATOR);
       if (vsepPos != -1) {

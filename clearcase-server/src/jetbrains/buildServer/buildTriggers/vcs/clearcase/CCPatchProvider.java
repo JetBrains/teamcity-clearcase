@@ -186,6 +186,7 @@ public class CCPatchProvider {
     } catch (InterruptedException e) {
       throw new VcsException(e);
     } catch (IOException primary) {
+      //TODO: apply ILineFilter for such errors?
       //TW-10811 hotfix: threat files that cannot get own context as "rmelem'ed"
       if (primary.getMessage().contains("Operation \"get cleartext\" failed: not a ClearCase object.")) {
         try {

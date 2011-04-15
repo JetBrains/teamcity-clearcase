@@ -121,7 +121,7 @@ public class CCParseUtil {
     if (!connection.isUCM()) {
       return iterator;
     }
-    final long delay = TeamCityProperties.getInteger(Constants.LSHISTORY_UCM_DELAY, 5) * Dates.ONE_SECOND;
+    final long delay = TeamCityProperties.getInteger(Constants.TEAMCITY_PROPERTY_LSHISTORY_UCM_DELAY, 5) * Dates.ONE_SECOND;
     final long threshold = new Date().getTime();
     int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
     do {

@@ -284,8 +284,8 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   }
 
   protected static boolean isDisableValidationErrors(AgentRunningBuild build) {
-    final String disableValidationError = build.getSharedConfigParameters().get(Constants.AGENT_DISABLE_VALIDATION_ERRORS);
-    LOG.debug(String.format("Found %s=\"%s\"", Constants.AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError)); //$NON-NLS-1$
+    final String disableValidationError = build.getSharedConfigParameters().get(Constants.TEAMCITY_PROPERTY_AGENT_DISABLE_VALIDATION_ERRORS);
+    LOG.debug(String.format("Found %s=\"%s\"", Constants.TEAMCITY_PROPERTY_AGENT_DISABLE_VALIDATION_ERRORS, disableValidationError)); //$NON-NLS-1$
     if (Boolean.parseBoolean(disableValidationError)) {
       return true;
     }

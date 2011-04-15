@@ -332,11 +332,11 @@ public class ClearCaseConnection {
 
   @NotNull
   private String getLSHistoryOptionsString() {
-    final String vcsRootOptionsById = TeamCityProperties.getPropertyOrNull(String.format(Constants.LSHISTORY_VCS_ROOT_OPTIONS_BY_ID, myRoot.getId()));
+    final String vcsRootOptionsById = TeamCityProperties.getPropertyOrNull(String.format(Constants.TEAMCITY_PROPERTY_LSHISTORY_VCS_ROOT_OPTIONS_BY_ID, myRoot.getId()));
     if (vcsRootOptionsById != null)
       return vcsRootOptionsById;
 
-    final String defaultOptions = TeamCityProperties.getPropertyOrNull(Constants.LSHISTORY_DEFAULT_OPTIONS);
+    final String defaultOptions = TeamCityProperties.getPropertyOrNull(Constants.TEAMCITY_PROPERTY_LSHISTORY_DEFAULT_OPTIONS);
     if (defaultOptions != null)
       return defaultOptions;
 
@@ -526,12 +526,7 @@ public class ClearCaseConnection {
       FileUtil.delete(new File(viewPath, UPDATE_LOG));//TODO: ????????
     }
 
-    //    updateView(getViewWholePath(), true);
   }
-
-  //  private boolean isViewIsDynamic() throws VcsException, IOException {
-  //    return isViewIsDynamic(getViewWholePath());
-  //  }
 
   protected static boolean isViewIsDynamic(@NotNull final String viewPath) throws VcsException, IOException {
     final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(viewPath);

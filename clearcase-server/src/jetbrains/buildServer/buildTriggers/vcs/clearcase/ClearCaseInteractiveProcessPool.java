@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseFacade;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.InteractiveProcess;
@@ -47,14 +49,14 @@ public class ClearCaseInteractiveProcessPool {
   private final HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
   private ClearCaseFacade myProcessExecutor = new ClearCaseFacade() {
-    
+
     @SuppressWarnings("serial")
     public ClearCaseInteractiveProcess createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
       try {
         final Process osProcess = generalCommandLine.createProcess();
         return ClearCaseInteractiveProcessPool.this.createProcess(osProcess);
       } catch (ExecutionException e) {
-        if(Util.isExecutableNotFoundException(e)){
+        if (Util.isExecutableNotFoundException(e)) {
           throw new Util.ExecutableNotFoundException(generalCommandLine.getCommandLineString(), e.getMessage()) {
             @Override
             public String getMessage() {
@@ -69,8 +71,34 @@ public class ClearCaseInteractiveProcessPool {
   };
 
   public static class ClearCaseInteractiveProcess extends InteractiveProcess {
+
+    private final class ClearCaseErrorFilter implements ILineFilter {
+
+      static final String WARN_LOG_MESSAGE_PATTERN = "Error was detected but rejected by filter: %s";
+
+      private Pattern[] myIgnoreErrorPatterns = new Pattern[0];
+
+      protected ClearCaseErrorFilter(final Pattern... ignorePatterns) {
+        if (ignorePatterns.length > 0) {
+          myIgnoreErrorPatterns = ignorePatterns;
+        }
+      }
+
+      public String apply(final @NotNull String line) {
+        for (final Pattern pattern : myIgnoreErrorPatterns) {
+          final Matcher matcher = pattern.matcher(line);
+          if (matcher.matches()) {
+            LOG.warn(String.format(WARN_LOG_MESSAGE_PATTERN, line));
+            return Constants.EMPTY;
+          }
+        }
+        return line;
+      }
+    }
+
     private final Process myProcess;
     private LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
+    private ILineFilter myErrorFilter;
 
     public Process getProcess() {
       return myProcess;
@@ -128,8 +156,11 @@ public class ClearCaseInteractiveProcessPool {
           //get return status
           final String retCode = line.substring(statusPos + restStr.length(), line.length()).trim();
           if (!"0".equals(retCode)) {
-            String error = readError();
-            throw new IOException(new StringBuilder("Error executing ").append(Arrays.toString(params)).append(": ").append(error).toString());
+            final String errorMessage = readError();
+            //check there is any message(we can ignore kind of error)
+            if (errorMessage.trim().length() > 0) {
+              throw new IOException(new StringBuilder("Error executing ").append(Arrays.toString(params)).append(": ").append(errorMessage).toString());
+            }
           }
           return true;
         }
@@ -183,16 +214,28 @@ public class ClearCaseInteractiveProcessPool {
       try {
         return super.executeAndReturnProcessInput(params);
       } catch (IOException ioe) {
-        //check the process is alive and recreate if not so
-        try {
-          int retCode = getProcess().exitValue();
-          LOG.debug(String.format("Interactive Process terminated with code '%d', create new one for the view", retCode));
-          final InteractiveProcessFacade newProcess = getDefault().renewProcess(this);
-          return newProcess.executeAndReturnProcessInput(params);
-        } catch (IllegalThreadStateException ite) {
-          //process is still running. do not trap IOException
-          throw ioe;
-        }
+        return handleError(params, ioe);
+      }
+    }
+
+    @Override
+    protected ILineFilter getErrorFilter() {
+      if (myErrorFilter == null) {
+        myErrorFilter = new ClearCaseErrorFilter(ClearCaseSupport.getDefault().getIgnoreErrorPatterns());
+      }
+      return myErrorFilter;
+    }
+
+    private InputStream handleError(String[] params, IOException ioe) throws IOException {
+      try {
+        //check the process is alive and recreate if not so        
+        int retCode = getProcess().exitValue();
+        LOG.debug(String.format("Interactive Process terminated with code '%d', create new one for the view", retCode));
+        final InteractiveProcessFacade newProcess = getDefault().renewProcess(this);
+        return newProcess.executeAndReturnProcessInput(params);
+      } catch (IllegalThreadStateException ite) {
+        //process is still running. do not trap IOException
+        throw ioe;
       }
     }
 

@@ -31,6 +31,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
@@ -99,20 +101,31 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
 
-  private @Nullable ClearCaseStructureCache myCache;
+  private @Nullable
+  ClearCaseStructureCache myCache;
 
-  public ClearCaseSupport(){
+  private Pattern[] myIgnoreErrorPatterns;
+
+  private static ClearCaseSupport ourDefault;
+
+  public static ClearCaseSupport getDefault() {
+    return ourDefault;
+  }
+
+  public ClearCaseSupport() {
+    ourDefault = this;
     myCache = null;
   }
-  
+
   public ClearCaseSupport(File baseDir) {
+    this();
     if (baseDir != null) {
       myCache = new ClearCaseStructureCache(baseDir, this);
     }
   }
 
   public ClearCaseSupport(final @NotNull SBuildServer server, final @NotNull ServerPaths serverPaths, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
-
+    this();
     File cachesRootDir = new File(new File(serverPaths.getCachesDir()), "clearCase");
     if (!cachesRootDir.exists() && !cachesRootDir.mkdirs()) {
       myCache = null;
@@ -427,12 +440,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       public Collection<InvalidProperty> process(Map<String, String> properties) {
         final ArrayList<InvalidProperty> validationResult = new ArrayList<InvalidProperty>();
         //collect all validation errors 
-        final ValidationComposite composite = new ValidationComposite(
-            new IValidation[] { 
-                new ClearCaseValidation.CleartoolValidator(), 
-                new ClearCaseValidation.ClearcaseViewRootPathValidator(), 
-                new ClearCaseValidation.ClearcaseViewRelativePathValidator(), 
-                new ClearCaseValidation.ClearcaseGlobalLabelingValidator() });
+        final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.CleartoolValidator(), new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(),
+            new ClearCaseValidation.ClearcaseGlobalLabelingValidator() });
         //transform to expected 
         final Map<IValidation, Collection<InvalidProperty>> result = composite.validate(properties);
         for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : result.entrySet()) {
@@ -906,9 +915,37 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     return null;
   }
-  
-  public boolean isClearCaseClientNotFound(){
+
+  public boolean isClearCaseClientNotFound() {
     return !Util.canRun(Constants.CLEARTOOL_CHECK_AVAILABLE_COMMAND);
+  }
+
+  @NotNull
+  public Pattern[] getIgnoreErrorPatterns() {
+    //        //TW-14154 "Permission denied" error is considered critical error for ClearCase integration 
+    //        if (line.contains("Permission denied")) {
+    //
+    //        } else if (line.contains("Unable to resolve symlink")) {
+    //          LOG.warn(String.format(WARN_LOG_MESSAGE_PATTERN, line));
+    //          return Constants.EMPTY;
+    //        }
+    if (myIgnoreErrorPatterns == null) {
+      final ArrayList<Pattern> patterns = new ArrayList<Pattern>();
+      final String prop = TeamCityProperties.getProperty(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
+      if (prop != null && prop.trim().length() > 0) {
+        for (String pstr : prop.split("[;:]")) {
+          if (pstr.trim().length() > 0) {
+            try {
+              patterns.add(Pattern.compile(pstr));
+            } catch (PatternSyntaxException e) {
+              LOG.error(e.getMessage());
+            }
+          }
+        }
+      }
+      myIgnoreErrorPatterns = patterns.toArray(new Pattern[patterns.size()]);
+    }
+    return myIgnoreErrorPatterns;
   }
 
 }

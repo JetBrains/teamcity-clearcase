@@ -122,7 +122,7 @@ public class CCPathElement {
   }
   
   private static boolean useLegacySplitter() {
-    return !TeamCityProperties.getBoolean(Constants.TREAT_MAIN_AS_VERSION_IDENTIFIER);
+    return !TeamCityProperties.getBoolean(Constants.TEAMCITY_PROPERTY_TREAT_MAIN_AS_VERSION_IDENTIFIER);
   }
 
   static List<CCPathElement> split_Legacy(String objectName) {

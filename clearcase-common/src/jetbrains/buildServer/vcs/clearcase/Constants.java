@@ -18,33 +18,59 @@ package jetbrains.buildServer.vcs.clearcase;
 import org.jetbrains.annotations.NonNls;
 
 public interface Constants {
-  
-  @NonNls public static final String NAME = "clearcase";
-  @NonNls public static final String VIEW_TAG = "view-tag";  
-  @NonNls public static final String VIEW_PATH = "view-path";
-  @NonNls public static final String CC_VIEW_PATH = "cc-view-path";
-  @NonNls public static final String RELATIVE_PATH = "rel-path";
-  @NonNls public static final String TYPE = "TYPE";
-  @NonNls public static final String UCM = "UCM";
-  @NonNls public static final String BASE = "BASE";
-  @NonNls public static final String GLOBAL_LABELS_VOB = "global-labels-vob";
-  @NonNls public static final String USE_GLOBAL_LABEL = "use-global-label";
-  @NonNls public static final String LSHISTORY_DEFAULT_OPTIONS = "clearcase.lshistory.options.default";
-  @NonNls public static final String LSHISTORY_VCS_ROOT_OPTIONS_BY_ID = "clearcase.lshistory.options.vcsRoot{%d}";
-  @NonNls public static final String LSHISTORY_UCM_DELAY = "clearcase.lshistory.ucm.delay.seconds";
 
-  public static final String VOBS_NAME_ONLY = "vobs";
-  public static final String VOBS = "vobs/";
-  public static final String MAIN = "main";
-  
-  public static final String AGENT_CONFIGSPECS_SYS_PROP_PATTERN = "vcs.clearcase.configspec.%s";
-  public static final String AGENT_SOURCE_VIEW_TAG_PROP_PATTERN = "vcs.clearcase.view.tag.%s";
-  
-  public static final String AGENT_DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors"; //$NON-NLS-1$  
-  public static final String TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.treat.main.as.version.identifier";
-  public static final String DISABLE_HISTORY_ELEMENT_TRANSFORMATION = "clearcase.disable.history.transformation";
-  
-  public static final String CLEARTOOL_CHECK_AVAILABLE_COMMAND = "cleartool hostinfo";
-  
-  public static String CLIENT_NOT_FOUND_MESSAGE = "ClearCase Client is not installed properly: 'cleartool' is not in PATH.";  
+  @NonNls
+  public static final String NAME = "clearcase";
+  @NonNls
+  public static final String VIEW_TAG = "view-tag"; //$NON-NLS-1$  
+  @NonNls
+  public static final String VIEW_PATH = "view-path"; //$NON-NLS-1$
+  @NonNls
+  public static final String CC_VIEW_PATH = "cc-view-path"; //$NON-NLS-1$
+  @NonNls
+  public static final String RELATIVE_PATH = "rel-path"; //$NON-NLS-1$
+  @NonNls
+  public static final String TYPE = "TYPE"; //$NON-NLS-1$
+  @NonNls
+  public static final String UCM = "UCM"; //$NON-NLS-1$
+  @NonNls
+  public static final String BASE = "BASE"; //$NON-NLS-1$
+  @NonNls
+  public static final String GLOBAL_LABELS_VOB = "global-labels-vob"; //$NON-NLS-1$
+  @NonNls
+  public static final String USE_GLOBAL_LABEL = "use-global-label"; //$NON-NLS-1$
+
+  @NonNls
+  public static final String VOBS_NAME_ONLY = "vobs"; //$NON-NLS-1$
+  @NonNls
+  public static final String VOBS = "vobs/"; //$NON-NLS-1$
+  @NonNls
+  public static final String MAIN = "main"; //$NON-NLS-1$
+  @NonNls
+  public static final String EMPTY = ""; //$NON-NLS-1$
+
+  @NonNls
+  public static final String AGENT_CONFIGSPECS_SYS_PROP_PATTERN = "vcs.clearcase.configspec.%s"; //$NON-NLS-1$
+  @NonNls
+  public static final String AGENT_SOURCE_VIEW_TAG_PROP_PATTERN = "vcs.clearcase.view.tag.%s"; //$NON-NLS-1$
+
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_LSHISTORY_DEFAULT_OPTIONS = "clearcase.lshistory.options.default"; //$NON-NLS-1$
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_LSHISTORY_VCS_ROOT_OPTIONS_BY_ID = "clearcase.lshistory.options.vcsRoot{%d}"; //$NON-NLS-1$
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_LSHISTORY_UCM_DELAY = "clearcase.lshistory.ucm.delay.seconds"; //$NON-NLS-1$
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_AGENT_DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors"; //$NON-NLS-1$  
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.treat.main.as.version.identifier"; //$NON-NLS-1$
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_DISABLE_HISTORY_ELEMENT_TRANSFORMATION = "clearcase.disable.history.transformation"; //$NON-NLS-1$
+  @NonNls
+  public static final String TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN = "clearcase.ignore.error.message.patterns"; //$NON-NLS-1$
+
+  @NonNls
+  public static final String CLEARTOOL_CHECK_AVAILABLE_COMMAND = "cleartool hostinfo"; //$NON-NLS-1$
+
+  public static String CLIENT_NOT_FOUND_MESSAGE = "ClearCase Client is not installed properly: 'cleartool' is not in PATH.";
 }

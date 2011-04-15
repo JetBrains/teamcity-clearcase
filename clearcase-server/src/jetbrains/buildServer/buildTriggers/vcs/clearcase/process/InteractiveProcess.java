@@ -27,6 +27,7 @@ import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import com.intellij.openapi.vcs.VcsException;
 
@@ -36,7 +37,18 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   private final InputStream myInput;
   private final OutputStream myOutput;
+
   private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
+
+  protected static interface ILineFilter {
+    String apply(final @NotNull String line);
+  }
+
+  protected static final ILineFilter ACCEPT_ALL_FILTER = new ILineFilter() {
+    public String apply(final @NotNull String line) {
+      return line;
+    }
+  };
 
   public InteractiveProcess(final InputStream inputStream, final OutputStream outputStream) {
     myInput = inputStream;
@@ -90,14 +102,17 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       if (myInput.available() > 0)
         break;
       if (getErrorStream().available() > 0) {
-        throw new VcsException(readError());
+        final String errorMesage = readError();
+        if (errorMesage.trim().length() > 0) {
+          throw new VcsException(errorMesage);
+        }
       }
     }
     final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
     StringBuilder buffer = new StringBuilder();
     String line;
     while ((line = reader.readLine()) != null) {
-//      lineRead(line);
+      //      lineRead(line);
       if (isEndOfCommandOutput(line, params)) {
         break;
       }
@@ -134,29 +149,33 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   protected abstract boolean isEndOfCommandOutput(final String line, final String[] params) throws IOException;
 
-//  protected void lineRead(final String line) {
-//  }
-
+  @NotNull
   protected String readError() throws IOException {
     final InputStream errorStream = getErrorStream();
     final StringBuffer result = new StringBuffer();
-
     int available = errorStream.available();
-
-    do {
-      final byte[] read = new byte[available];
-      //noinspection ResultOfMethodCallIgnored
-      errorStream.read(read);
-      result.append(new String(read));
-      try {
-        Util.sleep("InteractiveProcess: Error reading", ERROR_READING_SLEEP_MILLIS);
-      } catch (InterruptedException e) {
-        //ignore
-      }
-      available = errorStream.available();
-    } while (available > 0);
-    return result.toString();
+    if (available > 0) {
+      do {
+        final byte[] read = new byte[available];
+        errorStream.read(read);
+        final String line = new String(read);
+        result.append(line);
+        try {
+          Util.sleep("InteractiveProcess: Error reading", ERROR_READING_SLEEP_MILLIS);
+        } catch (InterruptedException e) {
+          //ignore
+        }
+        available = errorStream.available();
+      } while (available > 0);
+    }
+    return getErrorFilter().apply(result.toString());
   }
 
   protected abstract InputStream getErrorStream();
+
+  @NotNull
+  protected ILineFilter getErrorFilter() {
+    return ACCEPT_ALL_FILTER;
+  }
+
 }
