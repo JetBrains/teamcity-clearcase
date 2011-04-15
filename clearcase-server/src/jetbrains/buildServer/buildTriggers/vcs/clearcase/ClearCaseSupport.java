@@ -104,8 +104,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private @Nullable
   ClearCaseStructureCache myCache;
 
-  private Pattern[] myIgnoreErrorPatterns;
-
   private static ClearCaseSupport ourDefault;
 
   public static ClearCaseSupport getDefault() {
@@ -922,23 +920,20 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public Pattern[] getIgnoreErrorPatterns() {
-    if (myIgnoreErrorPatterns == null) {
-      final ArrayList<Pattern> patterns = new ArrayList<Pattern>();
-      final String prop = TeamCityProperties.getPropertyOrNull(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
-      if (prop != null && prop.trim().length() > 0) {
-        for (String pstr : prop.split("[;:]")) {
-          if (pstr.trim().length() > 0) {
-            try {
-              patterns.add(Pattern.compile(pstr, Pattern.DOTALL | Pattern.MULTILINE));
-            } catch (PatternSyntaxException e) {
-              LOG.error(e.getMessage());
-            }
+    final ArrayList<Pattern> patterns = new ArrayList<Pattern>();
+    final String prop = TeamCityProperties.getPropertyOrNull(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
+    if (prop != null && prop.trim().length() > 0) {
+      for (String pstr : prop.split("[;:]")) {
+        if (pstr.trim().length() > 0) {
+          try {
+            patterns.add(Pattern.compile(pstr, Pattern.DOTALL | Pattern.MULTILINE));
+          } catch (PatternSyntaxException e) {
+            LOG.error(e.getMessage());
           }
         }
       }
-      myIgnoreErrorPatterns = patterns.toArray(new Pattern[patterns.size()]);
     }
-    return myIgnoreErrorPatterns;
+    return patterns.toArray(new Pattern[patterns.size()]);
   }
 
 }
