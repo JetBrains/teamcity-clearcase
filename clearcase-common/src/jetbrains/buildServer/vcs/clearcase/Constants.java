@@ -43,4 +43,8 @@ public interface Constants {
   public static final String AGENT_DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors"; //$NON-NLS-1$  
   public static final String TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.treat.main.as.version.identifier";
   public static final String DISABLE_HISTORY_ELEMENT_TRANSFORMATION = "clearcase.disable.history.transformation";
+  
+  public static final String CLEARTOOL_CHECK_AVAILABLE_COMMAND = "cleartool hostinfo";
+  
+  public static String CLIENT_NOT_FOUND_MESSAGE = "ClearCase Client is not installed properly: 'cleartool' is not in PATH.";  
 }

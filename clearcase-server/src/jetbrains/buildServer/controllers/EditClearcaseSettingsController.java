@@ -25,20 +25,41 @@ import jetbrains.buildServer.vcs.VcsException;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class EditClearcaseSettingsController extends BaseAjaxActionController {
+  
+  /*
+    <!-- c:if test="${showClearCaseNotFound}">
+  <tr class="noBorder" id ="psexecPathNoteContainer" style="display:none;">
+    <td colspan="2">
+      <div class="attentionComment">
+        Could not find Sysinternals <a showdiscardchangesmessage="false" target="_blank" href="http://technet.microsoft.com/en-us/sysinternals/bb897553.aspx">psexec.exe</a> tool on the server.<br/>
+        Please ensure it is available in the system PATH or specify path to psexec.exe in teamcity.psexec.path server internal property
+        <bs:help file="Configuring+TeamCity+Server+Startup+Properties#ConfiguringTeamCityServerStartupProperties-internal.properties"/>.<br/>
+      </div>
+    </td>
+  </tr>
+</c:if-->
+
+
+   */
+  
   public EditClearcaseSettingsController(@NotNull final WebControllerManager controllerManager) {
     super(controllerManager);
+    
     controllerManager.registerController("/admin/convertOldCCSettings.html", this);
+    
     registerAction(new ControllerAction() {
+      
       public boolean canProcess(HttpServletRequest request) {
         final String oldViewPath = request.getParameter("view-path-value");
         return oldViewPath != null && oldViewPath.trim().length() != 0;
       }
-
+      
       public void process(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @Nullable Element ajaxResponse) {
         if (ajaxResponse == null) {
           Loggers.SERVER.debug("Error: ajaxResponse is null");
@@ -64,4 +85,5 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
       }
     });
   }
+
 }

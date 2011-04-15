@@ -35,9 +35,6 @@ import java.util.Set;
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseInteractiveProcessPool.ClearCaseInteractiveProcess;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseGlobalLabelingValidator;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRelativePathValidator;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ClearcaseViewRootPathValidator;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.IValidation;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseValidation.ValidationComposite;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
@@ -86,6 +83,7 @@ import jetbrains.buildServer.vcs.VcsSupportUtil;
 import jetbrains.buildServer.vcs.clearcase.CCException;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
+import jetbrains.buildServer.vcs.clearcase.Util;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
 
 import org.apache.log4j.Logger;
@@ -101,14 +99,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
 
-  private final @Nullable
-  ClearCaseStructureCache myCache;
+  private @Nullable ClearCaseStructureCache myCache;
 
+  public ClearCaseSupport(){
+    myCache = null;
+  }
+  
   public ClearCaseSupport(File baseDir) {
     if (baseDir != null) {
       myCache = new ClearCaseStructureCache(baseDir, this);
-    } else {
-      myCache = null;
     }
   }
 
@@ -428,7 +427,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       public Collection<InvalidProperty> process(Map<String, String> properties) {
         final ArrayList<InvalidProperty> validationResult = new ArrayList<InvalidProperty>();
         //collect all validation errors 
-        final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearcaseViewRootPathValidator(), new ClearcaseViewRelativePathValidator(), new ClearcaseGlobalLabelingValidator() });
+        final ValidationComposite composite = new ValidationComposite(
+            new IValidation[] { 
+                new ClearCaseValidation.CleartoolValidator(), 
+                new ClearCaseValidation.ClearcaseViewRootPathValidator(), 
+                new ClearCaseValidation.ClearcaseViewRelativePathValidator(), 
+                new ClearCaseValidation.ClearcaseGlobalLabelingValidator() });
         //transform to expected 
         final Map<IValidation, Collection<InvalidProperty>> result = composite.validate(properties);
         for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : result.entrySet()) {
@@ -901,6 +905,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       return string.trim();
     }
     return null;
+  }
+  
+  public boolean isClearCaseClientNotFound(){
+    return !Util.canRun(Constants.CLEARTOOL_CHECK_AVAILABLE_COMMAND);
   }
 
 }

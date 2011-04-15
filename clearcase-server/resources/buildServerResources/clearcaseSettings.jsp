@@ -17,11 +17,25 @@
 <%@include file="/include.jsp"%>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="bs" tagdir="/WEB-INF/tags" %>
+<%@ page import="jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport" %>
+<%@ page import="jetbrains.buildServer.vcs.clearcase.Constants" %>
+
 <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
+<jsp:useBean id="clearcaseSupport" scope="request" class="jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport" />
 
 <script type="text/javascript" src="/plugins/clearcase/js/clearcaseSettings.js"></script>
 
+<c:set var="showClearCaseNotFound" value="${clearcaseSupport.clearCaseClientNotFound}"/>
+<c:set var="clearCaseNotFoundText" value="<%=Constants.CLIENT_NOT_FOUND_MESSAGE%>"/>
 <c:set var="showOldSettings" value="${propertiesBean.properties['view-path'] != null && not empty propertiesBean.properties['view-path']}"/>
+
+<bs:linkCSS>
+    /css/main.css
+    /css/forms.css
+    /css/project.css
+    /css/admin/adminMain.css
+</bs:linkCSS>
+
 <c:if test="${showOldSettings}">
     <style type="text/css">
         #oldSettingsMessageInternal {
@@ -38,6 +52,18 @@
 
 <table class="runnerFormTable">
 <l:settingsGroup title="ClearCase Settings">
+
+<c:if test="${showClearCaseNotFound}">
+  <tr>
+    <td colspan="2">
+      <div class="attentionComment">
+      <font color='red'>${clearCaseNotFoundText}</font><br/>
+      See online documentation for more detail<bs:help file="ClearCase#ClearCase"/><br/>
+      </div>
+    </td>
+  </tr>
+</c:if>
+
 <c:if test="${showOldSettings}">
     <tr id="oldSettingsRow">
         <th><label for="view-path" style="text-decoration: line-through">View path:</label>

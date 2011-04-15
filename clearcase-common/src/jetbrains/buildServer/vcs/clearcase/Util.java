@@ -49,63 +49,83 @@ public class Util {
    * @param command
    * @return
    */
-  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2,(.*)");
-
   private static long ourTotalSleepTime;
 
   private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();;
 
+  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2(.*)");
+
   public static boolean canRun(String executable) {
     try {
       execAndWait(executable);
-    } catch (Exception e) {
+      return true;
+    } catch (Throwable e) {
       LOG.debug(e);
-      final Matcher matcher = EXE_NOT_FOUND_PATTERN.matcher(e.getMessage().trim());
-      if (matcher.matches()) {
-        LOG.debug(String.format("Cannot run \"%s\": executable not found", executable));
+      if(e instanceof ExecutableNotFoundException){
         return false;
       }
     }
     return true;
   }
 
-  public static String[] execAndWait(String command) throws IOException, InterruptedException {
+  public static String[] execAndWait(String command) throws IOException {
     return execAndWait(command, new File("."));
   }
 
-  public static String[] execAndWait(String command, String[] envp) throws IOException, InterruptedException {
+  public static String[] execAndWait(String command, String[] envp) throws IOException {
     return execAndWait(command, envp, new File("."));
   }
 
-  public static String[] execAndWait(String command, File dir) throws IOException, InterruptedException {
+  public static String[] execAndWait(String command, File dir) throws IOException {
     return execAndWait(command, null, dir);
   }
 
-  public static String[] execAndWait(String command, String[] envp, File dir) throws IOException, InterruptedException {
+  public static String[] execAndWait(String command, String[] envp, File dir) throws IOException {
     LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
-    Process process = Runtime.getRuntime().exec(makeArguments(command), envp, dir);
-    process.getOutputStream().close();
-    final StringBuffer errBuffer = new StringBuffer();
-    final StringBuffer outBuffer = new StringBuffer();
-    final Thread errReader = pipe(process.getErrorStream(), null, errBuffer);
-    final Thread outReader = pipe(process.getInputStream(), null, outBuffer);
-    int result = process.waitFor();
-    // wait for readers to finish...
-    errReader.join();
-    outReader.join();
-    process.getErrorStream().close();
-    process.getInputStream().close();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("Command stdout:\n%s", outBuffer.toString()));
+    try {
+      Process process = Runtime.getRuntime().exec(makeArguments(command), envp, dir);
+      process.getOutputStream().close();
+      final StringBuffer errBuffer = new StringBuffer();
+      final StringBuffer outBuffer = new StringBuffer();
+      final Thread errReader = pipe(process.getErrorStream(), null, errBuffer);
+      final Thread outReader = pipe(process.getInputStream(), null, outBuffer);
+      int result = process.waitFor();
+      // wait for readers to finish...
+      errReader.join();
+      outReader.join();
+      process.getErrorStream().close();
+      process.getInputStream().close();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Command stdout:\n%s", outBuffer.toString()));
+      }
+      if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
+        LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));
+        throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
+      }
+      if (outBuffer.toString().trim().length() > 0) {
+        return outBuffer.toString().split("\n+");
+      }
+      return new String[0];
+
+    } catch (IOException e) {
+      //check there is no executables message and retrow appropriate exception
+      if(isExecutableNotFoundException(e)){
+        throw new ExecutableNotFoundException(command, e.getMessage());
+      }
+      throw e;
+      
+    } catch (InterruptedException e) {
+      throw new IOException(e.getMessage());
+
     }
-    if (result != 0 || (errBuffer != null && errBuffer.length() > 0)) {
-      LOG.debug(String.format("Command stderr:\n%s", errBuffer.toString()));
-      throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
+  }
+
+  public static boolean isExecutableNotFoundException(final @NotNull Exception e) {
+    final Matcher matcher = EXE_NOT_FOUND_PATTERN.matcher(e.getMessage().trim());
+    if (matcher.matches()) {
+      return true;
     }
-    if (outBuffer.toString().trim().length() > 0) {
-      return outBuffer.toString().split("\n+");
-    }
-    return new String[0];
+    return false;
   }
 
   public static String[] makeArguments(final @NotNull String command) {
@@ -743,6 +763,61 @@ public class Util {
       path = path.substring(0, path.length() - 1);
     }
     return path;
+  }
+
+  @SuppressWarnings("serial")
+  public static class ExecutableNotFoundException extends RuntimeException {
+
+    private String myExecutable;
+    private String myCommand;
+
+    private String extractExecutable(@NotNull String command) {
+      command = command.trim();
+      //respect 'long names'
+      int nextQuotePos = -1;
+      if (command.startsWith("\"")) {
+        nextQuotePos = command.indexOf("\"", 1);
+      } else if (command.startsWith("'")) {
+        nextQuotePos = command.indexOf("'", 1);
+      }
+      if (nextQuotePos != -1) {
+        command.substring(1, nextQuotePos);
+        return command.substring(1, nextQuotePos);
+      }
+      //treat first argument as executable executable
+      String[] arguments = command.split("\\s+");
+      if (arguments.length > 1) {
+        return arguments[0];
+      } else {
+        return command;
+      }
+    }
+
+    public ExecutableNotFoundException(final @NotNull String command, final @NotNull String message) {
+      super(message);
+      myExecutable = extractExecutable(command);
+      myCommand = command;
+    }
+
+    public String getExecutable() {
+      return myExecutable;
+    }
+    
+    public String getCommandline() {
+      return myCommand;
+    }
+
+    @Override
+    public String getMessage() {
+      return String.format("Could not find executable: '%s'. Original message: %s", getExecutable(), super.getMessage());
+    }
+
+    @Override
+    public String getLocalizedMessage() {
+      return getMessage();
+    }
+    
+
   }
 
 }

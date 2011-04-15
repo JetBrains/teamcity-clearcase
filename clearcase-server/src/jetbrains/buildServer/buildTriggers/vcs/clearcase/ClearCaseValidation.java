@@ -35,8 +35,8 @@ public class ClearCaseValidation {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseValidation.class);
 
-  private static final String NO_PARAM_VALIDATION_PASSED = "validation failed"; //$NON-NLS-1$
-  private static final String NO_PARAM_VALIDATION_FAILED = "validation failed"; //$NON-NLS-1$
+  private static final String VALIDATION_PASSED = "validation passed"; //$NON-NLS-1$
+  private static final String VALIDATION_FAILED = "validation failed"; //$NON-NLS-1$
   private static final String SINGLE_PARAM_VALIDATION_FAILED = "validation: \"%s\" failed"; //$NON-NLS-1$
   private static final String SINGLE_PARAM_VALIDATION_PASSED = "validation: \"%s\" passed"; //$NON-NLS-1$
   private static final String DOUBLLE_PARAM_VALIDATION_PASSED = "validation: %s, \"%s\" passed"; //$NON-NLS-1$
@@ -45,8 +45,9 @@ public class ClearCaseValidation {
   interface IValidation {
 
     String getDescription();
+
     boolean validate(final Map<String, String> properties, final Collection<InvalidProperty> validationResultBuffer);
-    
+
   }
 
   static class ValidationComposite {
@@ -83,16 +84,16 @@ public class ClearCaseValidation {
    * Checks the "cleartool" runnable
    */
   static class CleartoolValidator implements IValidation {
+
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-      boolean canRun = Util.canRun("cleartool"); //$NON-NLS-1$
-      if (!canRun) {
-        final String reason = String.format(Messages.getString("ClearCaseValidation.cleartool_not_found_message")); //$NON-NLS-1$
-        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, reason));
-        debug(String.format(NO_PARAM_VALIDATION_FAILED, getClass().getSimpleName()));
-      } else {
-        debug(String.format(NO_PARAM_VALIDATION_PASSED, getClass().getSimpleName()));
+      //validate executable
+      if (new ClearCaseSupport().isClearCaseClientNotFound()) {
+        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, Constants.CLIENT_NOT_FOUND_MESSAGE));
+        debug(String.format(VALIDATION_FAILED, getClass().getSimpleName()));
+        return false;
       }
-      return canRun;
+      debug(String.format(VALIDATION_PASSED, getClass().getSimpleName()));
+      return true;
     }
 
     public String getDescription() {
@@ -113,9 +114,10 @@ public class ClearCaseValidation {
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
+      //validate settings
       try {
-        Util.execAndWait("cleartool hostinfo"); //$NON-NLS-1$
-        debug(String.format(NO_PARAM_VALIDATION_PASSED, getClass().getSimpleName()));
+        Util.execAndWait(Constants.CLEARTOOL_CHECK_AVAILABLE_COMMAND);
+        debug(String.format(VALIDATION_PASSED, getClass().getSimpleName()));
         return true;
       } catch (Exception e) {
         debug(e);

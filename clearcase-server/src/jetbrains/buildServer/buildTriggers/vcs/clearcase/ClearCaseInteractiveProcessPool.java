@@ -47,8 +47,24 @@ public class ClearCaseInteractiveProcessPool {
   private final HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
   private ClearCaseFacade myProcessExecutor = new ClearCaseFacade() {
+    
+    @SuppressWarnings("serial")
     public ClearCaseInteractiveProcess createProcess(final GeneralCommandLine generalCommandLine) throws ExecutionException {
-      return ClearCaseInteractiveProcessPool.this.createProcess(generalCommandLine.createProcess());
+      try {
+        final Process osProcess = generalCommandLine.createProcess();
+        return ClearCaseInteractiveProcessPool.this.createProcess(osProcess);
+      } catch (ExecutionException e) {
+        if(Util.isExecutableNotFoundException(e)){
+          throw new Util.ExecutableNotFoundException(generalCommandLine.getCommandLineString(), e.getMessage()) {
+            @Override
+            public String getMessage() {
+              return Constants.CLIENT_NOT_FOUND_MESSAGE;
+            }
+          };
+        }
+        throw e;
+      }
+
     }
   };
 
@@ -271,18 +287,6 @@ public class ClearCaseInteractiveProcessPool {
     return generalCommandLine;
   }
 
-  //  private InteractiveProcessFacade renewProcess(final @NotNull VcsRoot root) throws IOException {
-  //    synchronized (ourViewProcesses) {
-  //      InteractiveProcessFacade cached = getProcess(root);
-  //      if (cached != null) {
-  //        cached.destroy();
-  //        ourViewProcesses.remove(getVcsRootProcessKey(root));
-  //        LOG.debug(String.format("Interactive Process of '%s' has been dropt. Recreated."));
-  //      }
-  //    }
-  //    return getProcess(root);
-  //  }
-  //  
   private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
     synchronized (ourViewProcesses) {
       String processKeyToReniew = null;
@@ -310,6 +314,23 @@ public class ClearCaseInteractiveProcessPool {
 
   private ClearCaseInteractiveProcess createProcess(final Process process) {
     return new ClearCaseInteractiveProcess(process);
+  }
+
+  public void dispose(final @NotNull VcsRoot root) {
+    try {
+      final String processKey = getVcsRootProcessKey(root);
+      if (ourViewProcesses.containsKey(processKey)) {
+        synchronized (ourViewProcesses) {
+          final ClearCaseInteractiveProcess process = ourViewProcesses.get(processKey);
+          if (process != null) {
+            process.shutdown();
+          }
+          ourViewProcesses.remove(processKey);
+        }
+      }
+    } catch (Throwable t) {
+      LOG.error(t.getMessage(), t);
+    }
   }
 
   public void dispose() {
