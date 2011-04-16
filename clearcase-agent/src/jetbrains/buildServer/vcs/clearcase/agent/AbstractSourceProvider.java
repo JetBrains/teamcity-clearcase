@@ -91,7 +91,6 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       } else {
         build.getBuildLogger().message(String.format(Messages.getString("AbstractSourceProvider.no_changes_loaded_target_message"), describe)); //$NON-NLS-1$
       }
-      //      publish(build, ccview, changes, checkoutDirectory, pathWithinView, build.getBuildLogger());
 
     } catch (Exception e) {
       build.getBuildLogger().buildFailureDescription(Messages.getString("AbstractSourceProvider.update_root_target_error_message")); //$NON-NLS-1$
@@ -148,9 +147,13 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     // scan for exists
     final CCSnapshotView existingView = findView(build, root, ccCheckoutRoot, logger);
     if (existingView != null) {
+      build.getBuildLogger().message(String.format("Using existing ClearCase snapshot view '%s' for build", existingView));
       return existingView;
     }
-    return createNew(build, root, ccCheckoutRoot, logger);
+    build.getBuildLogger().message(String.format("ClearCase view for '%s' not found, creating new one...", root.getName()));
+    final CCSnapshotView newView = createNew(build, root, ccCheckoutRoot, logger);
+    build.getBuildLogger().message(String.format("New ClearCase snapshot view '%s' successfully created", newView.getTag()));    
+    return newView;
   }
 
   /**
@@ -171,16 +174,15 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       existingWithTheSameTag.drop();
     }
     // create new in the checkout directory
-    cleanClearCaseData(build.getAgentConfiguration().getWorkDirectory(), viewRoot);
+    cleanClearCaseData(viewRoot, build.getAgentConfiguration().getWorkDirectory());
     return create(build, root, buildViewTag, viewRoot);
   }
 
   /**
-   * removes all view.dat files in the directories starting from viewRoot till
-   * workDirectory(from child to parent)
+   * removes all view.dat files in the directories starting from 'from' till 'to'(from child to parent)
    */
-  private void cleanClearCaseData(final @NotNull File workDirectory, final @NotNull File viewRoot) {
-    File parent = viewRoot;
+  private void cleanClearCaseData(final @NotNull File from, final @NotNull File to) {
+    File parent = from;
     while (parent != null) {
       parent = parent.getParentFile();
       if(parent == null){
@@ -191,7 +193,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
         FileUtil.delete(viewDatFile);
         LOG.debug(String.format("cleanClearCaseData: '%s' has been dropt", viewDatFile.getAbsolutePath()));
       }
-      if (parent.equals(workDirectory)) {
+      if (parent.equals(to)) {
         break;
       }
     }

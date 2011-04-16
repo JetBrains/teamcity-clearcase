@@ -39,85 +39,21 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
   protected File getCCRootDirectory(AgentRunningBuild build, final @NotNull VcsRoot vcsRoot, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules) throws VcsValidationException {
     final File pathWithinAView = getRelativePathWithinAView(vcsRoot);
     LOG.debug(String.format("Relative Path within a View: '%s'", pathWithinAView)); //$NON-NLS-1$    
-    //    final File checkoutDirectory = build.getCheckoutDirectory();
-    LOG.debug(String.format("Checkout directory: '%s'", checkoutRoot/*checkoutDirectory*/.getPath())); //$NON-NLS-1$      
-    final File workDirectory = build.getAgentConfiguration().getWorkDirectory();//641457143173266e ...
+    LOG.debug(String.format("Checkout directory: '%s'", checkoutRoot.getPath())); //$NON-NLS-1$      
+    final File workDirectory = build.getAgentConfiguration().getWorkDirectory();
     LOG.debug(String.format("Work directory: '%s'", workDirectory.getPath())); //$NON-NLS-1$      
-    if (!checkoutRoot/*checkoutDirectory*/.equals(new File(workDirectory, pathWithinAView.getPath()))) {
+    if (!checkoutRoot.equals(new File(workDirectory, pathWithinAView.getPath()))) {
       final String relativePath;
-      if (workDirectory.getAbsoluteFile().equals(checkoutRoot/*checkoutDirectory*/.getAbsoluteFile())) {
+      if (workDirectory.getAbsoluteFile().equals(checkoutRoot.getAbsoluteFile())) {
         relativePath = ".";
       } else {
-        relativePath = FileUtil.getRelativePath(workDirectory.getPath(), checkoutRoot/*checkoutDirectory*/.getPath(), File.separatorChar);
+        relativePath = FileUtil.getRelativePath(workDirectory.getPath(), checkoutRoot.getPath(), File.separatorChar);
       }
       final String errorMessage = String.format("Wrong checkout directory: expected '%s' but found '%s'.\n Set \"VersionControl Settings\\Checkout directory\" equals to \"Relative path within the view\" of \"%s\" Vcs Root", pathWithinAView, relativePath, vcsRoot.getName());
       report(errorMessage, isDisableValidationErrors(build));
     }
     return workDirectory;
   }
-
-  //  public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
-  //    //check "Checkout Directory" & Checkout Rules matches to the ClearCase View structure
-  //    validatePaths(build, checkoutDirectory, root, rules);
-  //    //perform update
-  //    super.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
-  //  }
-  //
-  //  void validatePaths(final @NotNull AgentRunningBuild build, final @NotNull File configurationCheckoutDirectory, final @NotNull VcsRoot root, final @NotNull CheckoutRules rules) throws VcsValidationException {
-  //    //log configurationCheckoutDirectory
-  //    LOG.debug(String.format("build.checkoutDirectory=\"%s\"", build.getCheckoutDirectory())); //$NON-NLS-1$
-  //    LOG.debug(String.format("configurationCheckoutDirectory=\"%s\"", configurationCheckoutDirectory)); //$NON-NLS-1$
-  //    //make checkout directory relative due to validation issues
-  //    final File relativeCheckoutDirectory;
-  //    if (configurationCheckoutDirectory.isAbsolute()) {
-  //      relativeCheckoutDirectory = new File(FileUtil.getRelativePath(build.getAgentConfiguration().getWorkDirectory(), configurationCheckoutDirectory));
-  //      LOG.debug(String.format("make relative configurationCheckoutDirectory=\"%s\"", relativeCheckoutDirectory)); //$NON-NLS-1$      
-  //    } else {
-  //      relativeCheckoutDirectory = configurationCheckoutDirectory;
-  //    }
-  //    final File serverSideFullPathWithinTheView = new File(root.getProperty(Constants.CC_VIEW_PATH), root.getProperty(Constants.RELATIVE_PATH));
-  //    //log referencing path    
-  //    LOG.debug(String.format("serverSideFullPathWithinTheView=\"%s\"", serverSideFullPathWithinTheView)); //$NON-NLS-1$
-  //    LOG.debug(String.format("Validating rules {%s}", rules.toString().trim())); //$NON-NLS-1$
-  //    if (!CheckoutRules.DEFAULT.equals(rules)) {
-  //      if (rules.getIncludeRules().size() == 1) {
-  //        final IncludeRule rule = rules.getIncludeRules().get(0);
-  //        if (rule.getFrom().trim().length() == 0 || ".".equals(rule.getFrom())) { //$NON-NLS-1$
-  //          final File buildCheckoutDirectory = new File(FileUtil.normalizeRelativePath(new File(relativeCheckoutDirectory, rule.getTo()).getPath()));
-  //          //log buildCheckoutDirectory
-  //          LOG.debug(String.format("validating buildCheckoutDirectory=\"%s\"", buildCheckoutDirectory)); //$NON-NLS-1$
-  //          if (isAncestor(buildCheckoutDirectory, serverSideFullPathWithinTheView)) {
-  //            //match, log
-  //            LOG.debug(String.format("\"%s\" validated, accepted", buildCheckoutDirectory)); //$NON-NLS-1$
-  //          } else {
-  //            //report: rule doesn't match to expected, error
-  //            report(String.format(Messages.getString("ConvensionBasedSourceProvider.unmatched_checkout_root_error_message"), buildCheckoutDirectory, serverSideFullPathWithinTheView), isDisableValidationErrors(build)); //$NON-NLS-1$
-  //          }
-  //        } else {
-  //          //report: from is not ".", error
-  //          report(String.format(Messages.getString("ConvensionBasedSourceProvider.unsupported_rule_format_error_message"), rule.getFrom()), isDisableValidationErrors(build)); //$NON-NLS-1$
-  //        }
-  //      } else {
-  //        //report: multiple, error
-  //        report(String.format(Messages.getString("ConvensionBasedSourceProvider.multiple_checkout_root_error_message"), rules.toString().trim()), isDisableValidationErrors(build)); //$NON-NLS-1$
-  //      }
-  //    } else {
-  //      //default Checkout Rules
-  //      //log validation of configurationCheckoutDirectory, serverSideFullPathWithinTheView
-  //      LOG.debug(String.format("validating buildCheckoutDirectory=\"%s\"", relativeCheckoutDirectory)); //$NON-NLS-1$
-  //      if (isAncestor(relativeCheckoutDirectory, serverSideFullPathWithinTheView)) {
-  //        //match, log
-  //        LOG.debug(String.format("\"%s\" validated, accepted", relativeCheckoutDirectory)); //$NON-NLS-1$
-  //      } else {
-  //        //report: configurationCheckoutDirectory doesn't match to expected, error
-  //        report(String.format(Messages.getString("ConvensionBasedSourceProvider.unmatched_checkout_root_error_message"), relativeCheckoutDirectory, serverSideFullPathWithinTheView), isDisableValidationErrors(build)); //$NON-NLS-1$
-  //      }
-  //    }
-  //  }
-  //
-  //  public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
-  //    //do nothing. all data already should be in the checkout directory
-  //  }
 
   @Override
   protected CCSnapshotView getView(AgentRunningBuild build, VcsRoot root, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules, BuildProgressLogger logger) throws VcsValidationException, CCException {
@@ -128,10 +64,12 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
     if (existingOnFileSystemView != null) {
       //view's root exist. let's check view exists on server side
       if (isAlive(existingOnFileSystemView)) {
+        build.getBuildLogger().message(String.format("Using ClearCase view '%s' for build", existingOnFileSystemView.getTag()));
         return restore(existingOnFileSystemView);//perhaps view.dat can be corrupted/overrided by other roots/soft...
 
       } else {
         //have to create new temporary one because CC could not create maps view into existing folder
+        build.getBuildLogger().message(String.format("Repairing the View '%s'...", existingOnFileSystemView.getTag()));
         final File tmpViewRoot = new File(build.getAgentConfiguration().getTempDirectory(), String.valueOf(System.currentTimeMillis()));
         LOG.debug(String.format("getView::creating temporary snapshot view in \"%s\"", tmpViewRoot.getAbsolutePath())); //$NON-NLS-1$
         createNew(build, root, tmpViewRoot, logger);
@@ -140,7 +78,10 @@ public class CheckoutDirectoryBasedSourceProvider extends AbstractSourceProvider
         return getView(build, root, checkoutRoot, rules, logger);
       }
     }
-    return createNew(build, root, ccCheckoutRoot, logger);
+    build.getBuildLogger().message(String.format("View for '%s' not found, creating new one...", root.getName()));
+    final CCSnapshotView newView = createNew(build, root, ccCheckoutRoot, logger);
+    build.getBuildLogger().message(String.format("New ClearCase snapshot view '%s' successfully created", newView.getTag()));    
+    return newView;
   }
 
 }
