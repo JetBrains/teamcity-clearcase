@@ -21,6 +21,7 @@ import java.util.Map;
 
 import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildProgressLogger;
+import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
@@ -170,7 +171,31 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
       existingWithTheSameTag.drop();
     }
     // create new in the checkout directory
+    cleanClearCaseData(build.getAgentConfiguration().getWorkDirectory(), viewRoot);
     return create(build, root, buildViewTag, viewRoot);
+  }
+
+  /**
+   * removes all view.dat files in the directories starting from viewRoot till
+   * workDirectory(from child to parent)
+   */
+  private void cleanClearCaseData(final @NotNull File workDirectory, final @NotNull File viewRoot) {
+    File parent = viewRoot;
+    while (parent != null) {
+      parent = parent.getParentFile();
+      if(parent == null){
+        break;
+      }
+      final File viewDatFile = new File(parent, "view.dat");
+      if (viewDatFile.exists()) {
+        FileUtil.delete(viewDatFile);
+        LOG.debug(String.format("cleanClearCaseData: '%s' has been dropt", viewDatFile.getAbsolutePath()));
+      }
+      if (parent.equals(workDirectory)) {
+        break;
+      }
+    }
+
   }
 
   private CCSnapshotView create(AgentRunningBuild build, final VcsRoot root, final String buildViewTag, final File viewRoot) throws CCException {

@@ -144,7 +144,21 @@ public class CCSnapshotView {
       setConfigSpec(myConfigSpecs);
 
     } catch (Exception e) {
+      dumpDirsHierarchy(myLocalPath.getAbsolutePath());
       throw new CCException(e);
+    }
+  }
+
+  private void dumpDirsHierarchy(final String absolutePath) {
+    File parent = new File(absolutePath).getParentFile();
+    StringBuffer margin = new StringBuffer();
+    while (parent != null) {
+      System.err.println(String.format("%sdir(%s)", margin.toString(), parent.getPath()));
+      for (File file : parent.listFiles()) {
+        System.err.println(String.format("%s%s", margin.toString(), file.getPath()));
+      }
+      parent = parent.getParentFile();
+      margin.append("\t");
     }
   }
 
