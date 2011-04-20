@@ -115,7 +115,7 @@ public class ClearCaseConnection {
     myCache = cache;
     myRoot = root;
 
-    myUCMSupported = root.getProperty(Constants.TYPE, Constants.BASE).equals(Constants.UCM);//ucmSupported;
+    myUCMSupported = isUCMView(root);//ucmSupported;
 
     myViewPath = viewPath;
 
@@ -150,21 +150,15 @@ public class ClearCaseConnection {
     updateCurrentView();
   }
 
+  private static boolean isUCMView(final @NotNull VcsRoot root) {
+    return root.getProperty(Constants.TYPE, Constants.BASE).equals(Constants.UCM);
+  }
+
   protected boolean isUCM() {
     return myUCMSupported;
   }
 
   public void dispose() throws IOException {
-    //    synchronized (ourViewProcesses) {
-    //      final ClearCaseInteractiveProcess cached = ourViewProcesses.get(getVcsRootProcessKey(myRoot));
-    //      if(cached != null){
-    //        cached.release();
-    //      }
-    ////      final InteractiveProcessFacade process = ourViewProcesses.remove(myRoot.getId());
-    ////      if (process != null) {
-    ////        process.destroy();
-    ////      }
-    //    }
   }
 
   public String getViewWholePath() {
@@ -406,29 +400,34 @@ public class ClearCaseConnection {
 
     return myConfigSpec.isVersionIsInsideView(this, pathElements, isFile);
   }
-
-  public String testConnection() throws IOException, VcsException {
+  
+  static String testConnection(final @NotNull VcsRoot vcsRoot) throws IOException, VcsException {
     final StringBuffer result = new StringBuffer();
-
     final String[] params;
-    if (myUCMSupported) {
+    if (isUCMView(vcsRoot)) {
       params = new String[] { "lsstream", "-long" };
     } else {
-      params = new String[] { "describe", insertDots(getViewWholePath(), true) };
+      params = new String[] { "describe", insertDots(ClearCaseSupport.getViewPath(vcsRoot).getWholePath(), true) };
     }
-
-    final InputStream input = executeAndReturnProcessInput(params);
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-
-    try {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        result.append(line).append('\n');
+    //have to use separate pool for preventing "long running" testing due to cc operations queuing on default pool  
+    final ClearCaseInteractiveProcessPool testPool = new ClearCaseInteractiveProcessPool();
+    try{
+      final ClearCaseInteractiveProcess cleartool = testPool.getProcess(vcsRoot);
+      final InputStream input = cleartool.executeAndReturnProcessInput(params);
+      final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+      try {
+        String line;
+        while ((line = reader.readLine()) != null) {
+          result.append(line).append('\n');
+        }
+      } finally {
+        reader.close();
       }
+      
     } finally {
-      reader.close();
+      testPool.dispose(vcsRoot);
+      testPool.dispose();      
     }
-
     return result.toString();
   }
 
@@ -807,7 +806,7 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  String insertDots(@NotNull final String fullPath, final boolean isDirPath) throws VcsException {
+  static String insertDots(@NotNull final String fullPath, final boolean isDirPath) throws VcsException {
     final List<CCPathElement> filePath = CCPathElement.splitIntoPathElements(CCPathElement.normalizePath(fullPath));
 
     final int lastIndex = filePath.size() - (isDirPath ? 1 : 2);

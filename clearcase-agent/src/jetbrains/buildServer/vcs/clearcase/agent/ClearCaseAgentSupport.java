@@ -65,6 +65,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   private boolean canRun(BuildAgentConfiguration config) {
     setupCleartool(config);
     //check can run
+    dumpEnvironment();    
     try {
       Util.execAndWait(getCheckExecutionCommand());
       return true;
@@ -74,8 +75,6 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       } else {
         LOG.info(String.format("ClearCase agent checkout is disabled: %s", e.getMessage()));
       }
-      LOG.debug(String.format("User: %s", System.getProperty("user.name")));
-      LOG.debug(String.format("Path: %s", System.getenv("PATH")));
       LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_PROP, config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP)));
       LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV)));
       LOG.debug(e.getMessage(), e);
@@ -83,6 +82,12 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       return false;
     }
 
+  }
+
+  private void dumpEnvironment() {
+    LOG.debug(String.format("ClearCase Agent Support environment:"));    
+    LOG.debug(String.format("Running user: %s", System.getProperty("user.name")));
+    LOG.debug(String.format("Environment variables: %s", System.getenv()));
   }
 
   private void setupCleartool(BuildAgentConfiguration config) {

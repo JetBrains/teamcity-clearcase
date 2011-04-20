@@ -496,13 +496,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         new ClearCaseValidation.ClearcaseConfigurationValidator(), new ClearCaseValidation.ClearcaseViewValidator(), new ClearCaseValidation.IValidation() {
           public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
             try {
-              ClearCaseConnection caseConnection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
-              try {
-                validationResult[0] = caseConnection.testConnection();
+              validationResult[0] = ClearCaseConnection.testConnection(vcsRoot);
 
-              } finally {
-                caseConnection.dispose();
-              }
             } catch (Exception e) {
               validationResultBuffer.add(
               //it fired by "Relative path..." setting because others already checked hard I guess... 
@@ -520,6 +515,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
         } });
     //fire validation
     final Map<IValidation, Collection<InvalidProperty>> validationErrors = composite.validate(vcsRoot.getProperties());
+    
     //format exception if something is
     final StringBuffer readableOut = new StringBuffer();
     if (!validationErrors.isEmpty()) {

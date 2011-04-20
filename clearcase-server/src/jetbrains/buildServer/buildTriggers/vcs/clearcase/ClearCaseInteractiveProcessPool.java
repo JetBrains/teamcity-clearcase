@@ -46,7 +46,7 @@ public class ClearCaseInteractiveProcessPool {
 
   private static ClearCaseInteractiveProcessPool ourDefault;
 
-  private final HashMap<String, ClearCaseInteractiveProcess> ourViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
+  private final HashMap<String, ClearCaseInteractiveProcess> myViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
   private ClearCaseFacade myProcessExecutor = new ClearCaseFacade() {
 
@@ -266,14 +266,14 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   public ClearCaseInteractiveProcess getProcess(final @NotNull VcsRoot root) throws IOException {
-    synchronized (ourViewProcesses) {
+    synchronized (myViewProcesses) {
       final String processKey = getVcsRootProcessKey(root);
-      ClearCaseInteractiveProcess cached = ourViewProcesses.get(processKey);
+      ClearCaseInteractiveProcess cached = myViewProcesses.get(processKey);
       if (cached == null) {
         //create new
         cached = createProcess(processKey);
         //        cached.addRef();
-        ourViewProcesses.put(processKey, cached);
+        myViewProcesses.put(processKey, cached);
       }
       return cached;
     }
@@ -281,8 +281,8 @@ public class ClearCaseInteractiveProcessPool {
 
   public ClearCaseInteractiveProcess getProcess(final @NotNull String viewPath) throws IOException {
     //check there already is process for the path and reuse them
-    synchronized (ourViewProcesses) {
-      for (final Map.Entry<String, ClearCaseInteractiveProcess> processEntry : ourViewProcesses.entrySet()) {
+    synchronized (myViewProcesses) {
+      for (final Map.Entry<String, ClearCaseInteractiveProcess> processEntry : myViewProcesses.entrySet()) {
         final String processKey = processEntry.getKey();
         if (Util.isUnderPath(viewPath, processKey)) {
           if (LOG.isDebugEnabled()) {
@@ -313,8 +313,8 @@ public class ClearCaseInteractiveProcessPool {
       final String viewRoot = content.toString().trim();
       //create persistent process in the view root for caching
       final ClearCaseInteractiveProcess process = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(viewPath, createCommandLine(viewRoot, "-status"));
-      synchronized (ourViewProcesses) {
-        ourViewProcesses.put(viewRoot, process);
+      synchronized (myViewProcesses) {
+        myViewProcesses.put(viewRoot, process);
         LOG.debug(String.format("ClearCaseInteractiveProcess cached for '%s'", viewRoot));
       }
       return process;
@@ -337,9 +337,9 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
-    synchronized (ourViewProcesses) {
+    synchronized (myViewProcesses) {
       String processKeyToReniew = null;
-      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
+      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
         if (entry.getValue().equals(process)) {
           processKeyToReniew = entry.getKey();
         }
@@ -347,7 +347,7 @@ public class ClearCaseInteractiveProcessPool {
       if (processKeyToReniew != null) {
         InteractiveProcessFacade cached = getProcess(processKeyToReniew);
         cached.destroy();
-        ourViewProcesses.remove(processKeyToReniew);
+        myViewProcesses.remove(processKeyToReniew);
         LOG.debug(String.format("Interactive Process of '%s' has been dropt. Will be recreated.", processKeyToReniew));
       } else {
         LOG.debug(String.format("Could not find process for Renewing."));
@@ -368,13 +368,13 @@ public class ClearCaseInteractiveProcessPool {
   public void dispose(final @NotNull VcsRoot root) {
     try {
       final String processKey = getVcsRootProcessKey(root);
-      if (ourViewProcesses.containsKey(processKey)) {
-        synchronized (ourViewProcesses) {
-          final ClearCaseInteractiveProcess process = ourViewProcesses.get(processKey);
+      if (myViewProcesses.containsKey(processKey)) {
+        synchronized (myViewProcesses) {
+          final ClearCaseInteractiveProcess process = myViewProcesses.get(processKey);
           if (process != null) {
             process.shutdown();
           }
-          ourViewProcesses.remove(processKey);
+          myViewProcesses.remove(processKey);
         }
       }
     } catch (Throwable t) {
@@ -383,15 +383,19 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   public void dispose() {
+    if(myViewProcesses.isEmpty()){
+      LOG.debug(String.format("%s: Nothing to dispose", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+      return;
+    }
     new Thread(new Runnable() {
       public void run() {
-        synchronized (ourViewProcesses) {
-          for (Map.Entry<String, ClearCaseInteractiveProcess> entry : ourViewProcesses.entrySet()) {
+        synchronized (myViewProcesses) {
+          for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
             ClearCaseInteractiveProcess process = entry.getValue();
             destroy(process, 100);
             LOG.debug(String.format("Interactive process for '%s' disposed", entry.getKey()));
           }
-          ourViewProcesses.clear();
+          myViewProcesses.clear();
         }
       }
 
