@@ -142,7 +142,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       public void serverShutdown() {
         LOG.debug(String.format("Invoke ClearCaseInteractiveProcessPool shutdown..."));
         try {
-          ClearCaseInteractiveProcessPool.getDefault().dispose();
+          ClearCaseInteractiveProcessPool.getDefault().disposeAll();
         } catch (Throwable t) {
           LOG.error(t.getMessage(), t);
         }
@@ -368,23 +368,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       connection.dispose();
     }
   }
-
-  @NotNull
-  public byte[] getContent(@NotNull final VcsModification vcsModification, @NotNull final VcsChangeInfo change, @NotNull final VcsChangeInfo.ContentType contentType, @NotNull final VcsRoot vcsRoot) throws VcsException {
-    final ClearCaseConnection connection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
-    final String filePath = new File(connection.getViewWholePath()).getParent() + File.separator + (contentType == VcsChangeInfo.ContentType.BEFORE_CHANGE ? change.getBeforeChangeRevisionNumber() : change.getAfterChangeRevisionNumber());
-
-    return getFileContent(connection, filePath);
-
-  }
-
+  
   private byte[] getFileContent(final ClearCaseConnection connection, final String filePath) throws VcsException {
     try {
       final File tempFile = FileUtil.createTempFile("cc", "tmp");
       FileUtil.delete(tempFile);
-
       try {
-
         connection.loadFileContent(tempFile, filePath);
         if (tempFile.isFile()) {
           return FileUtil.loadFileBytes(tempFile);
@@ -404,19 +393,34 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public byte[] getContent(@NotNull final String filePath, @NotNull final VcsRoot versionedRoot, @NotNull final String version) throws VcsException {
-    final String preparedPath = CCPathElement.normalizeSeparators(filePath);
-    final ClearCaseConnection connection = createConnection(versionedRoot, IncludeRule.createDefaultInstance(), null);
-    try {
-      connection.collectChangesToIgnore(version);
-      String path = new File(connection.getViewWholePath()).getParent() + File.separator + connection.getObjectRelativePathWithVersions(connection.getViewWholePath() + File.separator + preparedPath, true);
-      return getFileContent(connection, path);
+  public byte[] getContent(@NotNull final VcsModification vcsModification, @NotNull final VcsChangeInfo change, @NotNull final VcsChangeInfo.ContentType contentType, @NotNull final VcsRoot vcsRoot) throws VcsException {
+    try{
+      final ClearCaseConnection connection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
+      final String filePath = new File(connection.getViewWholePath()).getParent() + File.separator + (contentType == VcsChangeInfo.ContentType.BEFORE_CHANGE ? change.getBeforeChangeRevisionNumber() : change.getAfterChangeRevisionNumber());
+      return getFileContent(connection, filePath);
     } finally {
+      ClearCaseInteractiveProcessPool.getDefault().dispose();
+    }
+  }
+
+  @NotNull
+  public byte[] getContent(@NotNull final String filePath, @NotNull final VcsRoot versionedRoot, @NotNull final String version) throws VcsException {
+    try{
+      final String preparedPath = CCPathElement.normalizeSeparators(filePath);
+      final ClearCaseConnection connection = createConnection(versionedRoot, IncludeRule.createDefaultInstance(), null);
       try {
-        connection.dispose();
-      } catch (IOException e) {
-        //ignore
+        connection.collectChangesToIgnore(version);
+        String path = new File(connection.getViewWholePath()).getParent() + File.separator + connection.getObjectRelativePathWithVersions(connection.getViewWholePath() + File.separator + preparedPath, true);
+        return getFileContent(connection, path);
+      } finally {
+        try {
+          connection.dispose();
+        } catch (IOException e) {
+          //ignore
+        }
       }
+    } finally {
+      ClearCaseInteractiveProcessPool.getDefault().dispose();
     }
   }
 
@@ -490,44 +494,48 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public String testConnection(final @NotNull VcsRoot vcsRoot) throws VcsException {
-    final String[] validationResult = new String[] { "Passed" };
-    //validate in general
-    final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(), new ClearCaseValidation.CleartoolValidator(),
-        new ClearCaseValidation.ClearcaseConfigurationValidator(), new ClearCaseValidation.ClearcaseViewValidator(), new ClearCaseValidation.IValidation() {
-          public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-            try {
-              validationResult[0] = ClearCaseConnection.testConnection(vcsRoot);
+    try{
+      final String[] validationResult = new String[] { "Passed" };
+      //validate in general
+      final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(), new ClearCaseValidation.CleartoolValidator(),
+          new ClearCaseValidation.ClearcaseConfigurationValidator(), new ClearCaseValidation.ClearcaseViewValidator(), new ClearCaseValidation.IValidation() {
+        public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
+          try {
+            validationResult[0] = ClearCaseConnection.testConnection(vcsRoot);
 
-            } catch (Exception e) {
-              validationResultBuffer.add(
-              //it fired by "Relative path..." setting because others already checked hard I guess... 
-                  new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))); //$NON-NLS-1$
-              LOG.info(e.getMessage());
-              LOG.debug(e);
-              return false;
-            }
-            return true;
+          } catch (Exception e) {
+            validationResultBuffer.add(
+                //it fired by "Relative path..." setting because others already checked hard I guess... 
+                new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))); //$NON-NLS-1$
+            LOG.info(e.getMessage());
+            LOG.debug(e);
+            return false;
           }
-
-          public String getDescription() {
-            return "Summary functionality check";
-          }
-        } });
-    //fire validation
-    final Map<IValidation, Collection<InvalidProperty>> validationErrors = composite.validate(vcsRoot.getProperties());
-    
-    //format exception if something is
-    final StringBuffer readableOut = new StringBuffer();
-    if (!validationErrors.isEmpty()) {
-      for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : validationErrors.entrySet()) {
-        for (final InvalidProperty prop : entry.getValue()) {
-          readableOut.append(String.format("%s\n", prop.getInvalidReason()));
+          return true;
         }
+
+        public String getDescription() {
+          return "Summary functionality check";
+        }
+      } });
+      //fire validation
+      final Map<IValidation, Collection<InvalidProperty>> validationErrors = composite.validate(vcsRoot.getProperties());
+
+      //format exception if something is
+      final StringBuffer readableOut = new StringBuffer();
+      if (!validationErrors.isEmpty()) {
+        for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : validationErrors.entrySet()) {
+          for (final InvalidProperty prop : entry.getValue()) {
+            readableOut.append(String.format("%s\n", prop.getInvalidReason()));
+          }
+        }
+        throw new VcsException(readableOut.toString());
       }
-      throw new VcsException(readableOut.toString());
+      //all ok
+      return validationResult[0];
+    } finally {
+      ClearCaseInteractiveProcessPool.getDefault().dispose();
     }
-    //all ok
-    return validationResult[0];
   }
 
   @Nullable
@@ -671,17 +679,21 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public String label(@NotNull final String label, @NotNull final String version, @NotNull final VcsRoot root, @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    createLabel(label, root);
+    try{
+      createLabel(label, root);
 
-    final VersionProcessor labeler = getClearCaseLabeler(label);
-    final ConnectionProcessor childrenProcessor = getChildrenProcessor(version, labeler);
+      final VersionProcessor labeler = getClearCaseLabeler(label);
+      final ConnectionProcessor childrenProcessor = getChildrenProcessor(version, labeler);
 
-    for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
-      doWithConnection(root, includeRule, childrenProcessor);
-      doWithRootConnection(root, getParentsProcessor(version, labeler, createPath(root, includeRule)));
+      for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
+        doWithConnection(root, includeRule, childrenProcessor);
+        doWithRootConnection(root, getParentsProcessor(version, labeler, createPath(root, includeRule)));
+      }
+      return label;
+      
+    } finally {
+      ClearCaseInteractiveProcessPool.getDefault().dispose();
     }
-
-    return label;
   }
 
   private String createPath(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule) throws VcsException {
@@ -823,7 +835,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
 
       public void dispose() {
-        //nothing to do
+        ClearCaseInteractiveProcessPool.getDefault().dispose();
       }
     };
   }
@@ -836,7 +848,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
 
       public void dispose() {
-        //nothing to do
+        ClearCaseInteractiveProcessPool.getDefault().dispose();
       }
     };
   }

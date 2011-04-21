@@ -44,7 +44,7 @@ public class ClearCaseInteractiveProcessPool {
 
   private static Logger LOG = Logger.getLogger(ClearCaseConnection.class);
 
-  private static ClearCaseInteractiveProcessPool ourDefault;
+  private static HashMap<Long, ClearCaseInteractiveProcessPool> ourPools = new HashMap<Long, ClearCaseInteractiveProcessPool>();
 
   private final HashMap<String, ClearCaseInteractiveProcess> myViewProcesses = new HashMap<String, ClearCaseInteractiveProcess>();
 
@@ -66,9 +66,10 @@ public class ClearCaseInteractiveProcessPool {
         }
         throw e;
       }
-
     }
   };
+
+  private long myId;
 
   public static class ClearCaseInteractiveProcess extends InteractiveProcess {
 
@@ -100,11 +101,13 @@ public class ClearCaseInteractiveProcessPool {
     private LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
     private ILineFilter myErrorFilter;
     private String myWorkingDirectory;
+    
+    private long myPoolId = -1;
 
     public Process getProcess() {
       return myProcess;
     }
-    
+
     public String getWorkingDirrectory() {
       return myWorkingDirectory;
     }
@@ -112,12 +115,22 @@ public class ClearCaseInteractiveProcessPool {
     public void destroy() {
       //do nothing
     }
+    
+    public ClearCaseInteractiveProcess(final long poolId, final String workingDirectory, final Process process) {
+      this(workingDirectory, process);
+      myPoolId = poolId;
+    }
 
     public ClearCaseInteractiveProcess(final String workingDirectory, final Process process) {
       super(process.getInputStream(), process.getOutputStream());
       myProcess = process;
       myWorkingDirectory = workingDirectory;
     }
+    
+    public long getPoolId() {
+      return myPoolId;
+    }
+    
 
     /**
      * @return true if the Process is still running
@@ -183,14 +196,14 @@ public class ClearCaseInteractiveProcessPool {
     protected void forceDestroy() {
       try {
         final int retCode = myProcess.exitValue();
-        LOG.debug(String.format("Destroing Process has already exited with code (%d):", retCode, myLastExecutedCommand));
+        LOG.debug(String.format("[%d] Destroing Process has already exited with code (%d):", getPoolId(), retCode, myLastExecutedCommand));
       } catch (IllegalThreadStateException e) {
-        LOG.debug(String.format("Destroing Process is still running. Try to waiting for correct termination: %s", myLastExecutedCommand));
+        LOG.debug(String.format("[%d] Destroing Process is still running. Try to waiting for correct termination: %s", getPoolId(), myLastExecutedCommand));
         try {
           myProcess.waitFor();
           forceDestroy();
         } catch (InterruptedException e1) {
-          LOG.debug(String.format("Enforce low-level Process terminating. Last commands: %s", myLastExecutedCommand));
+          LOG.debug(String.format("[%d] Enforce low-level Process terminating. Last commands: %s", getPoolId(), myLastExecutedCommand));
           myProcess.destroy();
         }
 
@@ -236,7 +249,7 @@ public class ClearCaseInteractiveProcessPool {
       try {
         //check the process is alive and recreate if not so        
         int retCode = getProcess().exitValue();
-        LOG.debug(String.format("Interactive Process terminated with code '%d', create new one for the view", retCode));
+        LOG.debug(String.format("[%d] Interactive Process terminated with code '%d', create new one for the view", getPoolId(), retCode));
         final InteractiveProcessFacade newProcess = getDefault().renewProcess(this);
         return newProcess.executeAndReturnProcessInput(params);
       } catch (IllegalThreadStateException ite) {
@@ -247,15 +260,25 @@ public class ClearCaseInteractiveProcessPool {
 
   }
 
-  ClearCaseInteractiveProcessPool() {
+  private ClearCaseInteractiveProcessPool(long poolId) {
+    myId = poolId;
+  }
 
+  public long getId() {
+    return myId;
   }
 
   public static ClearCaseInteractiveProcessPool getDefault() {
-    if (ourDefault == null) {
-      ourDefault = new ClearCaseInteractiveProcessPool();
+    synchronized (ourPools) {
+      final long poolId = Thread.currentThread().getId();
+      ClearCaseInteractiveProcessPool ourThreadDefault = ourPools.get(poolId);
+      if (ourThreadDefault == null) {
+        ourThreadDefault = new ClearCaseInteractiveProcessPool(poolId);
+        ourPools.put(poolId, ourThreadDefault);
+        LOG.debug(String.format("[%d] %s created", poolId, ClearCaseInteractiveProcessPool.class.getSimpleName()));
+      }
+      return ourThreadDefault;
     }
-    return ourDefault;
   }
 
   /**
@@ -286,7 +309,7 @@ public class ClearCaseInteractiveProcessPool {
         final String processKey = processEntry.getKey();
         if (Util.isUnderPath(viewPath, processKey)) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Cache hit: '%s'->'%s'", viewPath, processEntry.getKey()));
+            LOG.debug(String.format("[%d] Cache hit: '%s'->'%s'", getId(), viewPath, processEntry.getKey()));
           }
           return processEntry.getValue();
         }
@@ -299,7 +322,7 @@ public class ClearCaseInteractiveProcessPool {
   private ClearCaseInteractiveProcess createProcess(final @NotNull String viewPath) throws IOException {
     //create new
     if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("Creating new ClearCaseInteractiveProcess for '%s'...", viewPath));
+      LOG.debug(String.format("[%d] Creating new ClearCaseInteractiveProcess for '%s'...", getId(), viewPath));
     }
     final GeneralCommandLine rootDetectionCommandLine = createCommandLine(viewPath, "-status");
     try {
@@ -315,7 +338,7 @@ public class ClearCaseInteractiveProcessPool {
       final ClearCaseInteractiveProcess process = (ClearCaseInteractiveProcess) myProcessExecutor.createProcess(viewPath, createCommandLine(viewRoot, "-status"));
       synchronized (myViewProcesses) {
         myViewProcesses.put(viewRoot, process);
-        LOG.debug(String.format("ClearCaseInteractiveProcess cached for '%s'", viewRoot));
+        LOG.debug(String.format("[%d] ClearCaseInteractiveProcess cached for '%s'", getId(), viewRoot));
       }
       return process;
     } catch (ExecutionException e) {
@@ -348,9 +371,9 @@ public class ClearCaseInteractiveProcessPool {
         InteractiveProcessFacade cached = getProcess(processKeyToReniew);
         cached.destroy();
         myViewProcesses.remove(processKeyToReniew);
-        LOG.debug(String.format("Interactive Process of '%s' has been dropt. Will be recreated.", processKeyToReniew));
+        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt. Will be recreated.", getId(), processKeyToReniew));
       } else {
-        LOG.debug(String.format("Could not find process for Renewing."));
+        LOG.debug(String.format("[%d] Could not find process for Renewing.", getId()));
       }
       return getProcess(processKeyToReniew);
     }
@@ -383,49 +406,70 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   public void dispose() {
-    if(myViewProcesses.isEmpty()){
-      LOG.debug(String.format("%s: Nothing to dispose", ClearCaseInteractiveProcessPool.class.getSimpleName()));
-      return;
-    }
-    new Thread(new Runnable() {
-      public void run() {
-        synchronized (myViewProcesses) {
-          for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
-            ClearCaseInteractiveProcess process = entry.getValue();
-            destroy(process, 100);
-            LOG.debug(String.format("Interactive process for '%s' disposed", entry.getKey()));
-          }
-          myViewProcesses.clear();
+    synchronized (ourPools) {
+      for (final ClearCaseInteractiveProcess process : myViewProcesses.values()) {
+        try {
+          process.shutdown();
+        } catch (Throwable t) {
+          LOG.error(t.getMessage());
         }
       }
+      myViewProcesses.clear();
+      ourPools.remove(getId());
+    }
+  }
 
-      private void destroy(final @NotNull ClearCaseInteractiveProcess process, final long timeout) {
-        //start new timeout watcher
+  public static void disposeAll() {
+    synchronized (ourPools) {
+      if (ourPools.isEmpty()) {
+        LOG.debug(String.format("%s: Nothing to dispose", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+        return;
+      }
+      for (final ClearCaseInteractiveProcessPool pool : ourPools.values()) {
+        if (pool.myViewProcesses.isEmpty()) {
+          LOG.debug(String.format("%s: Nothing to dispose", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+          continue;
+        }
         new Thread(new Runnable() {
           public void run() {
-            try {
-              Thread.sleep(timeout);
-              if (process.isRunning()) {
-                LOG.debug(String.format("Process is still running. Terminating."));//TODO: add working directory to ClearCaseInteractiveProcess                
-                process.getProcess().destroy();
-              }
-            } catch (Throwable t) {
-              //noop
+            for (Map.Entry<String, ClearCaseInteractiveProcess> entry : pool.myViewProcesses.entrySet()) {
+              ClearCaseInteractiveProcess process = entry.getValue();
+              destroy(process, 100);
+              LOG.debug(String.format("Interactive process for '%s' disposed", entry.getKey()));
             }
+            pool.myViewProcesses.clear();
           }
-        }, String.format("%s: shutdown: wait for process termination", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
-        //attempt to shutdown gracefully
-        process.shutdown();
-      }
-    }, String.format("%s: shutdown", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
 
-    //waiting for complete subprocess shutdown
-    try {
-      LOG.debug(String.format("%s: Waiting for the complete shutdown...", ClearCaseInteractiveProcessPool.class.getSimpleName()));
-      Thread.sleep(2000);
-      LOG.debug(String.format("%s: Shutdown completed.", ClearCaseInteractiveProcessPool.class.getSimpleName()));
-    } catch (InterruptedException e) {
-      //do nothing
+          private void destroy(final @NotNull ClearCaseInteractiveProcess process, final long timeout) {
+            //start new timeout watcher
+            new Thread(new Runnable() {
+              public void run() {
+                try {
+                  Thread.sleep(timeout);
+                  if (process.isRunning()) {
+                    LOG.debug(String.format("Process is still running. Terminating."));//TODO: add working directory to ClearCaseInteractiveProcess                
+                    process.getProcess().destroy();
+                  }
+                } catch (Throwable t) {
+                  //noop
+                }
+              }
+            }, String.format("%s: shutdown: wait for process termination", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
+            //attempt to shutdown gracefully
+            process.shutdown();
+          }
+        }, String.format("%s: shutdown", ClearCaseInteractiveProcessPool.class.getSimpleName())).start();
+
+        //waiting for complete subprocess shutdown
+        try {
+          LOG.debug(String.format("%s: Waiting for the complete shutdown...", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+          Thread.sleep(2000);
+          LOG.debug(String.format("%s: Shutdown completed.", ClearCaseInteractiveProcessPool.class.getSimpleName()));
+        } catch (InterruptedException e) {
+          //do nothing
+        }
+
+      }
     }
   }
 

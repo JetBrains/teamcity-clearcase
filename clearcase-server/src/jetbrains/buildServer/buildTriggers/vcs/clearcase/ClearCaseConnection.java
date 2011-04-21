@@ -409,25 +409,17 @@ public class ClearCaseConnection {
     } else {
       params = new String[] { "describe", insertDots(ClearCaseSupport.getViewPath(vcsRoot).getWholePath(), true) };
     }
-    //have to use separate pool for preventing "long running" testing due to cc operations queuing on default pool  
-    final ClearCaseInteractiveProcessPool testPool = new ClearCaseInteractiveProcessPool();
-    try{
-      final ClearCaseInteractiveProcess cleartool = testPool.getProcess(vcsRoot);
-      final InputStream input = cleartool.executeAndReturnProcessInput(params);
-      final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-      try {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          result.append(line).append('\n');
-        }
-      } finally {
-        reader.close();
+    final InputStream input = ClearCaseInteractiveProcessPool.getDefault().getProcess(vcsRoot).executeAndReturnProcessInput(params);
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+    try {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        result.append(line).append('\n');
       }
-      
     } finally {
-      testPool.dispose(vcsRoot);
-      testPool.dispose();      
+      reader.close();
     }
+
     return result.toString();
   }
 
