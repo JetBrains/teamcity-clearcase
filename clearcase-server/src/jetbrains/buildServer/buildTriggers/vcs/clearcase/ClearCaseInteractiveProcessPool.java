@@ -385,7 +385,7 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   private ClearCaseInteractiveProcess createProcess(String workingDirectory, final Process process) {
-    return new ClearCaseInteractiveProcess(workingDirectory, process);
+    return new ClearCaseInteractiveProcess(getId(), workingDirectory, process);
   }
 
   public void dispose(final @NotNull VcsRoot root) {
