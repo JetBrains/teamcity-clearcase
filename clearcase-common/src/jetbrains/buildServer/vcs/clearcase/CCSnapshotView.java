@@ -42,7 +42,7 @@ public class CCSnapshotView {
 
   protected ArrayList<String> myConfigSpecs = new ArrayList<String>();
   protected File myLocalPath;
-  protected File myGlobalPath;
+  protected String myGlobalPath;
   protected String myTag;
 
   private boolean isUcm = false;
@@ -61,15 +61,19 @@ public class CCSnapshotView {
   public static CCSnapshotView init(File localRoot) throws CCException {
     try {
       final ViewParser parser = CTool.lsView(localRoot);
-      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), new File(parser.getGlobalPath()), parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM), parser.getOwner());
+      final CCSnapshotView view = new CCSnapshotView(parser.getRegion(), parser.getServerHost(), parser.getTag(), parser.getGlobalPath(), parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM), parser.getOwner());
       view.myLocalPath = localRoot;
       return view;
     } catch (Exception e) {
       throw new CCException(e);
     }
   }
-
-  CCSnapshotView(final String region, final String server, final String tag, final File glolbalPath, final boolean isUcm, String owner) {
+  
+  CCSnapshotView(final @NotNull ViewParser parser) {
+    this(parser.getRegion(), parser.getServerHost(), parser.getTag(), parser.getGlobalPath(), parser.getAttributes() != null ? parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM) : false, parser.getOwner());
+  }
+  
+  CCSnapshotView(final String region, final String server, final String tag, final String glolbalPath, final boolean isUcm, String owner) {
     myTag = tag;
     myGlobalPath = glolbalPath;
     this.isUcm = isUcm;
@@ -82,7 +86,7 @@ public class CCSnapshotView {
   }
 
   //TODO: review constructors 
-  public CCSnapshotView(String buildViewTag, @Nullable String stream, File globalViewLocation, File localPath) {
+  public CCSnapshotView(String buildViewTag, @Nullable String stream, String globalViewLocation, File localPath) {
     this(buildViewTag, localPath);
     myGlobalPath = globalViewLocation;
     myStream = stream;
@@ -100,7 +104,7 @@ public class CCSnapshotView {
     return myTag;
   }
 
-  public File getGlobalPath() {
+  public String getGlobalPath() {
     return myGlobalPath;
   }
 
@@ -136,11 +140,11 @@ public class CCSnapshotView {
       }
       final VobObjectParser result;
       if (myGlobalPath != null) {
-        result = CTool.createSnapshotView(getTag(), getStream(), myGlobalPath.getAbsolutePath(), myLocalPath.getAbsolutePath(), reason);
+        result = CTool.createSnapshotView(getTag(), getStream(), new File(myGlobalPath).getAbsolutePath(), myLocalPath.getAbsolutePath(), reason);
       } else {
         result = CTool.createSnapshotView(getTag(), getStream(), null, myLocalPath.getAbsolutePath(), reason);
       }
-      myGlobalPath = new File(result.getGlobalPath());
+      myGlobalPath = result.getGlobalPath();
       setConfigSpec(myConfigSpecs);
 
     } catch (Exception e) {
@@ -164,7 +168,7 @@ public class CCSnapshotView {
 
   public CCDelta[] setConfigSpec(final Collection<String> configSpec) throws CCException {
     try {
-      LOG.debug(String.format("", getTag(), configSpec));
+      LOG.debug(String.format("Set up ConfigSpec of '%s': %s", getTag(), configSpec));
       myConfigSpecs = new ArrayList<String>(configSpec);
       return wrap(CTool.setConfigSpecs(myLocalPath, myConfigSpecs));
 
@@ -191,11 +195,14 @@ public class CCSnapshotView {
     }
   }
 
-  protected CCHistory[] add(final @NotNull File file, String reason) throws CCException {
+  protected CCHistory[] add(final @NotNull File[] files, String reason) throws CCException {
     try {
-      CTool.mkelem(myLocalPath, file, reason);
-      final CCHistory revision = checkin(file, reason);
-      return new CCHistory[] { revision };
+      CCHistory lastRevision = null;       
+      for(File file : files){
+        CTool.mkelem(myLocalPath, file, reason);
+        lastRevision = checkin(file, reason);
+      }
+      return new CCHistory[] { lastRevision };
     } catch (Exception e) {
       throw new CCException(e);
     }
@@ -283,15 +290,12 @@ public class CCSnapshotView {
   }
 
   public boolean exists() throws CCException {
-    final CCRegion region = new CCRegion();
-    for (CCSnapshotView view : region.getViews()) {
-      if (view.getTag().trim().equals(getTag().trim())) {
-        // TODO: move initialization to proper place
-        myGlobalPath = view.getGlobalPath();
-        myLocalPath = view.getLocalPath();
-        myConfigSpecs = new ArrayList<String>(view.getConfigSpec());
-        return true;
-      }
+    final CCSnapshotView remoteView = Util.Finder.findView(new CCRegion(), getTag().trim());
+    if(remoteView != null){
+      myGlobalPath = remoteView.getGlobalPath();
+      myLocalPath = remoteView.getLocalPath();
+      myConfigSpecs = new ArrayList<String>(remoteView.getConfigSpec());
+      return true;
     }
     return false;
   }
@@ -344,8 +348,12 @@ public class CCSnapshotView {
   }
 
   public CCSnapshotView drop() throws CCException {
+    final String globalPath = getGlobalPath();
+    if(globalPath == null){
+      throw new CCException(String.format("Cannot drop view: Global Path lost '%s'", this.toString()));
+    }
     try {
-      CTool.dropView(getGlobalPath().getAbsolutePath());
+      CTool.dropView(new File(globalPath).getAbsolutePath());
       if (getLocalPath() != null && getLocalPath().exists()) {
         FileUtil.delete(getLocalPath());
       }

@@ -2,7 +2,8 @@
 <launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
 <stringAttribute key="org.eclipse.debug.core.ATTR_REFRESH_SCOPE" value="${workspace}"/>
 <mapAttribute key="org.eclipse.debug.core.environmentVariables">
-<mapEntry key="JAVA_HOME" value="C:\Program Files\Java\jdk1.6.0_14"/>
+<mapEntry key="JAVA_HOME" value="C:\Program Files\Java\jdk1.6.0_24"/>
+<mapEntry key="TEAMCITY_DATA_PATH" value="C:\Users\kdonskov.SWIFTTEAMS\.BuildServer-6.x"/>
 </mapAttribute>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="Z:\teamcity\TeamCity-distr\TeamCity\bin\teamcity-server.bat"/>
 <stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="start"/>

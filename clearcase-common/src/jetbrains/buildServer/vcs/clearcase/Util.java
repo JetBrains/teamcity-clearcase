@@ -36,6 +36,8 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
+
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
@@ -173,10 +175,13 @@ public class Util {
   public static class Finder {
 
     public static CCSnapshotView findView(CCRegion region, String viewTag) throws CCException {
-      for (CCSnapshotView view : region.getViews()) {
-        if (view.getTag().equals(viewTag)) {
-          return view;
+      try{
+        final ViewParser parser = CTool.lsView(viewTag);
+        if(parser != null){
+          return new CCSnapshotView(parser);
         }
+      } catch (Exception e) {
+        return null;
       }
       return null;
     }

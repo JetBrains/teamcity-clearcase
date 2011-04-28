@@ -82,6 +82,7 @@ public class CTool {
   @SuppressWarnings("unused")
   private static String ourSessionPassword;
   private static String ourCleartoolExecutable = "cleartool"; //$NON-NLS-1$
+  
 
   public static String getCleartoolExecutable() {
     return ourCleartoolExecutable;
@@ -94,6 +95,30 @@ public class CTool {
       LOG.warn(String.format("Could not set CleartoolExecutable to \"null\""));
     }
   }
+  
+  //Executor's part
+  public static interface ICommandExecutor {
+    String[] execAndWait(final @NotNull String command) throws IOException;
+    String[] execAndWait(final @NotNull String command, final @NotNull File workingDirectory) throws IOException; 
+  }
+  
+  private static ICommandExecutor ourCommandExecutor = new ICommandExecutor() {
+    public String[] execAndWait(final String command) throws IOException {
+      return Util.execAndWait(command);
+    }
+
+    public String[] execAndWait(final String command, final File path) throws IOException {
+      return Util.execAndWait(command, path);
+    }
+  };
+  
+  public static ICommandExecutor getCommandExecutor() {
+    return ourCommandExecutor;
+  }
+  
+  public static void setCommandExecutor(final @NotNull ICommandExecutor executor) {
+    ourCommandExecutor = executor;
+  }
 
   /**
    * the account uses for PsExec execution only
@@ -102,7 +127,7 @@ public class CTool {
     ourSessionUser = user;
     ourSessionPassword = password;
   }
-
+  
   static VobObjectParser createVob(final String tag, final String reason) throws IOException, InterruptedException {
     /**
      * check the Tag already exists
@@ -111,101 +136,27 @@ public class CTool {
       throw new IOException(String.format("The VOB \"%s\" already exists", tag));
     }
     final String command = String.format("%s mkvob -tag %s -c \"%s\" -stgloc -auto", getCleartoolExecutable(), tag, reason);
-    final String[] execAndWait = Util.execAndWait(command);
+    final String[] execAndWait = getCommandExecutor().execAndWait(command);
     LOG.debug(String.format("The Vob created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
   }
 
   private static boolean isVobExists(String tag) {
     try {
-      Util.execAndWait(String.format("%s lsvob \\%s", getCleartoolExecutable(), tag));
+      getCommandExecutor().execAndWait(String.format("%s lsvob \\%s", getCleartoolExecutable(), tag));
       return true;
     } catch (Exception e) {
       return false;
     }
   }
 
-  //  static VobObjectParser importVob(final String tag, final File dump, final String reason) throws IOException, InterruptedException, CCException {
-  //    final long timeStamp = System.currentTimeMillis();
-  //    CCStorage anyStorage = null;
-  //    File silentCmd = null;
-  //    try {
-  //      // looking for any VOB for storage detection
-  //      CCStorage[] availableVobs = new CCRegion("any").getStorages();
-  //      if (availableVobs.length == 0) {
-  //        throw new CCException("No one VOB Storage found");
-  //      }
-  //      anyStorage = availableVobs[0];
-  //      final String uploadCommand = String.format("xcopy /Y \"%s\" %s", dump, anyStorage.getGlobalPath());// TODO:
-  //      // use
-  //      // timestamp
-  //      // in
-  //      // file
-  //      // name
-  //
-  //      /**
-  //       * upload replica to target host. it required by replica's import
-  //       */
-  //      Util.execAndWait(uploadCommand);
-  //      /**
-  //       * run command using psexec make sure the user account has administrative
-  //       * privileges on target host
-  //       */
-  //
-  //      silentCmd = new File(String.format("import_replica_%s.cmd", timeStamp));
-  //      silentCmd.createNewFile();
-  //      final FileWriter writer = new FileWriter(silentCmd);
-  //      writer.write("@echo off\n");
-  //      writer.write("echo yes>yes.txt\n");
-  //      writer.write(String.format("multitool mkreplica -import -workdir %s -c \"%s\" -tag \\%s -stgloc -auto -npreserve %s 2>&1 1>>c:\\replica.log 0<yes.txt\n", "c:\\rep.tmp", reason, tag, String.format("%s\\%s", anyStorage.getGlobalPath(), dump.getName())));// TODO:
-  //      // use
-  //      // timestamp
-  //      // in
-  //      // file
-  //      // name
-  //      writer.write("del /F /Q yes.txt\n");
-  //      writer.close();
-  //
-  //      final String command;
-  //
-  //      if (ourSessionUser != null) {
-  //        // the tool was logged in
-  //        command = String.format("psexec \\\\%s -u %s -p %s -c %s", anyStorage.getServerHost(), ourSessionUser, ourSessionPassword, silentCmd.getAbsolutePath());
-  //      } else {
-  //        // use current credentials
-  //        command = String.format("psexec \\\\%s -c %s", anyStorage.getServerHost(), silentCmd.getAbsolutePath());
-  //      }
-  //      try {
-  //        Util.execAndWait(command);
-  //      } catch (Exception e) {
-  //        // psexec writes own output to stderr
-  //      }
-  //      // read VOB properties
-  //      final VobObjectParser vobObjectResult = new VobObjectParser(Util.execAndWait(String.format("%s lsvob -long \\%s", getCleartoolExecutable(), tag)));
-  //      if (vobObjectResult.getGlobalPath() == null) {
-  //        throw new IOException(String.format("Could not create %s VOB", tag));
-  //      }
-  //      return vobObjectResult;
-  //
-  //    } finally {
-  //      // cleanup
-  //      if (silentCmd != null) {
-  //        silentCmd.delete();
-  //      }
-  //      if (anyStorage != null) {
-  //        Util.execAndWait(String.format("cmd /c del /F /Q \"%s\\%s\"", anyStorage.getGlobalPath(), dump.getName()));
-  //      }
-  //    }
-  //
-  //  }
-
   static void dropVob(String globalPath) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_RMVOB, getCleartoolExecutable(), globalPath));
+    getCommandExecutor().execAndWait(String.format(CMD_RMVOB, getCleartoolExecutable(), globalPath));
     LOG.debug(String.format("The Vob \"%s\" has been dropt", globalPath));
   }
 
   static void dropView(String globalPath) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_RMVIEW, getCleartoolExecutable(), globalPath));
+    getCommandExecutor().execAndWait(String.format(CMD_RMVIEW, getCleartoolExecutable(), globalPath));
     LOG.debug(String.format("The View \"%s\" has been dropt", globalPath));
   }
 
@@ -230,7 +181,7 @@ public class CTool {
         command = String.format(CMD_MKVIEW_AUTOLOC_UCM, getCleartoolExecutable(), tag, stream, reason, localViewPath);
       }
     }
-    final String[] execAndWait = Util.execAndWait(command);
+    final String[] execAndWait = getCommandExecutor().execAndWait(command);
     LOG.debug(String.format("View created: %s", Arrays.toString(execAndWait)));
     return new VobObjectParser(execAndWait);
   }
@@ -239,7 +190,7 @@ public class CTool {
     final File file = Util.createTempFile();
     try {
       final String command = String.format(CMD_UPDATE, getCleartoolExecutable(), file.getAbsolutePath());
-      Util.execAndWait(command, path);
+      getCommandExecutor().execAndWait(command, path);
       return parseUpdateOut(new FileInputStream(file));
     } finally {
       file.delete();
@@ -250,7 +201,7 @@ public class CTool {
     final File file = Util.createTempFile();
     try {
       final String command = String.format(CMD_LSCHANGE, getCleartoolExecutable(), file.getAbsolutePath());
-      Util.execAndWait(command, path);
+      getCommandExecutor().execAndWait(command, path);
       return parseUpdateOut(new FileInputStream(file));
     } finally {
       file.delete();
@@ -266,7 +217,7 @@ public class CTool {
       command = String.format(CMD_LSHISTORY_CONTAINING, getCleartoolExecutable(), HistoryParser.OUTPUT_FORMAT_WITHOUT_COMMENTS, file.getAbsolutePath());
     }
     final ArrayList<HistoryParser> buffer = new ArrayList<HistoryParser>();
-    final String[] output = Util.execAndWait(command);
+    final String[] output = getCommandExecutor().execAndWait(command);
     for (String line : output) {
       buffer.add(new HistoryParser(line));
     }
@@ -303,7 +254,7 @@ public class CTool {
 
   static VobParser[] lsVob() throws IOException, InterruptedException {
     final String command = String.format(CMD_LSVOB, getCleartoolExecutable());
-    final String[] stdOut = Util.execAndWait(command);
+    final String[] stdOut = getCommandExecutor().execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<VobParser> out = new ArrayList<VobParser>();
     for (String line : stdOut) {
@@ -325,29 +276,26 @@ public class CTool {
 
   static StorageParser[] lsStgLoc() throws IOException, InterruptedException {
     final String command = String.format(CMD_LSLOCATIONS, getCleartoolExecutable());
-    final String[] stdOut = Util.execAndWait(command);
+    final String[] stdOut = getCommandExecutor().execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<StorageParser> out = new ArrayList<StorageParser>();
     for (String line : stdOut) {
       final String trim = line.trim();
       if (trim.startsWith(StorageParser.NAME_TOKEN) && !buffer.isEmpty()) {
-        // reach the next section
+        // next_section_reached
         out.add(new StorageParser(buffer.toArray(new String[buffer.size()])));
         buffer.clear();
       }
       buffer.add(trim);
     }
+    // do_not_forget_the_last
     out.add(new StorageParser(buffer.toArray(new String[buffer.size()])));// do
-    // not
-    // forget
-    // the
-    // last
     return out.toArray(new StorageParser[out.size()]);
   }
 
   static ViewParser[] lsView() throws IOException, InterruptedException {
     final String command = String.format(CMD_LSVIEW, getCleartoolExecutable());
-    final String[] stdOut = Util.execAndWait(command);
+    final String[] stdOut = getCommandExecutor().execAndWait(command);
     final ArrayList<String> buffer = new ArrayList<String>();
     final ArrayList<ViewParser> out = new ArrayList<ViewParser>();
     for (String line : stdOut) {
@@ -363,20 +311,19 @@ public class CTool {
     }
     if (!buffer.isEmpty()) {
       // do_not_forget_the_last
-      out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));// do
-      // not
+      out.add(new ViewParser(buffer.toArray(new String[buffer.size()])));
     }
     return out.toArray(new ViewParser[out.size()]);
   }
 
   static ViewParser lsView(File root) throws IOException, InterruptedException {
     final String command = String.format(CMD_DSCRVIEW_IN_FOLDER, getCleartoolExecutable());
-    return new ViewParser(Util.execAndWait(command, root));
+    return new ViewParser(getCommandExecutor().execAndWait(command, root));
   }
 
   static ViewParser lsView(String viewTag) throws IOException, InterruptedException {
     final String command = String.format(CMD_DSCRVIEW_BY_TAG, getCleartoolExecutable(), viewTag);
-    return new ViewParser(Util.execAndWait(command));
+    return new ViewParser(getCommandExecutor().execAndWait(command));
   }
 
   /**
@@ -386,7 +333,7 @@ public class CTool {
     final File executionFolder = getFolder(root);
     final String relativePath = FileUtil.getRelativePath(executionFolder, root);
     final String command = String.format(CMD_LSVTREE, getCleartoolExecutable(), relativePath);
-    final String[] rawOut = Util.execAndWait(command, executionFolder);
+    final String[] rawOut = getCommandExecutor().execAndWait(command, executionFolder);
     // remove labels info
     final ArrayList<String> out = new ArrayList<String>(rawOut.length);
     for (String line : rawOut) {
@@ -402,7 +349,7 @@ public class CTool {
 
   public static VersionParser describe(File root, String version) throws IOException, InterruptedException {
     final String command = MessageFormat.format(CMD_DESCRIBE, getCleartoolExecutable(), version);
-    return new VersionParser(Util.execAndWait(command, getFolder(root)));
+    return new VersionParser(getCommandExecutor().execAndWait(command, getFolder(root)));
   }
 
   private static File getFolder(File file) {
@@ -809,6 +756,11 @@ public class CTool {
       return myServerAccessPath;
     }
 
+    @Override
+    public String toString() {
+      return String.format("region=%s, tag=%s, serverHost=%s, globalPath=%s, serverAccessPath=%s", getRegion(), getTag(), getServerHost(), getGlobalPath(), getServerAccessPath());
+    }
+
   }
 
   static class ViewParser extends VobParser {
@@ -857,6 +809,12 @@ public class CTool {
     public String getOwner() {
       return myOwner;
     }
+    
+    @Override
+    public String toString() {
+      return String.format("%s, uuid=%s, attributes=%s", super.toString(), getUUID(), getAttributes());
+    }
+    
 
   }
 
@@ -913,7 +871,7 @@ public class CTool {
 
   static StreamParser lsStream(final @NotNull String viewTag) throws IOException, InterruptedException {
     final String command = String.format(CMD_LSSTREAM, getCleartoolExecutable(), viewTag);
-    return new StreamParser(Util.execAndWait(command));
+    return new StreamParser(getCommandExecutor().execAndWait(command));
   }
 
   static ChangeParser[] setConfigSpecs(File myLocalPath, ArrayList<String> configSpecs) throws IOException, InterruptedException {
@@ -934,7 +892,7 @@ public class CTool {
       // cffile.getAbsolutePath());
       final String command = String.format(CMD_SETCS, getCleartoolExecutable(), cffile.getAbsolutePath());
       try {
-        Util.execAndWait(command, myLocalPath);
+        getCommandExecutor().execAndWait(command, myLocalPath);
         return new ChangeParser[0];// should not reach there
 
       } catch (Exception e) {
@@ -959,7 +917,7 @@ public class CTool {
 
   static List<String> getConfigSpecs(final String viewTag) throws IOException, InterruptedException {
     final String command = String.format(CMD_CATCS, getCleartoolExecutable(), viewTag);
-    final String[] result = Util.execAndWait(command);
+    final String[] result = getCommandExecutor().execAndWait(command);
     return Arrays.asList(result);
   }
 
@@ -970,7 +928,7 @@ public class CTool {
     } else {
       cmd = "%s lscheckout -long %s";
     }
-    final String[] response = Util.execAndWait(String.format(cmd, getCleartoolExecutable(), file.getAbsolutePath()), root);
+    final String[] response = getCommandExecutor().execAndWait(String.format(cmd, getCleartoolExecutable(), file.getAbsolutePath()), root);
     if (response.length == 0 || (response.length == 1 && response[0].trim().length() == 0)) {
       return false;
     } else {
@@ -979,19 +937,19 @@ public class CTool {
   }
 
   static void checkout(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_CHECKOUT, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
+    getCommandExecutor().execAndWait(String.format(CMD_CHECKOUT, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void mkelem(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_MKELEM, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
+    getCommandExecutor().execAndWait(String.format(CMD_MKELEM, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void checkin(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_CHECKIN, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
+    getCommandExecutor().execAndWait(String.format(CMD_CHECKIN, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void rmname(File root, File file, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_RMNAME, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
+    getCommandExecutor().execAndWait(String.format(CMD_RMNAME, getCleartoolExecutable(), reason, file.getAbsolutePath()), root);
   }
 
   static void rmelem(File root, File[] files, String reason) throws IOException, InterruptedException {
@@ -1001,12 +959,12 @@ public class CTool {
         names.append("\"").append(file.getName()).append("\"").append(" ");
       }
       String command = String.format(CMD_RMELEM, getCleartoolExecutable(), reason, names.toString());
-      Util.execAndWait(command, root);
+      getCommandExecutor().execAndWait(command, root);
     }
   }
 
   static void rmver(File root, File file, String version, String reason) throws IOException, InterruptedException {
-    Util.execAndWait(String.format(CMD_RMVER, getCleartoolExecutable(), version, reason, file.getAbsolutePath()), root);
+    getCommandExecutor().execAndWait(String.format(CMD_RMVER, getCleartoolExecutable(), version, reason, file.getAbsolutePath()), root);
   }
 
 }

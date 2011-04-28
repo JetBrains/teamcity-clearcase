@@ -233,14 +233,17 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
     } else {
 
       //...construct
-      final File originalViewGlobalFolder = ccOriginalView.getGlobalPath();
-      final File originalViewGlobalFolderLocation = originalViewGlobalFolder.getParentFile();
+      final String originalViewGlobalPath = ccOriginalView.getGlobalPath();
+      if(originalViewGlobalPath == null){
+        throw new CCException(String.format("Cannot create view: Global Path lost '%s'", ccOriginalView));
+      }
+      final File originalViewGlobalFolderLocation = new File(originalViewGlobalPath).getParentFile();
       LOG.debug(String.format("create:: found Global Location of original view folder: \"%s\"", originalViewGlobalFolderLocation)); //$NON-NLS-1$
       final File buildViewGlobalFolder = new File(originalViewGlobalFolderLocation, String.format("%s.vws", buildViewTag)); //$NON-NLS-1$
       LOG.debug(String.format("create:: use \"%s\" Global Location folder for build view", buildViewGlobalFolder)); //$NON-NLS-1$
 
       //let's go...
-      clone = new CCSnapshotView(buildViewTag, ccOriginalStream, buildViewGlobalFolder, viewRoot);
+      clone = new CCSnapshotView(buildViewTag, ccOriginalStream, buildViewGlobalFolder.getAbsolutePath(), viewRoot);
     }
     clone.create(String.format("Clone view \'%s\' created", buildViewTag)); //$NON-NLS-1$
     return clone;
