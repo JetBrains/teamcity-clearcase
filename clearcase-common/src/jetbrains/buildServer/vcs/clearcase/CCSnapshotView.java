@@ -168,7 +168,7 @@ public class CCSnapshotView {
 
   public CCDelta[] setConfigSpec(final Collection<String> configSpec) throws CCException {
     try {
-      LOG.debug(String.format("Set up ConfigSpec of '%s': %s", getTag(), configSpec));
+      LOG.debug(String.format("Setting up ConfigSpec of '%s': %s", getTag(), configSpec));
       myConfigSpecs = new ArrayList<String>(configSpec);
       return wrap(CTool.setConfigSpecs(myLocalPath, myConfigSpecs));
 
