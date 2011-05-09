@@ -15,33 +15,22 @@
  */
 package jetbrains.buildServer.vcs.clearcase;
 
+import com.intellij.execution.configurations.ParametersList;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.channels.FileChannel;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import jetbrains.buildServer.util.NamedThreadFactory;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-
-import com.intellij.execution.configurations.ParametersList;
 
 public class Util {
 
@@ -598,21 +587,25 @@ public class Util {
         LOGGER.debug("\nslice = " + NUMBER_FORMAT.format(slice) + " Byte\ntransferVolume = " + NUMBER_FORMAT.format(transferVolume) + " Byte");
         sliceStartTime = System.currentTimeMillis();
 
-        ExecutorService executorService = Executors.newCachedThreadPool();
-        ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<Void>(executorService);
-        for (Transferrer transferrer : transferrers) {
-          completionService.submit(transferrer, null);
-        }
-
-        // wait until all transferrers completed their execution
-        for (int i = 0; i < destinationCount; i++) {
-          try {
-            completionService.take();
-          } catch (InterruptedException ex) {
-            LOGGER.error(ex.getMessage(), ex);
+        //TODO: Is that ok to use executor service creation
+        ExecutorService executorService = Executors.newCachedThreadPool(new NamedThreadFactory("Clearcase copy file"));
+        try {
+          ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<Void>(executorService);
+          for (Transferrer transferrer : transferrers) {
+            completionService.submit(transferrer, null);
           }
+
+          // wait until all transferrers completed their execution
+          for (int i = 0; i < destinationCount; i++) {
+            try {
+              completionService.take();
+            } catch (InterruptedException ex) {
+              LOGGER.error(ex.getMessage(), ex);
+            }
+          }
+        } finally {
+          executorService.shutdown();
         }
-        executorService.shutdown();
       }
 
       private class Transferrer extends Thread {
