@@ -491,7 +491,7 @@ public class ClearCaseConnection {
 
   protected void updateCurrentView() throws VcsException {
     Semaphore semaphore;
-    final String viewPath = getViewWholePath();
+    final String viewPath = myViewPath.getClearCaseViewPath(); 
     synchronized (viewName2Semaphore) {
       semaphore = viewName2Semaphore.get(viewPath);
       if (semaphore == null) {
@@ -514,7 +514,7 @@ public class ClearCaseConnection {
       throw new VcsException(e);
     } finally {
       semaphore.release();
-      FileUtil.delete(new File(viewPath, UPDATE_LOG));//TODO: ????????
+      FileUtil.delete(new File(getViewWholePath(), UPDATE_LOG));//TODO: ????????
     }
 
   }
