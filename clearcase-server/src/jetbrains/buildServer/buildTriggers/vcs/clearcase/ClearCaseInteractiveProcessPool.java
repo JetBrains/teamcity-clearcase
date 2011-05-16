@@ -250,7 +250,7 @@ public class ClearCaseInteractiveProcessPool {
         //check the process is alive and recreate if not so        
         int retCode = getProcess().exitValue();
         LOG.debug(String.format("[%d] Interactive Process terminated with code '%d', create new one for the view", getPoolId(), retCode));
-        final InteractiveProcessFacade newProcess = getDefault().renewProcess(this);
+        final InteractiveProcessFacade newProcess = getDefault().renewProcess(this, ioe);
         return newProcess.executeAndReturnProcessInput(params);
       } catch (IllegalThreadStateException ite) {
         //process is still running. do not trap IOException
@@ -359,7 +359,7 @@ public class ClearCaseInteractiveProcessPool {
     return generalCommandLine;
   }
 
-  private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
+  private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process, final @NotNull IOException cause) throws IOException {
     synchronized (myViewProcesses) {
       String processKeyToReniew = null;
       for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
@@ -371,13 +371,15 @@ public class ClearCaseInteractiveProcessPool {
         InteractiveProcessFacade cached = getProcess(processKeyToReniew);
         cached.destroy();
         myViewProcesses.remove(processKeyToReniew);
-        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt. Will be recreated.", getId(), processKeyToReniew));
+//        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt. Will be recreated.", getId(), processKeyToReniew));
+        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt: %s", getId(), processKeyToReniew, cause.getMessage()));
       } else {
         LOG.debug(String.format("[%d] Could not find process for Renewing.", getId()));
       }
-      return getProcess(processKeyToReniew);
+//      return getProcess(processKeyToReniew);
     }
-
+    LOG.debug(String.format("Existing view processes: %s", myViewProcesses));    
+    throw cause;
   }
 
   protected String getVcsRootProcessKey(final @NotNull VcsRoot root) {
