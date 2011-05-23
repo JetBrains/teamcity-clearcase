@@ -108,7 +108,7 @@ public class ClearCaseInteractiveProcessPool {
       return myProcess;
     }
 
-    public String getWorkingDirrectory() {
+    public String getWorkingDirectory() {
       return myWorkingDirectory;
     }
 
@@ -254,8 +254,23 @@ public class ClearCaseInteractiveProcessPool {
         return newProcess.executeAndReturnProcessInput(params);
       } catch (IllegalThreadStateException ite) {
         //process is still running. do not trap IOException
+        if(isWaitingForUserInput(ioe)){
+          LOG.debug(String.format("Interrupting process for '%s'", getWorkingDirectory()));
+          getProcess().getOutputStream().close();
+          getProcess().destroy();
+          getDefault().dispose(this);
+          LOG.debug(String.format("Process for '%s' interrupted", getWorkingDirectory()));          
+        }
         throw ioe;
       }
+    }
+    
+    boolean isWaitingForUserInput(final IOException ioe) {
+      if(ioe.getMessage().contains("A snapshot view update is in progress") || ioe.getMessage().contains("An update is already in progress")){
+        LOG.debug(String.format("Waiting for input detected: %s", ioe.getMessage()));
+        return true;
+      }
+      return false;
     }
 
   }
@@ -360,24 +375,7 @@ public class ClearCaseInteractiveProcessPool {
   }
 
   private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process, final @NotNull IOException cause) throws IOException {
-    synchronized (myViewProcesses) {
-      String processKeyToReniew = null;
-      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
-        if (entry.getValue().equals(process)) {
-          processKeyToReniew = entry.getKey();
-        }
-      }
-      if (processKeyToReniew != null) {
-        InteractiveProcessFacade cached = getProcess(processKeyToReniew);
-        cached.destroy();
-        myViewProcesses.remove(processKeyToReniew);
-//        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt. Will be recreated.", getId(), processKeyToReniew));
-        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt: %s", getId(), processKeyToReniew, cause.getMessage()));
-      } else {
-        LOG.debug(String.format("[%d] Could not find process for Renewing.", getId()));
-      }
-//      return getProcess(processKeyToReniew);
-    }
+    dispose(process);
     LOG.debug(String.format("Existing view processes: %s", myViewProcesses));    
     throw cause;
   }
@@ -388,6 +386,26 @@ public class ClearCaseInteractiveProcessPool {
 
   private ClearCaseInteractiveProcess createProcess(String workingDirectory, final Process process) {
     return new ClearCaseInteractiveProcess(getId(), workingDirectory, process);
+  }
+  
+  public void dispose(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
+    synchronized (myViewProcesses) {
+      String processKeyToReniew = null;
+      for (Map.Entry<String, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
+        if (entry.getValue().equals(process)) {
+          processKeyToReniew = entry.getKey();
+          break;
+        }
+      }
+      if (processKeyToReniew != null) {
+        ClearCaseInteractiveProcess cached = getProcess(processKeyToReniew);
+        cached.destroy();
+        myViewProcesses.remove(processKeyToReniew);
+        LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt: %s", getId(), cached.getWorkingDirectory(), processKeyToReniew));
+      } else {
+        LOG.debug(String.format("[%d] Could not find process for Renewing.", getId()));
+      }
+    }
   }
 
   public void dispose(final @NotNull VcsRoot root) {

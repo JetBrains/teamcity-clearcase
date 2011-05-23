@@ -64,18 +64,23 @@ public class Util {
   }
 
   public static String[] execAndWait(String command, String[] envp) throws IOException {
-    return execAndWait(command, envp, new File("."));
+    return execAndWait(command, null, envp, new File("."));
   }
 
   public static String[] execAndWait(String command, File dir) throws IOException {
-    return execAndWait(command, null, dir);
+    return execAndWait(command, null, null, dir);
   }
 
-  public static String[] execAndWait(String command, String[] envp, File dir) throws IOException {
+  public static String[] execAndWait(String command, String input, String[] envp, File dir) throws IOException {
     LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
     try {
       Process process = Runtime.getRuntime().exec(makeArguments(command), envp, dir);
-      process.getOutputStream().close();
+      if(input == null){
+        process.getOutputStream().close();
+      } else {
+        process.getOutputStream().write(input.getBytes());
+        process.getOutputStream().flush();
+      }
       final StringBuffer errBuffer = new StringBuffer();
       final StringBuffer outBuffer = new StringBuffer();
       final Thread errReader = pipe(process.getErrorStream(), null, errBuffer);
