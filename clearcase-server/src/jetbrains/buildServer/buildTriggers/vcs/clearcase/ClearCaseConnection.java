@@ -41,6 +41,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.MultiMap;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
@@ -275,8 +276,7 @@ public class ClearCaseConnection {
   }
 
   private InputStream getChanges(final String since, final String options) throws VcsException, IOException {
-    final String viewWholePath = getViewWholePath();
-    final String preparedOptions = options.replace(PATH, insertDots(viewWholePath, true));
+    final String preparedOptions = options.replace(PATH, insertDots(getViewWholePath(), true));
     final ArrayList<String> optionList = new ArrayList<String>();
     optionList.add("lshistory");
     optionList.add("-eventid");
@@ -292,7 +292,26 @@ public class ClearCaseConnection {
   private List<String> getLSHistoryOptions() {
     final String lsHistoryOptionsString = getLSHistoryOptionsString();
     LOG.debug("Using the following options for \"lshistory\": " + lsHistoryOptionsString);
-    return splitStringByVerticalBar(lsHistoryOptionsString);
+    return applyBranches(splitStringByVerticalBar(lsHistoryOptionsString));
+  }
+
+  @NotNull
+  private List<String> applyBranches(@NotNull final List<String> baseOptionsList) {
+    final List<String> branches = StringUtil.split(StringUtil.emptyIfNull(myRoot.getProperty(Constants.BRANCHES)));
+    if (branches.isEmpty()) {
+      LOG.debug("There are no branches specified for \"lshistory\".");
+      return baseOptionsList;
+    }
+    else {
+      LOG.debug("Using the following branches for \"lshistory\": " + branches);
+      final List<String> options = new ArrayList<String>();
+      for (final String branch : branches) {
+        for (final String baseOptions : baseOptionsList) {
+          options.add(String.format("-branch %s %s", branch, baseOptions));
+        }
+      }
+      return options;
+    }
   }
 
   @NotNull

@@ -92,6 +92,16 @@
     <span class="error" id="error_rel-path"></span></td>
 </tr>
 <tr>
+  <th><label for="branch">Branches: <bs:help file="ClearCase" anchor="branchesOptionDescription"/></label>
+  </th>
+  <td><props:textProperty name="branches" className="longField" />
+    <span class="error" id="error_branches"></span>
+    <div class="smallNote" style="margin-left: 0;">
+      The branches you specify in this field will be used in "-branch" parameter for "lshistory" command. This field is optional but can significally improve the performance so it is recommended to specify it.
+    </div>
+  </td>
+</tr>
+<tr>
   <th class="noBorder"><label for="TYPE">Use ClearCase:</label></th>
   <td class="noBorder"><props:selectProperty name="TYPE">
         <props:option value="UCM">UCM</props:option>
