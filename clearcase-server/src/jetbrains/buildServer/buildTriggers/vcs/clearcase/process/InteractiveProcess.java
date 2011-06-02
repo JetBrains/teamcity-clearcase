@@ -120,7 +120,12 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     }
     final String response = buffer.toString();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("output line read:\n" + response);
+      if (params.length == 0 || !"update".equals(params[0]) || TeamCityProperties.getBoolean("clearcase.log.update")) {
+        LOG.debug("output line read:\n" + response);
+      }
+      else {
+        LOG.debug("output was omitted due to its size");
+      }
     }
     final ByteArrayInputStream out = new ByteArrayInputStream(response.getBytes());
 
