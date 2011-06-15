@@ -114,6 +114,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     while ((line = reader.readLine()) != null) {
       //      lineRead(line);
       if (isEndOfCommandOutput(line, params)) {
+        final String theRest = getLastOutput();
+        if (theRest != null) {
+          buffer.append(theRest).append("\n");
+        }
         break;
       }
       buffer.append(line).append("\n");
@@ -122,8 +126,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     if (LOG.isDebugEnabled()) {
       if (params.length == 0 || !"update".equals(params[0]) || TeamCityProperties.getBoolean("clearcase.log.update")) {
         LOG.debug("output line read:\n" + response);
-      }
-      else {
+      } else {
         LOG.debug("output was omitted due to its size");
       }
     }
@@ -153,6 +156,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   }
 
   protected abstract boolean isEndOfCommandOutput(final String line, final String[] params) throws IOException;
+
+  protected String getLastOutput() {
+    return null;
+  }
 
   @NotNull
   protected String readError() throws IOException {

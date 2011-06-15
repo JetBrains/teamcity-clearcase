@@ -97,12 +97,13 @@ public class ClearCaseInteractiveProcessPool {
       }
     }
 
-    private final Process myProcess;
+    private Process myProcess;
     private LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
     private ILineFilter myErrorFilter;
     private String myWorkingDirectory;
-    
+
     private long myPoolId = -1;
+    private String myLastOutput;
 
     public Process getProcess() {
       return myProcess;
@@ -115,7 +116,12 @@ public class ClearCaseInteractiveProcessPool {
     public void destroy() {
       //do nothing
     }
-    
+
+    //just for testing purpose 
+    protected ClearCaseInteractiveProcess() {
+      super(null, null);
+    }
+
     public ClearCaseInteractiveProcess(final long poolId, final String workingDirectory, final Process process) {
       this(workingDirectory, process);
       myPoolId = poolId;
@@ -126,11 +132,10 @@ public class ClearCaseInteractiveProcessPool {
       myProcess = process;
       myWorkingDirectory = workingDirectory;
     }
-    
+
     public long getPoolId() {
       return myPoolId;
     }
-    
 
     /**
      * @return true if the Process is still running
@@ -166,25 +171,38 @@ public class ClearCaseInteractiveProcessPool {
       }
     }
 
+    static Pattern END_OF_COMMAND = Pattern.compile("(.*)Command (\\d*) returned status (\\d*)(.*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
     @Override
     protected boolean isEndOfCommandOutput(final String line, final String[] params) throws IOException {
-      if (line.startsWith("Command ")) {
-        final String restStr = " returned status ";
-        final int statusPos = line.indexOf(restStr);
-        if (statusPos != -1) {
-          //get return status
-          final String retCode = line.substring(statusPos + restStr.length(), line.length()).trim();
-          if (!"0".equals(retCode)) {
-            final String errorMessage = readError();
-            //check there is any message(we can ignore kind of error)
-            if (errorMessage.trim().length() > 0) {
-              throw new IOException(new StringBuilder("Error executing ").append(Arrays.toString(params)).append(": ").append(errorMessage).toString());
-            }
+      final Matcher matcher = END_OF_COMMAND.matcher(line);
+      if (matcher.matches()) {
+        final String group = matcher.group(1);
+        myLastOutput = group.length() > 0 ? group : null; //keep the informational output 
+        final String retCode = matcher.group(3);
+        if (!"0".equals(retCode)) {
+          final String errorMessage = readError();
+          //check there is any message(we can ignore kind of error)
+          if (errorMessage.trim().length() > 0) {
+            throw new IOException(new StringBuilder("Error executing ").append(Arrays.toString(params)).append(": ").append(errorMessage).toString());
           }
-          return true;
         }
+        return true;
       }
       return false;
+    }
+
+    /**
+     * Use the method for getting last output before 'end-of-command' marker.
+     * Output will be discarded next to the method invocation
+     * 
+     * @see http://youtrack.jetbrains.net/issue/TW-17141
+     */
+    @Override
+    protected String getLastOutput() {
+      final String out = myLastOutput;
+      myLastOutput = null;
+      return out;
     }
 
     @Override
@@ -254,19 +272,19 @@ public class ClearCaseInteractiveProcessPool {
         return newProcess.executeAndReturnProcessInput(params);
       } catch (IllegalThreadStateException ite) {
         //process is still running. do not trap IOException
-        if(isWaitingForUserInput(ioe)){
+        if (isWaitingForUserInput(ioe)) {
           LOG.debug(String.format("Interrupting process for '%s'", getWorkingDirectory()));
           getProcess().getOutputStream().close();
           getProcess().destroy();
           getDefault().dispose(this);
-          LOG.debug(String.format("Process for '%s' interrupted", getWorkingDirectory()));          
+          LOG.debug(String.format("Process for '%s' interrupted", getWorkingDirectory()));
         }
         throw ioe;
       }
     }
-    
+
     boolean isWaitingForUserInput(final IOException ioe) {
-      if(ioe.getMessage().contains("A snapshot view update is in progress") || ioe.getMessage().contains("An update is already in progress")){
+      if (ioe.getMessage().contains("A snapshot view update is in progress") || ioe.getMessage().contains("An update is already in progress")) {
         LOG.debug(String.format("Waiting for input detected: %s", ioe.getMessage()));
         return true;
       }
@@ -376,7 +394,7 @@ public class ClearCaseInteractiveProcessPool {
 
   private InteractiveProcessFacade renewProcess(final @NotNull ClearCaseInteractiveProcess process, final @NotNull IOException cause) throws IOException {
     dispose(process);
-    LOG.debug(String.format("Existing view processes: %s", myViewProcesses));    
+    LOG.debug(String.format("Existing view processes: %s", myViewProcesses));
     throw cause;
   }
 
@@ -387,7 +405,7 @@ public class ClearCaseInteractiveProcessPool {
   private ClearCaseInteractiveProcess createProcess(String workingDirectory, final Process process) {
     return new ClearCaseInteractiveProcess(getId(), workingDirectory, process);
   }
-  
+
   public void dispose(final @NotNull ClearCaseInteractiveProcess process) throws IOException {
     synchronized (myViewProcesses) {
       String processKeyToReniew = null;
