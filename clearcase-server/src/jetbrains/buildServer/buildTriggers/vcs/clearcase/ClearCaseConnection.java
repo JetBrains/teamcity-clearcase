@@ -752,7 +752,10 @@ public class ClearCaseConnection {
   }
 
   protected boolean fileExistsInParents(@NotNull final HistoryElement element, final boolean isFile) throws VcsException {
-    return doFileExistsInParents(new File(CCPathElement.normalizePath(element.getObjectName())), myViewPath.getWholePathFile(), isFile);
+    final File file = new File(CCPathElement.normalizePath(element.getObjectName()));
+    final boolean result = doFileExistsInParents(file, myViewPath.getWholePathFile(), isFile);
+    LOG.debug(String.format(result ? "File \"%s\" exists in parents" : "File \"%s\" does not exist in parents", file.getAbsolutePath()));
+    return result;
   }
 
   private boolean doFileExistsInParents(@NotNull final File objectFile, @NotNull final File viewFile, final boolean objectIsFile) throws VcsException {

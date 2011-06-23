@@ -33,7 +33,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class HistoryElement {
-
   private static final Logger LOG = Logger.getLogger(HistoryElement.class);
 
   private static final Pattern CC_LSHISTORY_VPATH_PATTERN = Pattern.compile("(.*?)[/\\\\](\\d*)[/\\\\](.*?)[/\\\\](.*)");
@@ -162,7 +161,11 @@ public class HistoryElement {
   }
 
   public boolean versionIsInsideView(final ClearCaseConnection connection, final boolean isFile) throws IOException, VcsException {
-    return connection.versionIsInsideView(myObjectName, getObjectVersion(), isFile);
+    final boolean result = connection.versionIsInsideView(myObjectName, getObjectVersion(), isFile);
+    LOG.debug(String.format(result
+                            ? "Version \"%s\" of file \"%s\" is inside view"
+                            : "Version \"%s\" of file \"%s\" is not inside view", myObjectVersion, myObjectName));
+    return result;
   }
 
   public String getActivity() {
