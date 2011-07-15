@@ -107,6 +107,11 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
           throw new VcsException(errorMesage);
         }
       }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        // do nothing
+      }
     }
     final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
     StringBuilder buffer = new StringBuilder();
