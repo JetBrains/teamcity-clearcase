@@ -45,8 +45,7 @@ public class ConfigSpecImpl implements ConfigSpec {
   }
 
   @Nullable
-  public Version getCurrentVersion(final String ccViewRoot, final String fullFileName, final VersionTree versionTree, final boolean isFile)
-    throws IOException, VcsException {
+  public Version getCurrentVersion(final String ccViewRoot, final String fullFileName, final VersionTree versionTree, final boolean isFile) throws VcsException {
     final String normalizedFullFileName = CCPathElement.normalizeFileName(fullFileName);
     final Version version = doGetCurrentVersion(ccViewRoot, normalizedFullFileName, versionTree, isFile);
 
@@ -86,7 +85,7 @@ public class ConfigSpecImpl implements ConfigSpec {
     return myLoadRules;
   }
   
-  private boolean doIsVersionIsInsideView(final ClearCaseConnection connection, final String fullFileName, final Version version, final boolean isFile) throws VcsException, IOException {
+  private boolean doIsVersionIsInsideView(final ClearCaseConnection connection, final String fullFileName, final Version version, final boolean isFile) throws VcsException {
     final String normalizedFullFileName = CCPathElement.normalizeFileName(fullFileName);
     if (!isUnderLoadRules(connection.getClearCaseViewPath(), normalizedFullFileName)) return false;
 
@@ -146,8 +145,7 @@ public class ConfigSpecImpl implements ConfigSpec {
   }
 
   @Nullable
-  private Version doGetCurrentVersion(final String ccViewRoot, final String fullFileName, final VersionTree versionTree, final boolean isFile)
-    throws IOException, VcsException {
+  private Version doGetCurrentVersion(final String ccViewRoot, final String fullFileName, final VersionTree versionTree, final boolean isFile) throws VcsException {
     if (!isUnderLoadRules(ccViewRoot, fullFileName)) {
       return null;
     }
@@ -164,7 +162,7 @@ public class ConfigSpecImpl implements ConfigSpec {
     return null;
   }
 
-  public boolean isUnderLoadRules(final String ccViewRoot, final String fullFileName) throws IOException, VcsException {
+  public boolean isUnderLoadRules(final String ccViewRoot, final String fullFileName) throws VcsException {
     return myViewIsDynamic || doIsUnderLoadRules(fullFileName) ||
            doIsUnderLoadRules((new ViewPath(ccViewRoot, fullFileName)).getWholePath());
   }
@@ -173,7 +171,7 @@ public class ConfigSpecImpl implements ConfigSpec {
     myViewIsDynamic = viewIsDynamic;
   }
 
-  private boolean doIsUnderLoadRules(final String fullFileName) throws IOException {
+  private boolean doIsUnderLoadRules(final String fullFileName) {
     for (ConfigSpecLoadRule loadRule : myLoadRules) {
       if (loadRule.isUnderLoadRule(fullFileName)) {
         return true;

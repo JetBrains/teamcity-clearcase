@@ -28,16 +28,16 @@ import org.jetbrains.annotations.NotNull;
 
 public interface ConfigSpec {
   @Nullable
-  Version getCurrentVersion(final String ccViewRoot, final String fullFileName, final VersionTree versionTree, final boolean isFile) throws IOException, VcsException;
+  Version getCurrentVersion(String ccViewRoot, String fullFileName, VersionTree versionTree, boolean isFile) throws VcsException;
 
-  boolean isVersionIsInsideView(final ClearCaseConnection elements, final List<CCPathElement> pathElements, final boolean isFile) throws VcsException, IOException;
+  boolean isVersionIsInsideView(ClearCaseConnection elements, List<CCPathElement> pathElements, boolean isFile) throws VcsException, IOException;
 
   @NotNull
   List<ConfigSpecLoadRule> getLoadRules();
 
-  boolean isUnderLoadRules(final String ccViewRoot, final String fullFileName) throws IOException, VcsException;
+  boolean isUnderLoadRules(String ccViewRoot, String fullFileName) throws IOException, VcsException;
 
-  void setViewIsDynamic(final boolean viewIsDynamic);
+  void setViewIsDynamic(boolean viewIsDynamic);
   
   /**
    * @return true if Version Selector of any Rule refers to a Label 

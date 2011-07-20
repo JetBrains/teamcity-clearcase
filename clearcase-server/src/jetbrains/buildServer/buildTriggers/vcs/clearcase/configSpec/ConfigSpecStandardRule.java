@@ -82,8 +82,7 @@ public class ConfigSpecStandardRule {
   }
 
   @Nullable
-  public Version findVersion(final VersionTree versionTree, final String fullFileName)
-    throws VcsException, IOException {
+  public Version findVersion(final VersionTree versionTree, final String fullFileName) throws VcsException {
     final Collection<Branch> branches = findBranches(versionTree);
     if (branches == null) {
       return null;

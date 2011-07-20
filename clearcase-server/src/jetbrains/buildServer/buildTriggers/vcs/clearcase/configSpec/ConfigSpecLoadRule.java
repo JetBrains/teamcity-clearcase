@@ -16,9 +16,9 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 
-import com.intellij.openapi.util.io.FileUtil;
+import jetbrains.buildServer.util.FileUtil;
+
 import java.io.File;
-import java.io.IOException;
 
 public class ConfigSpecLoadRule {
   private final File myFile;
@@ -33,8 +33,8 @@ public class ConfigSpecLoadRule {
     return myRelativePath;
   }
 
-  public boolean isUnderLoadRule(final String elementPath) throws IOException {
-    File elementFile = new File(elementPath);
+  public boolean isUnderLoadRule(final String elementPath) {
+    final File elementFile = new File(elementPath);
     return FileUtil.isAncestor(elementFile, myFile, false) || FileUtil.isAncestor(myFile, elementFile, false);
   }
 

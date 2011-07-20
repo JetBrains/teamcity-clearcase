@@ -207,7 +207,7 @@ public class ClearCaseConnection {
   }
 
   @Nullable
-  private Version getLastVersion(final String path, final VersionTree versionTree, final boolean isFile) throws IOException, VcsException {
+  private Version getLastVersion(final String path, final VersionTree versionTree, final boolean isFile) throws VcsException {
     final String elementPath = extractElementPath(path);
 
     if (myChangesToIgnore.containsKey(elementPath)) {
