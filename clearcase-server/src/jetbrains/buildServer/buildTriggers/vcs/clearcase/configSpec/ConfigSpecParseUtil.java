@@ -27,7 +27,7 @@ public class ConfigSpecParseUtil {
     clearOldSavedVersion(outputConfigSpecFile);
     outputConfigSpecFile.createNewFile();
 
-    return doGetConfigSpecFromStream(viewPath.getClearCaseViewPathFile(), ClearCaseConnection.getConfigSpecInputStream(viewPath.getWholePath()), null,
+    return doGetConfigSpecFromStream(viewPath.getClearCaseViewPathFile(), ClearCaseConnection.getConfigSpecInputStream(viewPath), null,
                                      new FileOutputStream(outputConfigSpecFile), outputConfigSpecFile);
   }
 
@@ -42,7 +42,7 @@ public class ConfigSpecParseUtil {
   }
 
   public static ConfigSpec getConfigSpec(final ViewPath viewPath) throws VcsException, IOException {
-    return getConfigSpecFromStream(viewPath.getClearCaseViewPathFile(), ClearCaseConnection.getConfigSpecInputStream(viewPath.getWholePath()), null);
+    return getConfigSpecFromStream(viewPath.getClearCaseViewPathFile(), ClearCaseConnection.getConfigSpecInputStream(viewPath), null);
   }
 
   public static ConfigSpec getConfigSpecFromStream(final File viewRoot,

@@ -135,7 +135,7 @@ public class ClearCaseConnection {
 
     myConfigSpec = checkCSChange && configSpecFile != null ? ConfigSpecParseUtil.getAndSaveConfigSpec(myViewPath, configSpecFile) : ConfigSpecParseUtil.getConfigSpec(myViewPath);
 
-    myConfigSpec.setViewIsDynamic(isViewIsDynamic(getViewWholePath()));
+    myConfigSpec.setViewIsDynamic(isViewIsDynamic(myViewPath));
 
     myConfigSpecWasChanged = checkCSChange && configSpecFile != null && !myConfigSpec.equals(oldConfigSpec);
 
@@ -363,7 +363,7 @@ public class ClearCaseConnection {
   void loadFileContent(final File tempFile, final String line) throws ExecutionException, InterruptedException, IOException, VcsException {
     final String destFileFqn = insertDots(tempFile.getAbsolutePath(), false);
     final String versionFqn = insertDots(line, false);
-    ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot).copyFileContentTo(versionFqn, destFileFqn);
+    ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(myRoot).copyFileContentTo(versionFqn, destFileFqn);
   }
 
   public void collectChangesToIgnore(final String lastVersion) throws VcsException {
@@ -428,7 +428,7 @@ public class ClearCaseConnection {
     } else {
       params = new String[] { "describe", insertDots(ClearCaseSupport.getViewPath(vcsRoot).getWholePath(), true) };
     }
-    final InputStream input = ClearCaseInteractiveProcessPool.getDefault().getProcess(vcsRoot).executeAndReturnProcessInput(params);
+    final InputStream input = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(vcsRoot).executeAndReturnProcessInput(params);
     final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
     try {
       String line;
@@ -442,9 +442,9 @@ public class ClearCaseConnection {
     return result.toString();
   }
 
-  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
+  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException, VcsException {
     if (params != null && params.length > 0) {
-      final ClearCaseInteractiveProcess interactiveProcess = ClearCaseInteractiveProcessPool.getDefault().getProcess(myRoot);
+      final ClearCaseInteractiveProcess interactiveProcess = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(myRoot);
       if (interactiveProcess != null) {
         return interactiveProcess.executeAndReturnProcessInput(params);
       } else {
@@ -538,8 +538,8 @@ public class ClearCaseConnection {
 
   }
 
-  protected static boolean isViewIsDynamic(@NotNull final String viewPath) throws VcsException, IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(viewPath);
+  protected static boolean isViewIsDynamic(@NotNull final ViewPath viewPath) throws IOException {
+    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
     final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lsview", "-cview", "-long" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -591,8 +591,8 @@ public class ClearCaseConnection {
     return myViewPath.getClearCaseViewPath();
   }
 
-  public static InputStream getConfigSpecInputStream(final String viewPath) throws IOException {
-    final ClearCaseInteractiveProcess executor = ClearCaseInteractiveProcessPool.getDefault().getProcess(viewPath);
+  public static InputStream getConfigSpecInputStream(@NotNull final ViewPath viewPath) throws IOException {
+    final ClearCaseInteractiveProcess executor = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
     try {
       return executor.executeAndReturnProcessInput(new String[] { "catcs" });
     } catch (IOException e) {
@@ -610,8 +610,8 @@ public class ClearCaseConnection {
   }
 
   @Nullable
-  protected static String getViewTag(final String viewPath) throws IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(viewPath);
+  protected static String getViewTag(@NotNull final ViewPath viewPath) throws IOException {
+    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
     final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lsview", "-cview" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
     try {
@@ -786,8 +786,7 @@ public class ClearCaseConnection {
   @NotNull
   static String getClearCaseViewRoot(@NotNull final String viewPath) throws VcsException, IOException {
     final String normalPath = CCPathElement.normalizePath(viewPath);
-
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(normalPath);
+    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().createProcess(normalPath);
     final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -893,8 +892,8 @@ public class ClearCaseConnection {
     return subfiles;
   }
 
-  protected static boolean isLabelExists(@NotNull final String viewPath, @NotNull final String label) throws /*Vcs*/IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(viewPath);
+  protected static boolean isLabelExists(@NotNull final ViewPath viewPath, @NotNull final String label) throws /*Vcs*/IOException {
+    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
     final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lstype", "-kind", "lbtype", "-short" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
     String line;

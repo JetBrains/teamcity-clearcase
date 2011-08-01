@@ -772,7 +772,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       if (useGlobalLabel) {
         parameters.add("-global");
       }
-      if (ClearCaseConnection.isLabelExists(getViewPath(root).getWholePath(), label)) {
+      if (ClearCaseConnection.isLabelExists(getViewPath(root), label)) {
         parameters.add("-replace");
       }
       parameters.add("-c");
@@ -783,7 +783,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       } else {
         parameters.add(label);
       }
-      final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getProcess(root);
+      final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(root);
       final InputStream input = process.executeAndReturnProcessInput(makeArray(parameters));
       try {
         input.close();
