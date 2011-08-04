@@ -59,29 +59,7 @@ import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.util.filters.Filter;
 import jetbrains.buildServer.util.filters.FilterUtil;
-import jetbrains.buildServer.vcs.BuildPatchByIncludeRules;
-import jetbrains.buildServer.vcs.BuildPatchPolicy;
-import jetbrains.buildServer.vcs.CheckoutRules;
-import jetbrains.buildServer.vcs.CollectChangesByIncludeRules;
-import jetbrains.buildServer.vcs.CollectChangesPolicy;
-import jetbrains.buildServer.vcs.FileRule;
-import jetbrains.buildServer.vcs.IncludeRule;
-import jetbrains.buildServer.vcs.IncludeRuleChangeCollector;
-import jetbrains.buildServer.vcs.IncludeRulePatchBuilder;
-import jetbrains.buildServer.vcs.LabelingSupport;
-import jetbrains.buildServer.vcs.ModificationData;
-import jetbrains.buildServer.vcs.ServerVcsSupport;
-import jetbrains.buildServer.vcs.TestConnectionSupport;
-import jetbrains.buildServer.vcs.VcsChange;
-import jetbrains.buildServer.vcs.VcsChangeInfo;
-import jetbrains.buildServer.vcs.VcsException;
-import jetbrains.buildServer.vcs.VcsFileContentProvider;
-import jetbrains.buildServer.vcs.VcsModification;
-import jetbrains.buildServer.vcs.VcsPersonalSupport;
-import jetbrains.buildServer.vcs.VcsRoot;
-import jetbrains.buildServer.vcs.VcsRootEntry;
-import jetbrains.buildServer.vcs.VcsSupportCore;
-import jetbrains.buildServer.vcs.VcsSupportUtil;
+import jetbrains.buildServer.vcs.*;
 import jetbrains.buildServer.vcs.clearcase.CCException;
 import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
@@ -95,7 +73,10 @@ import org.jetbrains.annotations.Nullable;
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
 
-public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider, CollectChangesByIncludeRules, BuildPatchByIncludeRules, TestConnectionSupport, BuildStartContextProcessor {
+public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
+                                                                  CollectChangesByIncludeRules, BuildPatchByIncludeRules,
+                                                                  TestConnectionSupport, BuildStartContextProcessor,
+                                                                  VcsRootBasedMappingProvider {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
@@ -541,6 +522,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @Nullable
   public Map<String, String> getDefaultVcsProperties() {
     return new HashMap<String, String>();
+  }
+
+  public Collection<VcsClientMapping> getClientMapping(@NotNull final VcsRoot vcsRoot) throws VcsException {
+    return Collections.singleton(new VcsClientMapping(getViewPath(vcsRoot).getWholePath(), ""));
   }
 
   @NotNull
