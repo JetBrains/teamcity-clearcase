@@ -54,6 +54,7 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.SRunningBuild;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.Dates;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.util.StringUtil;
@@ -442,7 +443,21 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public String getCurrentVersion(@NotNull final VcsRoot root) throws VcsException {
-    return CCParseUtil.formatDate(new Date());
+    final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getViewPath(root));
+    try {
+      final Date lastChangeDate = connection.getLastChangeDate();
+      return CCParseUtil.formatDate(lastChangeDate == null ? new Date() : nextSecond(lastChangeDate));
+    }
+    catch (final IOException e) {
+      throw new VcsException(e);
+    }
+    finally {
+      try {
+        connection.dispose();
+      } catch (final IOException e) {
+        //ignore
+      }
+    }
   }
 
   @Override
@@ -637,7 +652,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
             continue;
 
           final Date date = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT).parse(key.getDate());
-          final String version = CCParseUtil.formatDate(new Date(date.getTime() + 1000));
+          final String version = CCParseUtil.formatDate(nextSecond(date));
           list.add(new ModificationData(date, changes, key.getCommentHolder().toString(), key.getUser(), root, version, version));
         }
 
@@ -929,4 +944,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return patterns.toArray(new Pattern[patterns.size()]);
   }
 
+  private static Date nextSecond(final Date date) {
+    return new Date(date.getTime() + Dates.ONE_SECOND);
+  }
 }

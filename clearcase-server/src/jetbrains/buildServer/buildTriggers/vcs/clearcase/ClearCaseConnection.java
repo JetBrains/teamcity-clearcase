@@ -275,13 +275,35 @@ public class ClearCaseConnection {
     return iterator;
   }
 
-  private InputStream getChanges(final String since, final String options) throws VcsException, IOException {
+  @Nullable
+  public Date getLastChangeDate() throws IOException, VcsException {
+    LOG.debug("Checking last change date...");
+    final HistoryElementIterator iterator = new HistoryElementProvider(getChanges(null, "-all"));
+    try {
+      return iterator.hasNext() ? iterator.next().getDate() : null;
+    }
+    catch (final ParseException e) {
+      throw new VcsException(e);
+    }
+    finally {
+      iterator.close();
+    }
+  }
+
+  @NotNull
+  private InputStream getChanges(@Nullable final String since, @NotNull final String options) throws VcsException, IOException {
     final String preparedOptions = options.replace(PATH, insertDots(getViewWholePath(), true));
     final ArrayList<String> optionList = new ArrayList<String>();
     optionList.add("lshistory");
     optionList.add("-eventid");
-    optionList.add("-since");
-    optionList.add(since);
+    if (since == null) {
+      optionList.add("-last");
+      optionList.add("1");
+    }
+    else {
+      optionList.add("-since");
+      optionList.add(since);
+    }
     optionList.add("-fmt");
     optionList.add(FORMAT);
     optionList.addAll(Arrays.asList(Util.makeArguments(preparedOptions)));
