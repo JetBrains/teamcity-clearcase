@@ -20,17 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -54,10 +44,7 @@ import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.SRunningBuild;
 import jetbrains.buildServer.serverSide.ServerPaths;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
-import jetbrains.buildServer.util.Dates;
-import jetbrains.buildServer.util.EventDispatcher;
-import jetbrains.buildServer.util.MultiMap;
-import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.util.*;
 import jetbrains.buildServer.util.filters.Filter;
 import jetbrains.buildServer.util.filters.FilterUtil;
 import jetbrains.buildServer.vcs.*;
@@ -296,7 +283,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private VcsChange addChange(final HistoryElement element, final String childFullPath, final ClearCaseConnection connection, final VcsChangeInfo.Type type, final String beforeVersion, final String afterVersion, final MultiMap<CCModificationKey, VcsChange> key2changes) throws VcsException {
-    final CCModificationKey modificationKey = new CCModificationKey(element.getDateString(), element.getUser(), element.getActivity());
+    final CCModificationKey modificationKey = new CCModificationKey(Revision.fromDate(element.getDate()), element.getUser(), element.getActivity());
     final VcsChange change = createChange(type, connection, beforeVersion, afterVersion, childFullPath);
     key2changes.putValue(modificationKey, change);
     CCModificationKey realKey = findKey(modificationKey, key2changes);
@@ -334,19 +321,19 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
-  public void buildPatch(VcsRoot root, String fromVersion, String toVersion, PatchBuilder builder, final IncludeRule includeRule) throws IOException, VcsException {
+  public void buildPatch(VcsRoot root, Revision fromVersion, Revision toVersion, PatchBuilder builder, final IncludeRule includeRule) throws IOException, VcsException {
     buildPatchForConnection(builder, fromVersion, toVersion, createConnection(root, includeRule, true, null));
   }
 
-  private void buildPatchForConnection(PatchBuilder builder, String fromVersion, String toVersion, ClearCaseConnection connection) throws IOException, VcsException {
+  private void buildPatchForConnection(PatchBuilder builder, Revision fromVersion, Revision toVersion, ClearCaseConnection connection) throws IOException, VcsException {
     try {
       final boolean useCache = USE_CC_CACHE && !connection.getConfigSpec().hasLabelBasedVersionSelector();
       new CCPatchProvider(connection, useCache).buildPatch(builder, fromVersion, toVersion);
-    } catch (ExecutionException e) {
+    }
+    catch (final ExecutionException e) {
       throw new VcsException(e);
-    } catch (ParseException e) {
-      throw new VcsException(e);
-    } finally {
+    }
+    finally {
       connection.dispose();
     }
   }
@@ -387,13 +374,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public byte[] getContent(@NotNull final String filePath, @NotNull final VcsRoot versionedRoot, @NotNull final String version) throws VcsException {
-    try{
+    try {
       final String preparedPath = CCPathElement.normalizeSeparators(filePath);
       final ClearCaseConnection connection = createConnection(versionedRoot, IncludeRule.createDefaultInstance(), null);
       try {
-        connection.collectChangesToIgnore(version);
+        connection.collectChangesToIgnore(Revision.fromNotNullString(version));
         String path = new File(connection.getViewWholePath()).getParent() + File.separator + connection.getObjectRelativePathWithVersions(connection.getViewWholePath() + File.separator + preparedPath, true);
         return getFileContent(connection, path);
+      } catch (final ParseException e) {
+        throw new VcsException(e);
       } finally {
         try {
           connection.dispose();
@@ -445,8 +434,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public String getCurrentVersion(@NotNull final VcsRoot root) throws VcsException {
     final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getViewPath(root));
     try {
-      final Date lastChangeDate = connection.getLastChangeDate();
-      return CCParseUtil.formatDate(lastChangeDate == null ? new Date() : nextSecond(lastChangeDate));
+      return connection.getCurrentRevision().asString();
     }
     catch (final IOException e) {
       throw new VcsException(e);
@@ -454,9 +442,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     finally {
       try {
         connection.dispose();
-      } catch (final IOException e) {
-        //ignore
-      }
+      } catch (final IOException ignore) {}
     }
   }
 
@@ -472,7 +458,19 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public Comparator<String> getVersionComparator() {
-    return new VcsSupportUtil.DateVersionComparator(CCParseUtil.getDateFormat());
+    return new Comparator<String>() {
+      public int compare(@NotNull final String versionString1, @NotNull final String versionString2) {
+        try {
+          final Revision version1 = Revision.fromNotNullString(versionString1);
+          final Revision version2 = Revision.fromNotNullString(versionString2);
+          return version1.beforeOrEquals(version2) ? (version2.beforeOrEquals(version1) ? 0 : -1) : 1;
+        }
+        catch (final ParseException e) {
+          ExceptionUtil.rethrowAsRuntimeException(e);
+          return 0;
+        }
+      }
+    };
   }
 
   @Override
@@ -614,7 +612,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return this;
   }
 
-  public List<ModificationData> collectChanges(final VcsRoot root, final String fromVersion, final String currentVersion, final IncludeRule includeRule) throws VcsException {
+  public List<ModificationData> collectChanges(final VcsRoot root, final Revision fromVersion, final Revision currentVersion, final IncludeRule includeRule) throws VcsException {
     LOG.debug(String.format("Attempt connect to '%s'", root.convertToPresentableString()));
     try {
       final ClearCaseConnection connection = createConnection(root, includeRule, null);
@@ -625,7 +623,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
-  private List<ModificationData> collectChangesWithConnection(VcsRoot root, String fromVersion, String currentVersion, ClearCaseConnection connection) throws VcsException {
+  private List<ModificationData> collectChangesWithConnection(VcsRoot root, Revision fromVersion, Revision currentVersion, ClearCaseConnection connection) throws VcsException {
     try {
       final ArrayList<ModificationData> list = new ArrayList<ModificationData>();
       final MultiMap<CCModificationKey, VcsChange> key2changes = new MultiMap<CCModificationKey, VcsChange>();
@@ -648,15 +646,13 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
             });
           }
 
-          if (changes.isEmpty())
-            continue;
+          if (changes.isEmpty()) continue;
 
-          final Date date = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT).parse(key.getDate());
-          final String version = CCParseUtil.formatDate(nextSecond(date));
-          list.add(new ModificationData(date, changes, key.getCommentHolder().toString(), key.getUser(), root, version, version));
+          final DateRevision version = key.getVersion();
+          final String versionString = version.asString();
+          list.add(new ModificationData(version.getDate(), changes, key.getCommentHolder().toString(), key.getUser(), root, versionString, versionString));
         }
-
-      } catch (Exception e) {
+      } catch (final Exception e) {
         throw new VcsException(e);
       }
 
@@ -667,30 +663,33 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       });
 
       return list;
-    } finally {
+    }
+    finally {
       LOG.debug("Collecting changes was finished.");
 
       try {
         connection.dispose();
-      } catch (IOException e) {
-        //ignore
-      }
+      } catch (final IOException ignore) {}
     }
   }
 
   public String label(@NotNull final String label, @NotNull final String version, @NotNull final VcsRoot root, @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    try{
+    try {
+      final Revision revision = Revision.fromNotNullString(version);
+
       createLabel(label, root);
 
       final VersionProcessor labeler = getClearCaseLabeler(label);
-      final ConnectionProcessor childrenProcessor = getChildrenProcessor(version, labeler);
+      final ConnectionProcessor childrenProcessor = getChildrenProcessor(revision, labeler);
 
       for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
         doWithConnection(root, includeRule, childrenProcessor);
-        doWithRootConnection(root, getParentsProcessor(version, labeler, createPath(root, includeRule)));
+        doWithRootConnection(root, getParentsProcessor(revision, labeler, createPath(root, includeRule)));
       }
       return label;
       
+    } catch (final ParseException e) {
+      throw new VcsException(e);
     } finally {
       ClearCaseInteractiveProcessPool.getDefault().dispose();
     }
@@ -702,7 +701,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return viewPath.getWholePath();
   }
 
-  private ConnectionProcessor getParentsProcessor(final String version, final VersionProcessor labeler, final String path) {
+  private ConnectionProcessor getParentsProcessor(final Revision version, final VersionProcessor labeler, final String path) {
     return new ConnectionProcessor() {
       public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
         connection.processAllParents(version, labeler, path);
@@ -710,7 +709,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     };
   }
 
-  private ConnectionProcessor getChildrenProcessor(final String version, final VersionProcessor labeler) {
+  private ConnectionProcessor getChildrenProcessor(final Revision version, final VersionProcessor labeler) {
     return new ConnectionProcessor() {
       public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
         connection.processAllVersions(version, labeler, true, true);
@@ -793,8 +792,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
     } catch (/*Vcs*//*IO*/Exception e) {
       if (!e.getLocalizedMessage().contains("already exists")) {
-        final VcsException ioe = new VcsException(e);
-        throw ioe;//e;
+        throw new VcsException(e);//e;
       }
     }
   }
@@ -831,7 +829,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return new IncludeRuleChangeCollector() {
       @NotNull
       public List<ModificationData> collectChanges(@NotNull final IncludeRule includeRule) throws VcsException {
-        return ClearCaseSupport.this.collectChanges(root, fromVersion, currentVersion, includeRule);
+        try {
+          return ClearCaseSupport.this.collectChanges(root, Revision.fromNotNullString(fromVersion), Revision.fromString(currentVersion), includeRule);
+        }
+        catch (final ParseException e) {
+          throw new VcsException(e);
+        }
       }
 
       public void dispose() {
@@ -844,7 +847,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public IncludeRulePatchBuilder getPatchBuilder(@NotNull final VcsRoot root, @Nullable final String fromVersion, @NotNull final String toVersion) {
     return new IncludeRulePatchBuilder() {
       public void buildPatch(@NotNull final PatchBuilder builder, @NotNull final IncludeRule includeRule) throws IOException, VcsException {
-        ClearCaseSupport.this.buildPatch(root, fromVersion, toVersion, builder, includeRule);
+        try {
+          ClearCaseSupport.this.buildPatch(root, Revision.fromString(fromVersion), Revision.fromNotNullString(toVersion), builder, includeRule);
+        }
+        catch (final ParseException e) {
+          throw new VcsException(e);
+        }
       }
 
       public void dispose() {
@@ -942,9 +950,5 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       }
     }
     return patterns.toArray(new Pattern[patterns.size()]);
-  }
-
-  private static Date nextSecond(final Date date) {
-    return new Date(date.getTime() + Dates.ONE_SECOND);
   }
 }

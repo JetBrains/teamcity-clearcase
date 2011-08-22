@@ -20,13 +20,8 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.ParseException;
-import java.util.Date;
 import java.util.List;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCParseUtil;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.VersionProcessor;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.*;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
@@ -36,8 +31,7 @@ import org.apache.log4j.Logger;
 public class CacheElement {
   private static final Logger LOG = Logger.getLogger(CacheElement.class);
 
-  private final Date myVersion;
-  private final String myVersionString;
+  private final DateRevision myVersion;
   private final File myCacheFile;
   private final ClearCaseStructureCache myOwner;
   private final String myPath;
@@ -49,17 +43,17 @@ public class CacheElement {
   private final VcsRoot myRoot;
   private final IncludeRule myIncludeRule;
 
-  public CacheElement(final Date version,
+  public CacheElement(final DateRevision version,
                       final File cacheFile,
                       ClearCaseStructureCache owner,
                       final String path,
-                      String versionStr,
-                      final IncludeRule includeRule, final ClearCaseSupport parentSupport, final VcsRoot root) {
+                      final IncludeRule includeRule,
+                      final ClearCaseSupport parentSupport,
+                      final VcsRoot root) {
     myVersion = version;
     myCacheFile = cacheFile;
     myOwner = owner;
     myPath = path;
-    myVersionString = versionStr;
     myIncludeRule = includeRule;
     myParentSupport = parentSupport;
     myRoot = root;
@@ -67,35 +61,28 @@ public class CacheElement {
     LOG.debug("ClearCase cache " + cacheFile.getPath() + " created for " + path);
   }
 
-  public void processAllVersions(
-    final VersionProcessor versionProcessor,
-    boolean processRoot,
-    ClearCaseConnection connection)
-    throws VcsException {
+  public void processAllVersions(final VersionProcessor versionProcessor, boolean processRoot, ClearCaseConnection connection) throws VcsException {
     try {
       if (!myCacheFile.exists()) {
         CacheElement nearestCache = myOwner.getNearestExistingCache(myVersion, myPath, myIncludeRule, myRoot);
         if (nearestCache == null) {
           LOG.debug("ClearCase cache " + myCacheFile.getPath() + " loading all versions");
-          loadAllRevisions(myVersionString, connection);
-        } else {
-          try {
-            LOG.debug("ClearCase cache " + myCacheFile.getPath() + " loading differences from " + nearestCache.getVersionString());
-            loadDifferences(nearestCache, connection);
-          } catch (ParseException e) {
-            throw new IOException(e.getLocalizedMessage());
-          }
+          loadAllRevisions(myVersion, connection);
+        }
+        else {
+          LOG.debug("ClearCase cache " + myCacheFile.getPath() + " loading differences from " + nearestCache.getVersion().asString());
+          loadDifferences(nearestCache, connection);
         }
       }
 
       processAllVersionsInternal(versionProcessor, processRoot, connection);
-    } catch (IOException e) {
-      connection.processAllVersions(myVersionString, versionProcessor, processRoot, false);
     }
-
+    catch (final IOException e) {
+      connection.processAllVersions(myVersion, versionProcessor, processRoot, false);
+    }
   }
 
-  private void loadAllRevisions(String version, ClearCaseConnection connection) throws IOException {
+  private void loadAllRevisions(DateRevision version, ClearCaseConnection connection) throws IOException {
     //noinspection ResultOfMethodCallIgnored
     myCacheFile.getParentFile().mkdirs();
     final DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(myCacheFile));
@@ -109,10 +96,8 @@ public class CacheElement {
 
   }
 
-  private void loadDifferences(final CacheElement nearestCache, final ClearCaseConnection connection)
-    throws IOException, VcsException, ParseException {
+  private void loadDifferences(final CacheElement nearestCache, final ClearCaseConnection connection) throws IOException, VcsException {
     final List<ChangedElementInfo> changedElements = loadChanges(nearestCache);
-    
     
     final DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(myCacheFile));
     final WriteVersionProcessor writeProcessor = new WriteVersionProcessor(outputStream);
@@ -128,8 +113,7 @@ public class CacheElement {
     return myCacheFile;
   }
 
-  private  List<ChangedElementInfo> loadChanges(final CacheElement nearestCache)
-    throws ParseException, IOException, VcsException {
+  private List<ChangedElementInfo> loadChanges(final CacheElement nearestCache) throws IOException, VcsException {
 /*
     if (myParentSupport.isViewPathIsExactlyCCViewPath(myRoot, myIncludeRule)) {
       final List<ConfigSpecLoadRule> loadRules = ConfigSpecParseUtil.getConfigSpec(ClearCaseSupport.getViewPath(myRoot)).getLoadRules();
@@ -148,22 +132,18 @@ public class CacheElement {
 //    }
   }
 
-  private List<ChangedElementInfo> loadChangesWithConnection(CacheElement nearestCache, ClearCaseConnection tempConnection) throws VcsException, ParseException, IOException {
+  private List<ChangedElementInfo> loadChangesWithConnection(CacheElement nearestCache, ClearCaseConnection tempConnection) throws VcsException, IOException {
     try {
       final CollectingChangedFilesProcessor processor = new CollectingChangedFilesProcessor(tempConnection);
-      CCParseUtil.processChangedFiles(tempConnection, nearestCache.getVersionString(), myVersionString, processor);
+      CCParseUtil.processChangedFiles(tempConnection, nearestCache.getVersion(), myVersion, processor);
       return processor.getChanges();
-    } finally {
+    }
+    finally {
       tempConnection.dispose();
     }
   }
 
-  private String getVersionString() {
-    return myVersionString;
-  }
-
-
-  public Date getVersion() {
+  public DateRevision getVersion() {
     return myVersion;
   }
 

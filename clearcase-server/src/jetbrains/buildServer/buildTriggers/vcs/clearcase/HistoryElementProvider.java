@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.ParseException;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -70,12 +71,22 @@ public class HistoryElementProvider implements HistoryElementIterator {
       if (line.endsWith(ClearCaseConnection.LINE_END_DELIMITER)) {
         line = line.substring(0, line.length() - ClearCaseConnection.LINE_END_DELIMITER.length());
       }
-      myNextElement = HistoryElement.readFrom(line);
+      myNextElement = parseChange(line);
       if (myNextElement != null) {
         return;
       }
       line = myNextLine;
     }
     myNextElement = null;
+  }
+
+  @Nullable
+  private static HistoryElement parseChange(@NotNull final String line) {
+    try {
+      return HistoryElement.readFrom(line);
+    }
+    catch (final ParseException e) {
+      return null;
+    }
   }
 }

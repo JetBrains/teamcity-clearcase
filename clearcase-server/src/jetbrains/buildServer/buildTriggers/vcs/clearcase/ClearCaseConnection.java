@@ -23,7 +23,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -36,6 +35,7 @@ import java.util.concurrent.Semaphore;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseInteractiveProcessPool.ClearCaseInteractiveProcess;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.CacheElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
@@ -266,7 +266,7 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  protected HistoryElementIterator getChangesIterator(@NotNull final String fromVersion) throws IOException, VcsException {
+  protected HistoryElementIterator getChangesIterator(@NotNull final Revision fromVersion) throws IOException, VcsException {
     final List<String> lsHistoryOptions = getLSHistoryOptions();
     HistoryElementIterator iterator = new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions.get(0)));
     for (int i = 1; i < lsHistoryOptions.size(); i++) {
@@ -275,15 +275,22 @@ public class ClearCaseConnection {
     return iterator;
   }
 
+  @NotNull
+  public Revision getCurrentRevision() throws VcsException, IOException {
+    final HistoryElement lastChange = getLastChange();
+    return lastChange == null
+           ? Revision.first()
+           : TeamCityProperties.getBoolean("clearcase.use.server.date.as.current.version")
+             ? Revision.current(lastChange)
+             : Revision.fromChange(lastChange);
+  }
+
   @Nullable
-  public Date getLastChangeDate() throws IOException, VcsException {
+  private HistoryElement getLastChange() throws IOException, VcsException {
     LOG.debug("Checking last change date...");
     final HistoryElementIterator iterator = new HistoryElementProvider(getChanges(null, "-all"));
     try {
-      return iterator.hasNext() ? iterator.next().getDate() : null;
-    }
-    catch (final ParseException e) {
-      throw new VcsException(e);
+      return iterator.hasNext() ? iterator.next() : null;
     }
     finally {
       iterator.close();
@@ -291,18 +298,17 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  private InputStream getChanges(@Nullable final String since, @NotNull final String options) throws VcsException, IOException {
+  private InputStream getChanges(@Nullable final Revision fromVersion, @NotNull final String options) throws VcsException, IOException {
     final String preparedOptions = options.replace(PATH, insertDots(getViewWholePath(), true));
     final ArrayList<String> optionList = new ArrayList<String>();
     optionList.add("lshistory");
     optionList.add("-eventid");
-    if (since == null) {
+    if (fromVersion == null) {
       optionList.add("-last");
       optionList.add("1");
     }
     else {
-      optionList.add("-since");
-      optionList.add(since);
+      fromVersion.appendLSHistoryOptions(optionList);
     }
     optionList.add("-fmt");
     optionList.add(FORMAT);
@@ -388,12 +394,11 @@ public class ClearCaseConnection {
     ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(myRoot).copyFileContentTo(versionFqn, destFileFqn);
   }
 
-  public void collectChangesToIgnore(final String lastVersion) throws VcsException {
+  public void collectChangesToIgnore(final Revision lastVersion) throws VcsException {
     try {
       CCParseUtil.processChangedFiles(this, lastVersion, null, createIgnoringChangesProcessor());
-    } catch (ParseException e) {
-      throw new VcsException(e);
-    } catch (IOException e) {
+    }
+    catch (final IOException e) {
       throw new VcsException(e);
     }
   }
@@ -654,11 +659,21 @@ public class ClearCaseConnection {
     }
   }
 
-  public void processAllVersions(final String version, final VersionProcessor versionProcessor, boolean processRoot, boolean useCache) throws VcsException {
+  public void processAllVersions(final Revision version, final VersionProcessor versionProcessor, boolean processRoot, boolean useCache) throws VcsException {
+    final DateRevision dateRevision = version.getDateRevision();
+    if (dateRevision == null) return;
+
     if (useCache && myCache != null) {
-      myCache.getCache(version, getViewWholePath(), IncludeRule.createDefaultInstance(), myRoot).processAllVersions(versionProcessor, processRoot, this);
-    } else {
-      final String directoryVersion = prepare(version).getWholeName();
+      final CacheElement cache = myCache.getCache(dateRevision, getViewWholePath(), IncludeRule.createDefaultInstance(), myRoot);
+      if (cache == null) {
+        processAllVersions(version, versionProcessor, processRoot, false);
+      }
+      else {
+        cache.processAllVersions(versionProcessor, processRoot, this);
+      }
+    }
+    else {
+      final String directoryVersion = prepare(dateRevision).getWholeName();
 
       String dirPath = getViewWholePath() + CCParseUtil.CC_VERSION_SEPARATOR + directoryVersion;
 
@@ -703,7 +718,7 @@ public class ClearCaseConnection {
     }
   }
 
-  private Version prepare(final String lastVersion) throws VcsException {
+  private Version prepare(final DateRevision lastVersion) throws VcsException {
     collectChangesToIgnore(lastVersion);
     try {
       final Version viewLastVersion = findVersionFor(lastVersion);
@@ -718,10 +733,10 @@ public class ClearCaseConnection {
 
   }
 
-  private Version findVersionFor(String lastVersion) throws Exception {
+  private Version findVersionFor(final DateRevision lastVersion) throws Exception {
     final File path = new File(getViewWholePath());
     final String[] versions = CTool.lsVTree(path);
-    final Date onDate = CCParseUtil.getDateFormat().parse(lastVersion);
+    final Date onDate = lastVersion.getDate();
     for (int i = versions.length - 1; i >= 0; i--) {//reverse order
       final VersionParser parser = CTool.describe(path, versions[i]);
       if (parser.getCreationDate().before(onDate)) {
@@ -932,8 +947,8 @@ public class ClearCaseConnection {
     }
   }
 
-  public void processAllParents(@NotNull final String version, @NotNull final VersionProcessor versionProcessor, @NotNull final String path) throws VcsException {
-    prepare(version);
+  public void processAllParents(@NotNull final Revision version, @NotNull final VersionProcessor versionProcessor, @NotNull final String path) throws VcsException {
+    collectChangesToIgnore(version);
 
     final File viewPathFile = myViewPath.getClearCaseViewPathFile();
     final File vobsPathFile = new File(viewPathFile, Constants.VOBS_NAME_ONLY);

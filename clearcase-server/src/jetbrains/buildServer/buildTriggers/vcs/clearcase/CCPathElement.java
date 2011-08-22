@@ -63,7 +63,7 @@ public class CCPathElement {
     return myVersion;
   }
 
-  public void setVersion(final String objectVersion) {
+  public void setVersion(@Nullable final String objectVersion) {
     if (objectVersion == null) {
       myVersion = null;
     } else if (objectVersion.startsWith(CCParseUtil.CC_VERSION_SEPARATOR)) {

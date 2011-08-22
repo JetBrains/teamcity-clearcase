@@ -21,7 +21,6 @@ import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.text.ParseException;
 
 import org.apache.log4j.Logger;
 
@@ -47,8 +46,8 @@ public class CCPatchProvider {
     myUseCCCache = useCcCache;
   }
 
-  public void buildPatch(final PatchBuilder builder, String fromVersion, String lastVersion)
-    throws IOException, VcsException, ExecutionException, ParseException {
+  public void buildPatch(final PatchBuilder builder, final Revision fromVersion, final Revision lastVersion)
+    throws IOException, VcsException, ExecutionException {
     try {
       if (fromVersion == null) {
         if (CC_OPTIMIZE_CHECKOUT) {

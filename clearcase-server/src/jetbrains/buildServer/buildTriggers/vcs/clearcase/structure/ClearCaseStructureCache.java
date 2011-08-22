@@ -19,13 +19,13 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
 import jetbrains.buildServer.BuildAgent;
 import jetbrains.buildServer.BuildType;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.DateRevision;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.GeneralDataCleaner;
@@ -34,7 +34,6 @@ import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.util.Hash;
 import jetbrains.buildServer.vcs.IncludeRule;
-import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -82,7 +81,7 @@ public class ClearCaseStructureCache {
   }
 
   @Nullable
-  public CacheElement getNearestExistingCache(final @NotNull Date version, final @NotNull String path, final @NotNull IncludeRule includeRule, final @NotNull VcsRoot vcsRoot) {
+  public CacheElement getNearestExistingCache(final @NotNull DateRevision version, final @NotNull String path, final @NotNull IncludeRule includeRule, final @NotNull VcsRoot vcsRoot) {
     File baseDir = createCacheBaseDir(path, vcsRoot);
     File[] cacheFiles = baseDir.listFiles();
     CacheElement result = null;
@@ -91,9 +90,9 @@ public class ClearCaseStructureCache {
         String fileName = cacheFile.getName();
         try {
           long currentCacheTime = Long.parseLong(fileName);
-          if (currentCacheTime <= version.getTime()) {
-            if (result == null || result.getVersion().getTime() < currentCacheTime) {
-              result = getCache(new Date(currentCacheTime), path, includeRule, vcsRoot);
+          if (currentCacheTime <= version.getDate().getTime()) {
+            if (result == null || result.getVersion().getDate().getTime() < currentCacheTime) {
+              result = getCache(Revision.fromDate(new Date(currentCacheTime)), path, includeRule, vcsRoot);
             }
           }
         } catch (NumberFormatException e) {
@@ -105,23 +104,10 @@ public class ClearCaseStructureCache {
   }
 
   @Nullable
-  public CacheElement getCache(final @NotNull String version, final @NotNull String path, final @NotNull IncludeRule includeRule, final @NotNull VcsRoot root) throws VcsException {
-    try {
-      Date date = CCParseUtil.getDateFormat().parse(version);
-      final File cacheFile = createCacheFile(date, path, root);
-      if (cacheFile == null) return null;
-      return new CacheElement(date, cacheFile, this, path, version,
-                              includeRule, myParentSupport, root);
-    } catch (ParseException e) {
-      throw new VcsException(e);
-    }
-  }
-  
-  @Nullable
-  public CacheElement getCache(final @NotNull Date version, final @NotNull String path, final @NotNull IncludeRule includeRule, final @NotNull VcsRoot root) {
-    return new CacheElement(version, createCacheFile(version, path, root), this, path, CCParseUtil.getDateFormat().format(version),
-                            includeRule,
-                            myParentSupport, root);
+  public CacheElement getCache(@NotNull final DateRevision version, @NotNull final String path, @NotNull final IncludeRule includeRule, @NotNull final VcsRoot root) {
+    final File cacheFile = createCacheFile(version.getDate(), path, root);
+    if (cacheFile == null) return null;
+    return new CacheElement(version, cacheFile, this, path, includeRule, myParentSupport, root);
   }
 
   @Nullable

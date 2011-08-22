@@ -59,22 +59,31 @@ public class CCParseUtil {
   }
 
   public static void processChangedFiles(final ClearCaseConnection connection,
-                                         final String fromVersion,
-                                         final String currentVersion,
-                                         final ChangedFilesProcessor fileProcessor) throws ParseException, IOException, VcsException {
-    final @Nullable Date lastDate = currentVersion != null ? parseDate(currentVersion) : null;
+                                         @NotNull final Revision fromVersion,
+                                         @Nullable final Revision toVersion,
+                                         final ChangedFilesProcessor fileProcessor) throws IOException, VcsException {
+    LOG.debug(String.format("Processing changes: fromVersion = [%s], toVersion = [%s]", fromVersion, toVersion));
+    final int pastMinutes = TeamCityProperties.getInteger("clearcase.look.for.the.changes.in.the.past.minutes", 0);
+    if (pastMinutes == 0) {
+      LOG.debug("Look for the changes in the past: false");
+    }
+    else {
+      LOG.debug(String.format("Look for the changes in the past: true, %d minute(s)", pastMinutes));
+    }
 
-    final HistoryElementIterator iterator = getChangesIterator(connection, fromVersion);
+    final HistoryElementIterator iterator = getChangesIterator(connection, fromVersion.shiftToPast(pastMinutes));
 
     final ChangesInverter actualChangesProcessor = new ChangesInverter(fileProcessor),
-                          ignoringChangesProcessor = lastDate == null ? null : new ChangesInverter(connection.createIgnoringChangesProcessor());
+                          ignoringChangesProcessor = toVersion == null ? null : new ChangesInverter(connection.createIgnoringChangesProcessor());
 
     try {
       while (iterator.hasNext()) {
         final HistoryElement element = iterator.next();
+        final Revision version = Revision.fromChange(element);
+        if (version.beforeOrEquals(fromVersion)) continue;
         LOG.debug("Processing event: " + element.getLogRepresentation());
         if (CCPathElement.isInsideView(element.getObjectName(), connection.getViewWholePath())) {
-          if (lastDate == null || element.getDate().before(lastDate)) {
+          if (toVersion == null || version.beforeOrEquals(toVersion)) {
             LOG.debug("Actual change");
             processHistoryElement(element, connection, actualChangesProcessor);
           }
@@ -116,29 +125,29 @@ public class CCParseUtil {
   }
 
   // see http://devnet.jetbrains.net/message/5273615
-  private static HistoryElementIterator getChangesIterator(final ClearCaseConnection connection, final String fromVersion) throws IOException, VcsException, ParseException {
+  private static HistoryElementIterator getChangesIterator(final ClearCaseConnection connection, final Revision fromVersion) throws IOException, VcsException {
     final HistoryElementIterator iterator = connection.getChangesIterator(fromVersion);
     if (!connection.isUCM()) {
       return iterator;
     }
     final long delay = TeamCityProperties.getInteger(Constants.TEAMCITY_PROPERTY_LSHISTORY_UCM_DELAY, 5) * Dates.ONE_SECOND;
-    final long threshold = new Date().getTime();
-    int eventCount_1, eventCount_2 = getEventCount(iterator, threshold);
+    final Revision thresholdRevision = connection.getCurrentRevision();
+    int eventCount_1, eventCount_2 = getEventCount(iterator, thresholdRevision);
     do {
       try {
         Util.sleep("HistoryElementIterator: UCM events synchronizer", delay);
       } catch (final InterruptedException ignore) {}
       eventCount_1 = eventCount_2;
-      eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), threshold);
+      eventCount_2 = getEventCount(connection.getChangesIterator(fromVersion), thresholdRevision);
     } while (eventCount_1 != eventCount_2);
     return connection.getChangesIterator(fromVersion);
   }
 
-  private static int getEventCount(final HistoryElementIterator iterator, final long threshold) throws IOException, ParseException {
+  private static int getEventCount(final HistoryElementIterator iterator, final Revision thresholdRevision) throws IOException {
     try {
       int count = 0;
       while (iterator.hasNext()) {
-        if (iterator.next().getDate().getTime() < threshold) {
+        if (Revision.fromChange(iterator.next()).beforeOrEquals(thresholdRevision)) {
           count++;
         }
       }
@@ -149,12 +158,23 @@ public class CCParseUtil {
     }
   }
 
-  private static Date parseDate(final String currentVersion) throws ParseException {
+  public static Date parseDate(final String currentVersion) throws ParseException {
     return getDateFormat().parse(currentVersion);
   }
 
   public static String formatDate(final Date date) {
     return getDateFormat().format(date);
+  }
+
+  public static long parseLong(@NotNull final String longStr) throws ParseException {
+    try {
+      return Long.parseLong(longStr);
+    }
+    catch (final NumberFormatException e) {
+      final ParseException parseException = new ParseException(longStr, 0);
+      parseException.initCause(e);
+      throw parseException;
+    }
   }
 
   public static void processChangedDirectory(final HistoryElement element,

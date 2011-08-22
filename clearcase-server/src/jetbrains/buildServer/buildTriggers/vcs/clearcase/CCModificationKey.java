@@ -17,13 +17,13 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 public class CCModificationKey {
-  private final String myDate;
+  private final DateRevision myVersion;
   private final String myUser;
   private final String myActivity;
   private final CommentHolder myCommentHolder = new CommentHolder();
 
-  public CCModificationKey(final String date, final String user, final String activity) {
-    myDate = date;
+  public CCModificationKey(final DateRevision version, final String user, final String activity) {
+    myVersion = version;
     myUser = user;
     myActivity = activity;
   }
@@ -36,7 +36,7 @@ public class CCModificationKey {
     final CCModificationKey that = (CCModificationKey)o;
 
     if (myActivity != null ? !myActivity.equals(that.myActivity) : that.myActivity != null) return false;
-    if (myDate != null ? !myDate.equals(that.myDate) : that.myDate != null) return false;
+    if (myVersion != null ? !myVersion.equals(that.myVersion) : that.myVersion != null) return false;
     if (myUser != null ? !myUser.equals(that.myUser) : that.myUser != null) return false;
 
     return true;
@@ -44,14 +44,14 @@ public class CCModificationKey {
 
   @Override
   public int hashCode() {
-    int result = myDate != null ? myDate.hashCode() : 0;
+    int result = myVersion != null ? myVersion.hashCode() : 0;
     result = 31 * result + (myUser != null ? myUser.hashCode() : 0);
     result = 31 * result + (myActivity != null ? myActivity.hashCode() : 0);
     return result;
   }
 
-  public String getDate() {
-    return myDate;
+  public DateRevision getVersion() {
+    return myVersion;
   }
 
   public String getUser() {

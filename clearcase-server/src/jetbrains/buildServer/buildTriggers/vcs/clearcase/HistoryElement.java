@@ -40,7 +40,8 @@ public class HistoryElement {
   private static final Pattern CC_LSHISTORY_VEND_PATTERN =  Pattern.compile("(.*?)[/\\\\](.*?)[/\\\\](\\d*)");
 
   private final String myUser;
-  private final String myDate;
+  private final String myDateString;
+  private final Date myDate;
   private final String myObjectName;
   private final String myObjectKind;
   private final String myObjectVersion;
@@ -54,10 +55,20 @@ public class HistoryElement {
   private static final String EVENT = "event ";
   private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
 
-  private HistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
+  private HistoryElement(final String eventId,
+                         final String user,
+                         final String dateString,
+                         final String objectName,
+                         final String objectKind,
+                         final String objectVersion,
+                         final String operation,
+                         final String event,
+                         final String comment,
+                         final String activity) throws ParseException {
     myEventID = Long.parseLong(eventId);
     myUser = user;
-    myDate = date;
+    myDateString = dateString;
+    myDate = ourDateFormat.parse(dateString);
     myObjectName = normalizeLsHistoryFileName(objectName);
     myObjectKind = objectKind;
     myObjectVersion = objectVersion;
@@ -67,7 +78,16 @@ public class HistoryElement {
     myActivity = activity;
   }
 
-  private static HistoryElement createHistoryElement(final String eventId, final String user, final String date, final String objectName, final String objectKind, final String objectVersion, final String operation, final String event, final String comment, final String activity) {
+  private static HistoryElement createHistoryElement(final String eventId,
+                                                     final String user,
+                                                     final String date,
+                                                     final String objectName,
+                                                     final String objectKind,
+                                                     final String objectVersion,
+                                                     final String operation,
+                                                     final String event,
+                                                     final String comment,
+                                                     final String activity) throws ParseException {
     String kind = objectKind, version = objectVersion;
     if ("rmver".equals(operation) && "destroy version on branch".equals(event)) {
       final String extractedVersion = extractVersion(comment);
@@ -89,7 +109,7 @@ public class HistoryElement {
     return null;
   }
 
-  public static HistoryElement readFrom(final String line) {
+  public static HistoryElement readFrom(final String line) throws ParseException {
     if (!line.startsWith(EVENT)) {
       return null;
     }
@@ -109,11 +129,11 @@ public class HistoryElement {
   }
 
   public String getDateString() {
-    return myDate;
+    return myDateString;
   }
 
-  public Date getDate() throws ParseException {
-    return ourDateFormat.parse(myDate);
+  public Date getDate() {
+    return myDate;
   }
 
   public String getObjectName() {
