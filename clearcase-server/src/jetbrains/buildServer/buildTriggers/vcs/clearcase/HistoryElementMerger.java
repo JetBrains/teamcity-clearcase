@@ -17,6 +17,7 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -47,14 +48,17 @@ public class HistoryElementMerger implements HistoryElementIterator {
       return getFirstNext();
     }
     else {
-      //noinspection ConstantConditions
-      if (myFirstNextElement.getEventID() > mySecondNextElement.getEventID()) {
-         return getFirstNext();
-      }
-      else {
-        return getSecondNext();
-      }
+      return isFirstNewer() ? getFirstNext() : getSecondNext();
     }
+  }
+
+  private boolean isFirstNewer() {
+    //noinspection ConstantConditions
+    final Date firstDate = myFirstNextElement.getDate(), secondDate = mySecondNextElement.getDate();
+    //noinspection ConstantConditions
+    return firstDate.equals(secondDate) // event ID order can be not the same as date order in case of using VOB replicas
+           ? myFirstNextElement.getEventID() > mySecondNextElement.getEventID()
+           : firstDate.after(secondDate);
   }
 
   public boolean hasNext() {
