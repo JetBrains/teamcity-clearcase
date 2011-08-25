@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 public abstract class Revision {
   @NonNls @NotNull private static final String FIRST = "FIRST";
-  @NonNls public static final char SEPARATOR = '@';
+  @NonNls @NotNull private static final String SEPARATOR = "@"; // if you want to change it to char, note that it will be casted to int in RevisionImpl.asString(), so be careful
 
   @Nullable
   public static Revision fromString(@Nullable final String stringRevision) throws ParseException {
@@ -35,11 +35,29 @@ public abstract class Revision {
 
   @NotNull
   public static Revision fromNotNullString(@NotNull final String stringRevision) throws ParseException {
-    if (FIRST.equals(stringRevision)) return first();
+    return FIRST.equals(stringRevision) ? first() : fromNotNullStringInternal(patchIfNeeded(stringRevision));
+  }
+
+  @NotNull
+  private static Revision fromNotNullStringInternal(@NotNull final String stringRevision) throws ParseException {
     final int separatorPos = stringRevision.indexOf(SEPARATOR);
     final Date date = CCParseUtil.parseDate(stringRevision.substring(separatorPos + 1));
     final Long eventId = separatorPos == -1 ? null : CCParseUtil.parseLong(stringRevision.substring(0, separatorPos));
     return new RevisionImpl(eventId, date);
+  }
+
+  @NotNull
+  private static String patchIfNeeded(@NotNull final String dateString) {
+    if (dateString.contains("@")) return dateString;
+    final int daySep = dateString.indexOf('-');
+    if (daySep <= 2) return dateString;
+    try {
+      final long eventId = Long.parseLong(dateString.substring(0, daySep - 2)) - '@';
+      return eventId + "@" + dateString.substring(daySep - 2);
+    }
+    catch (final NumberFormatException e) {
+      return dateString;
+    }
   }
 
   @NotNull
