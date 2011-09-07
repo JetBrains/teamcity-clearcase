@@ -19,7 +19,22 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 import java.util.Date;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class DateRevision extends Revision {
+public class ChangeInfo {
+  @NotNull private final Long myEventId;
+  @NotNull private final Date myDate;
+
+  public ChangeInfo(@NotNull final Long eventId, @NotNull final Date date) {
+    myEventId = eventId;
+    myDate = date;
+  }
+
   @NotNull
-  public abstract Date getDate();
+  public Long getEventId() {
+    return myEventId;
+  }
+
+  @NotNull
+  public Date getDate() {
+    return myDate;
+  }
 }

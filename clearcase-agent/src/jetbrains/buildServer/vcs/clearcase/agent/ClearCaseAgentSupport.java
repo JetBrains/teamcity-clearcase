@@ -16,6 +16,7 @@
 package jetbrains.buildServer.vcs.clearcase.agent;
 
 import java.io.File;
+import java.text.ParseException;
 import java.util.regex.Pattern;
 
 import jetbrains.buildServer.TextLogger;
@@ -25,6 +26,8 @@ import jetbrains.buildServer.agent.vcs.AgentVcsSupport;
 import jetbrains.buildServer.agent.vcs.AgentVcsSupportCore;
 import jetbrains.buildServer.agent.vcs.UpdateByCheckoutRules2;
 import jetbrains.buildServer.agent.vcs.UpdatePolicy;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.DateRevision;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
@@ -33,6 +36,8 @@ import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ClearCaseAgentSupport extends AgentVcsSupport {
 
@@ -113,14 +118,30 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
 
   static class SourceProviderFactory implements UpdateByCheckoutRules2 {
 
-    public void updateSources(VcsRoot root, CheckoutRules rules, String toVersion, File checkoutDirectory, AgentRunningBuild build, boolean cleanCheckoutRequested) throws VcsException {
+    public void updateSources(@NotNull final VcsRoot root,
+                              @NotNull final CheckoutRules rules,
+                              @NotNull final String toVersion,
+                              @NotNull final File checkoutDirectory,
+                              @NotNull final AgentRunningBuild build,
+                              final boolean cleanCheckoutRequested) throws VcsException {
+      final String preparedToVersion = prepareVersion(toVersion);
+      if (preparedToVersion == null) return;
       final ISourceProvider delegate = new RuleBasedSourceProvider();
       delegate.validate(build.getCheckoutDirectory(), root, rules);
       LOG.debug(String.format("Passed paremeters accepted by '%s' for checkout", delegate.getClass().getSimpleName()));
       LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));
-      delegate.updateSources(root, rules, toVersion, checkoutDirectory, build, cleanCheckoutRequested);
+      delegate.updateSources(root, rules, preparedToVersion, checkoutDirectory, build, cleanCheckoutRequested);
     }
 
+    @Nullable
+    private static String prepareVersion(@NotNull final String toVersion) throws VcsException {
+      try {
+        final DateRevision revision = Revision.fromNotNullString(toVersion).getDateRevision();
+        return revision == null ? null : revision.getDateString();
+      }
+      catch (final ParseException e) {
+        throw new VcsException(e);
+      }
+    }
   }
-
 }

@@ -53,7 +53,7 @@ public class HistoryElement {
 
   private static final int EXPECTED_CHANGE_FIELD_COUNT = 9;
   private static final String EVENT = "event ";
-  private static final DateFormat ourDateFormat = new SimpleDateFormat(CCParseUtil.OUTPUT_DATE_FORMAT);
+  private static final DateFormat ourDateFormat = new SimpleDateFormat(CCCommonParseUtil.OUTPUT_DATE_FORMAT);
 
   private HistoryElement(final String eventId,
                          final String user,
@@ -126,6 +126,10 @@ public class HistoryElement {
     } else {
       return createHistoryElement(eventId, strings[0], strings[1], strings[2], strings[3], strings[4], strings[5], strings[6], strings[7], strings[8]);
     }
+  }
+
+  public ChangeInfo getChangeInfo() {
+    return new ChangeInfo(myEventID, myDate);
   }
 
   public String getDateString() {

@@ -278,7 +278,7 @@ public class ClearCaseConnection {
   @NotNull
   public Revision getCurrentRevision() throws VcsException, IOException {
     final HistoryElement lastChange = getLastChange();
-    return lastChange == null ? Revision.first() : Revision.fromChange(lastChange);
+    return lastChange == null ? Revision.first() : Revision.fromChange(lastChange.getChangeInfo());
   }
 
   @Nullable

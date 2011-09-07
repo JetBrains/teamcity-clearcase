@@ -44,8 +44,8 @@ public abstract class Revision {
   @NotNull
   private static Revision fromNotNullStringInternal(@NotNull final String stringRevision) throws ParseException {
     final int separatorPos = stringRevision.indexOf(SEPARATOR);
-    final Date date = CCParseUtil.parseDate(stringRevision.substring(separatorPos + 1));
-    final Long eventId = separatorPos == -1 ? null : CCParseUtil.parseLong(stringRevision.substring(0, separatorPos));
+    final Date date = CCCommonParseUtil.parseDate(stringRevision.substring(separatorPos + 1));
+    final Long eventId = separatorPos == -1 ? null : CCCommonParseUtil.parseLong(stringRevision.substring(0, separatorPos));
     return new RevisionImpl(eventId, date);
   }
 
@@ -64,8 +64,8 @@ public abstract class Revision {
   }
 
   @NotNull
-  public static DateRevision fromChange(@NotNull final HistoryElement change) {
-    return new RevisionImpl(change.getEventID(), change.getDate());
+  public static DateRevision fromChange(@NotNull final ChangeInfo info) {
+    return new RevisionImpl(info.getEventId(), info.getDate());
   }
 
   @NotNull
@@ -87,6 +87,9 @@ public abstract class Revision {
 
   @NotNull
   public abstract String asString();
+
+  @NotNull
+  public abstract String asDisplayString();
 
   @NotNull
   public abstract Revision shiftToPast(final int minutes);
@@ -143,10 +146,16 @@ public abstract class Revision {
       return myDate;
     }
 
-    @Override
     @NotNull
+    @Override
     public String asString() {
       return myEventId == null ? getDateString() : myEventId + SEPARATOR + getDateString();
+    }
+
+    @NotNull
+    @Override
+    public String asDisplayString() {
+      return getDateString();
     }
 
     @NotNull
@@ -156,8 +165,9 @@ public abstract class Revision {
     }
 
     @NotNull
-    private String getDateString() {
-      return CCParseUtil.formatDate(myDate);
+    @Override
+    public String getDateString() {
+      return CCCommonParseUtil.formatDate(myDate);
     }
 
     @Override
@@ -198,6 +208,12 @@ public abstract class Revision {
     @Override
     public String asString() {
       return FIRST;
+    }
+
+    @NotNull
+    @Override
+    public String asDisplayString() {
+      return asString();
     }
 
     @NotNull

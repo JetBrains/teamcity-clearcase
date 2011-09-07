@@ -282,14 +282,26 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return connection.getObjectRelativePathWithVersions(child.getFullPath(), DirectoryChildElement.Type.FILE.equals(child.getType()));
   }
 
-  private VcsChange addChange(final HistoryElement element, final String childFullPath, final ClearCaseConnection connection, final VcsChangeInfo.Type type, final String beforeVersion, final String afterVersion, final MultiMap<CCModificationKey, VcsChange> key2changes) throws VcsException {
-    final CCModificationKey modificationKey = new CCModificationKey(Revision.fromDate(element.getDate()), element.getUser(), element.getActivity());
+  private VcsChange addChange(final HistoryElement element,
+                              final String childFullPath,
+                              final ClearCaseConnection connection,
+                              final VcsChangeInfo.Type type,
+                              final String beforeVersion,
+                              final String afterVersion,
+                              final MultiMap<CCModificationKey, VcsChange> key2changes) throws VcsException {
+    final CCModificationKey modificationKey = new CCModificationKey(Revision.fromChange(element.getChangeInfo()), element.getUser(), element.getActivity());
     final VcsChange change = createChange(type, connection, beforeVersion, afterVersion, childFullPath);
+
     key2changes.putValue(modificationKey, change);
-    CCModificationKey realKey = findKey(modificationKey, key2changes);
+
+    final CCModificationKey realKey = findKey(modificationKey, key2changes);
     if (realKey != null) {
       realKey.getCommentHolder().update(element.getActivity(), element.getComment(), connection.getVersionDescription(childFullPath, !isFile(type)));
+      if (!modificationKey.getVersion().beforeOrEquals(realKey.getVersion())) { // must keep the greatest eventId
+        realKey.setVersion(modificationKey.getVersion());
+      }
     }
+
     return change;
   }
 
@@ -456,7 +468,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public String getVersionDisplayName(@NotNull final String version, @NotNull final VcsRoot root) throws VcsException {
-    return version;
+    try {
+      return Revision.fromNotNullString(version).asDisplayString();
+    }
+    catch (final ParseException e) {
+      throw new VcsException(e);
+    }
   }
 
   @NotNull
@@ -652,8 +669,9 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           if (changes.isEmpty()) continue;
 
           final DateRevision version = key.getVersion();
-          final String versionString = version.asString();
-          list.add(new ModificationData(version.getDate(), changes, key.getCommentHolder().toString(), key.getUser(), root, versionString, versionString));
+          list.add(new ModificationData(
+            version.getDate(), changes, key.getCommentHolder().toString(), key.getUser(), root, version.asString(), version.asDisplayString()
+          ));
         }
       } catch (final Exception e) {
         throw new VcsException(e);

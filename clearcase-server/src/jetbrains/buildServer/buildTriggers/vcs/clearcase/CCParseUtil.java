@@ -18,8 +18,6 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.Dates;
@@ -37,8 +35,6 @@ public class CCParseUtil {
   @NotNull private static final Logger LOG = Logger.getLogger(CCParseUtil.class);
 
   @NonNls public static final String CC_VERSION_SEPARATOR = "@@";
-  @NonNls public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
-  @NonNls private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
   @NonNls private static final String DIRECTORY_ELEMENT = "directory element";
   @NonNls private static final String FILE_ELEMENT = "file element";
   @NonNls private static final String NOT_LOADED = "[not loaded]";
@@ -79,7 +75,7 @@ public class CCParseUtil {
     try {
       while (iterator.hasNext()) {
         final HistoryElement element = iterator.next();
-        final Revision version = Revision.fromChange(element);
+        final Revision version = Revision.fromChange(element.getChangeInfo());
         if (version.beforeOrEquals(fromVersion)) continue;
         LOG.debug("Processing event: " + element.getLogRepresentation());
         if (CCPathElement.isInsideView(element.getObjectName(), connection.getViewWholePath())) {
@@ -159,7 +155,7 @@ public class CCParseUtil {
     try {
       int count = 0;
       while (iterator.hasNext()) {
-        if (Revision.fromChange(iterator.next()).beforeOrEquals(thresholdRevision)) {
+        if (Revision.fromChange(iterator.next().getChangeInfo()).beforeOrEquals(thresholdRevision)) {
           count++;
         }
       }
@@ -167,25 +163,6 @@ public class CCParseUtil {
     }
     finally {
       iterator.close();
-    }
-  }
-
-  public static Date parseDate(final String currentVersion) throws ParseException {
-    return getDateFormat().parse(currentVersion);
-  }
-
-  public static String formatDate(final Date date) {
-    return getDateFormat().format(date);
-  }
-
-  public static long parseLong(@NotNull final String longStr) throws ParseException {
-    try {
-      return Long.parseLong(longStr);
-    }
-    catch (final NumberFormatException e) {
-      final ParseException parseException = new ParseException(longStr, 0);
-      parseException.initCause(e);
-      throw parseException;
     }
   }
 
@@ -241,10 +218,6 @@ public class CCParseUtil {
       result.put(element.getName(), element);
     }
     return result;
-  }
-
-  public static SimpleDateFormat getDateFormat() {
-    return new SimpleDateFormat(INPUT_DATE_FORMAT, Locale.US);
   }
 
   public static String getFileName(final String subdirectory) {
