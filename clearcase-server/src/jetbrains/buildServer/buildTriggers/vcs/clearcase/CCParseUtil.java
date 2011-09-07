@@ -61,9 +61,9 @@ public class CCParseUtil {
   public static void processChangedFiles(final ClearCaseConnection connection,
                                          @NotNull final Revision fromVersion,
                                          @Nullable final Revision toVersion,
-                                         final ChangedFilesProcessor fileProcessor) throws IOException, VcsException {
+                                         @Nullable final ChangedFilesProcessor fileProcessor) throws IOException, VcsException {
     LOG.debug(String.format("Processing changes: fromVersion = [%s], toVersion = [%s]", fromVersion, toVersion));
-    final int pastMinutes = TeamCityProperties.getInteger("clearcase.look.for.the.changes.in.the.past.minutes", 0);
+    final int pastMinutes = getLookForTheChangesInThePastMinutes();
     if (pastMinutes == 0) {
       LOG.debug("Look for the changes in the past: false");
     }
@@ -73,7 +73,7 @@ public class CCParseUtil {
 
     final HistoryElementIterator iterator = getChangesIterator(connection, fromVersion.shiftToPast(pastMinutes));
 
-    final ChangesInverter actualChangesProcessor = new ChangesInverter(fileProcessor),
+    final ChangesInverter actualChangesProcessor = fileProcessor == null ? null : new ChangesInverter(fileProcessor),
                           ignoringChangesProcessor = toVersion == null ? null : new ChangesInverter(connection.createIgnoringChangesProcessor());
 
     try {
@@ -84,8 +84,10 @@ public class CCParseUtil {
         LOG.debug("Processing event: " + element.getLogRepresentation());
         if (CCPathElement.isInsideView(element.getObjectName(), connection.getViewWholePath())) {
           if (toVersion == null || version.beforeOrEquals(toVersion)) {
-            LOG.debug("Actual change");
-            processHistoryElement(element, connection, actualChangesProcessor);
+            if (actualChangesProcessor != null) {
+              LOG.debug("Actual change");
+              processHistoryElement(element, connection, actualChangesProcessor);
+            }
           }
           else {
             LOG.debug("Change to ignore");
@@ -101,7 +103,17 @@ public class CCParseUtil {
     if (ignoringChangesProcessor != null) {
       ignoringChangesProcessor.processCollectedChangesInInvertedOrder();
     }
-    actualChangesProcessor.processCollectedChangesInInvertedOrder();
+    if (actualChangesProcessor != null) {
+      actualChangesProcessor.processCollectedChangesInInvertedOrder();
+    }
+  }
+
+  private static int getLookForTheChangesInThePastMinutes() {
+    return TeamCityProperties.getInteger("clearcase.look.for.the.changes.in.the.past.minutes", 0);
+  }
+
+  public static boolean isLookingForTheChangesInThePastEnabled() {
+    return getLookForTheChangesInThePastMinutes() != 0;
   }
 
   private static void processHistoryElement(@NotNull final HistoryElement element,

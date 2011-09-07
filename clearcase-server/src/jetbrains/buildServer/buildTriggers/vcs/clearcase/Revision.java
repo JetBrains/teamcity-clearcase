@@ -27,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 public abstract class Revision {
   @NonNls @NotNull private static final String FIRST = "FIRST";
   @NonNls @NotNull private static final String SEPARATOR = "@"; // if you want to change it to char, note that it will be casted to int in RevisionImpl.asString(), so be careful
+  @NonNls @NotNull private static final String HASH = "#";
 
   @Nullable
   public static Revision fromString(@Nullable final String stringRevision) throws ParseException {
@@ -35,7 +36,9 @@ public abstract class Revision {
 
   @NotNull
   public static Revision fromNotNullString(@NotNull final String stringRevision) throws ParseException {
-    return FIRST.equals(stringRevision) ? first() : fromNotNullStringInternal(patchIfNeeded(stringRevision));
+    final int hashPos = stringRevision.indexOf(HASH);
+    final String stringRevisionWithoutHash = hashPos == -1 ? stringRevision : stringRevision.substring(0, hashPos);
+    return FIRST.equals(stringRevisionWithoutHash) ? first() : fromNotNullStringInternal(patchIfNeeded(stringRevisionWithoutHash));
   }
 
   @NotNull
@@ -66,11 +69,6 @@ public abstract class Revision {
   }
 
   @NotNull
-  public static DateRevision current(@NotNull final HistoryElement change) {
-    return new RevisionImpl(change.getEventID(), new Date());
-  }
-
-  @NotNull
   public static DateRevision fromDate(@NotNull final Date date) {
     return new RevisionImpl(null, date);
   }
@@ -93,6 +91,12 @@ public abstract class Revision {
   @NotNull
   public abstract Revision shiftToPast(final int minutes);
 
+  @NotNull
+  public String asUniqueString() {
+    return asString() + HASH + Dates.now().getTime();
+  }
+
+  @NotNull
   @Override
   public String toString() {
     return asString();
@@ -108,7 +112,7 @@ public abstract class Revision {
     }
 
     @Override
-    @Nullable
+    @NotNull
     public DateRevision getDateRevision() {
       return this;
     }
@@ -176,6 +180,7 @@ public abstract class Revision {
   }
 
   private static class FirstRevision extends Revision {
+    @Nullable
     @Override
     public DateRevision getDateRevision() {
       return null;

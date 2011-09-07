@@ -278,11 +278,7 @@ public class ClearCaseConnection {
   @NotNull
   public Revision getCurrentRevision() throws VcsException, IOException {
     final HistoryElement lastChange = getLastChange();
-    return lastChange == null
-           ? Revision.first()
-           : TeamCityProperties.getBoolean("clearcase.use.server.date.as.current.version")
-             ? Revision.current(lastChange)
-             : Revision.fromChange(lastChange);
+    return lastChange == null ? Revision.first() : Revision.fromChange(lastChange);
   }
 
   @Nullable
@@ -396,7 +392,7 @@ public class ClearCaseConnection {
 
   public void collectChangesToIgnore(final Revision lastVersion) throws VcsException {
     try {
-      CCParseUtil.processChangedFiles(this, lastVersion, null, createIgnoringChangesProcessor());
+      CCParseUtil.processChangedFiles(this, lastVersion, lastVersion, null);
     }
     catch (final IOException e) {
       throw new VcsException(e);
