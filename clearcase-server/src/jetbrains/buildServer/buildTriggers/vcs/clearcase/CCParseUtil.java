@@ -56,9 +56,12 @@ public class CCParseUtil {
 
   public static void processChangedFiles(final ClearCaseConnection connection,
                                          @NotNull final Revision fromVersion,
-                                         @Nullable final Revision toVersion,
+                                         @Nullable final Revision _toVersion,
                                          @Nullable final ChangedFilesProcessor fileProcessor) throws IOException, VcsException {
-    LOG.debug(String.format("Processing changes: fromVersion = [%s], toVersion = [%s]", fromVersion, toVersion));
+    LOG.debug(String.format("Processing changes: fromVersion = [%s], toVersion = [%s]", fromVersion, _toVersion));
+
+    final Revision toVersion = _toVersion != null && _toVersion.equals(fromVersion) ? _toVersion.getRevisionWithoutEventId() : _toVersion;
+
     final int pastMinutes = getLookForTheChangesInThePastMinutes();
     if (pastMinutes == 0) {
       LOG.debug("Look for the changes in the past: false");

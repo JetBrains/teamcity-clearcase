@@ -81,6 +81,9 @@ public abstract class Revision {
   @Nullable
   public abstract DateRevision getDateRevision();
 
+  @NotNull
+  public abstract Revision getRevisionWithoutEventId();
+
   public abstract boolean beforeOrEquals(@NotNull final Revision that);
 
   public abstract void appendLSHistoryOptions(@NotNull final List<String> optionList);
@@ -118,6 +121,12 @@ public abstract class Revision {
     @NotNull
     public DateRevision getDateRevision() {
       return this;
+    }
+
+    @NotNull
+    @Override
+    public Revision getRevisionWithoutEventId() {
+      return fromDate(myDate);
     }
 
     @Override
@@ -161,7 +170,7 @@ public abstract class Revision {
     @NotNull
     @Override
     public Revision shiftToPast(final int minutes) {
-      return new RevisionImpl(null, Dates.before(myDate, minutes * Dates.ONE_MINUTE));
+      return fromDate(Dates.before(myDate, minutes * Dates.ONE_MINUTE));
     }
 
     @NotNull
@@ -194,6 +203,12 @@ public abstract class Revision {
     @Override
     public DateRevision getDateRevision() {
       return null;
+    }
+
+    @NotNull
+    @Override
+    public Revision getRevisionWithoutEventId() {
+      return this;
     }
 
     @Override
