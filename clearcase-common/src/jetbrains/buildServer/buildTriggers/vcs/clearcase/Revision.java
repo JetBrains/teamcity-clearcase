@@ -27,7 +27,6 @@ import org.jetbrains.annotations.Nullable;
 public abstract class Revision {
   @NonNls @NotNull private static final String FIRST = "FIRST";
   @NonNls @NotNull private static final String SEPARATOR = "@"; // if you want to change it to char, note that it will be casted to int in RevisionImpl.asString(), so be careful
-  @NonNls @NotNull private static final String HASH = "#";
 
   @Nullable
   public static Revision fromString(@Nullable final String stringRevision) throws ParseException {
@@ -36,9 +35,7 @@ public abstract class Revision {
 
   @NotNull
   public static Revision fromNotNullString(@NotNull final String stringRevision) throws ParseException {
-    final int hashPos = stringRevision.indexOf(HASH);
-    final String stringRevisionWithoutHash = hashPos == -1 ? stringRevision : stringRevision.substring(0, hashPos);
-    return FIRST.equals(stringRevisionWithoutHash) ? first() : fromNotNullStringInternal(patchIfNeeded(stringRevisionWithoutHash));
+    return FIRST.equals(stringRevision) ? first() : fromNotNullStringInternal(patchIfNeeded(stringRevision));
   }
 
   @NotNull
@@ -50,7 +47,9 @@ public abstract class Revision {
   }
 
   @NotNull
-  private static String patchIfNeeded(@NotNull final String dateString) {
+  private static String patchIfNeeded(@NotNull final String _dateString) {
+    final int hashPos = _dateString.indexOf("#");
+    final String dateString = hashPos == -1 ? _dateString : _dateString.substring(0, hashPos);
     if (dateString.contains("@")) return dateString;
     final int daySep = dateString.indexOf('-');
     if (daySep <= 2) return dateString;
@@ -81,9 +80,6 @@ public abstract class Revision {
   @Nullable
   public abstract DateRevision getDateRevision();
 
-  @NotNull
-  public abstract Revision getRevisionWithoutEventId();
-
   public abstract boolean beforeOrEquals(@NotNull final Revision that);
 
   public abstract void appendLSHistoryOptions(@NotNull final List<String> optionList);
@@ -96,11 +92,6 @@ public abstract class Revision {
 
   @NotNull
   public abstract Revision shiftToPast(final int minutes);
-
-  @NotNull
-  public String asUniqueString() {
-    return asString() + HASH + Dates.now().getTime();
-  }
 
   @NotNull
   @Override
@@ -121,12 +112,6 @@ public abstract class Revision {
     @NotNull
     public DateRevision getDateRevision() {
       return this;
-    }
-
-    @NotNull
-    @Override
-    public Revision getRevisionWithoutEventId() {
-      return fromDate(myDate);
     }
 
     @Override
@@ -203,12 +188,6 @@ public abstract class Revision {
     @Override
     public DateRevision getDateRevision() {
       return null;
-    }
-
-    @NotNull
-    @Override
-    public Revision getRevisionWithoutEventId() {
-      return this;
     }
 
     @Override

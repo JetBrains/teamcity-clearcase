@@ -278,7 +278,17 @@ public class ClearCaseConnection {
   @NotNull
   public Revision getCurrentRevision() throws VcsException, IOException {
     final HistoryElement lastChange = getLastChange();
-    return lastChange == null ? Revision.first() : Revision.fromChange(lastChange.getChangeInfo());
+    if (lastChange == null) return Revision.first();
+
+    final Revision lastChangeRevision = Revision.fromChange(lastChange.getChangeInfo());
+
+    final int pastMinutes = CCParseUtil.getLookForTheChangesInThePastMinutes();
+    if (pastMinutes == 0) return lastChangeRevision;
+
+    final HistoryElement changeWithMaxEventId = getChangeWithMaxEventId(lastChange, lastChangeRevision.shiftToPast(pastMinutes));
+    final Date maxDate = new Date(Math.max(lastChange.getDate().getTime(), changeWithMaxEventId.getDate().getTime()));
+
+    return Revision.fromChange(new ChangeInfo(changeWithMaxEventId.getEventID(), maxDate));
   }
 
   @Nullable
@@ -291,6 +301,25 @@ public class ClearCaseConnection {
     finally {
       iterator.close();
     }
+  }
+
+  @NotNull
+  private HistoryElement getChangeWithMaxEventId(@NotNull final HistoryElement lastChange, @NotNull final Revision fromVersion) throws VcsException, IOException {
+    LOG.debug("Looking for the greatest event id...");
+    HistoryElement changeWithMaxEventId = lastChange;
+    final HistoryElementIterator iterator = getChangesIterator(fromVersion);
+    try {
+      while (iterator.hasNext()) {
+        final HistoryElement change = iterator.next();
+        if (change.getEventID() > changeWithMaxEventId.getEventID()) {
+          changeWithMaxEventId = change;
+        }
+      }
+    }
+    finally {
+      iterator.close();
+    }
+    return changeWithMaxEventId;
   }
 
   @NotNull

@@ -446,10 +446,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   public String getCurrentVersion(@NotNull final VcsRoot root) throws VcsException {
     final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getViewPath(root));
     try {
-      final Revision version = connection.getCurrentRevision();
-      // If we expect the changes in the past, we must perform collecting changes even if the current revision is not changed.
-      // So to avoid non-changed revision optimization, we must return new revision every time for that case.
-      return CCParseUtil.isLookingForTheChangesInThePastEnabled() ? version.asUniqueString() : version.asString();
+      return connection.getCurrentRevision().asString();
     }
     catch (final IOException e) {
       throw new VcsException(e);
