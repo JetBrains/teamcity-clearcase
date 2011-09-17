@@ -53,7 +53,12 @@ public class HistoryElement {
 
   private static final int EXPECTED_CHANGE_FIELD_COUNT = 9;
   private static final String EVENT = "event ";
-  private static final DateFormat ourDateFormat = new SimpleDateFormat(CCCommonParseUtil.OUTPUT_DATE_FORMAT);
+  private static final ThreadLocal<DateFormat> ourDateFormat = new ThreadLocal<DateFormat>() {
+    @Override
+    protected DateFormat initialValue() {
+      return new SimpleDateFormat(CCCommonParseUtil.OUTPUT_DATE_FORMAT);
+    }
+  };
 
   private HistoryElement(final String eventId,
                          final String user,
@@ -68,7 +73,7 @@ public class HistoryElement {
     myEventID = Long.parseLong(eventId);
     myUser = user;
     myDateString = dateString;
-    myDate = ourDateFormat.parse(dateString);
+    myDate = ourDateFormat.get().parse(dateString);
     myObjectName = normalizeLsHistoryFileName(objectName);
     myObjectKind = objectKind;
     myObjectVersion = objectVersion;
@@ -220,14 +225,14 @@ public class HistoryElement {
         //split...
         String head = lsHistoryFileName.substring(0, vsepPos);
         String tail = lsHistoryFileName.substring(vsepPos + 3, lsHistoryFileName.length());//exclude @@ and next slash
-        //drop versions    
+        //drop versions
         out.append(head);
         Matcher matcher;
         while (true) {
           matcher = CC_LSHISTORY_VPATH_PATTERN.matcher(tail);
           if (matcher.matches()) {
             //branch=matcher.group(1)
-            //version=matcher.group(2)            
+            //version=matcher.group(2)
             final String pathElement = matcher.group(3);
             tail = matcher.group(4);
             if (dropVersions) {
@@ -241,14 +246,14 @@ public class HistoryElement {
             matcher = CC_LSHISTORY_VFILE_PATTERN.matcher(tail);
             if (matcher.matches()) {
               //branch=matcher.group(1)
-              //version=matcher.group(2)            
+              //version=matcher.group(2)
               final String fileElement = matcher.group(3);
               if (dropVersions) {
                 out.append(targetPathSeparator).append(fileElement);
               } else {
                 out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append(targetPathSeparator).append(matcher.group(1)).append(targetPathSeparator).append(matcher.group(2)).append(targetPathSeparator).append(fileElement);
               }
-              
+
             } else {
               matcher = CC_LSHISTORY_VEND_PATTERN.matcher(tail);
               if (matcher.matches()) {

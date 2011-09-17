@@ -16,6 +16,7 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -26,6 +27,12 @@ import org.jetbrains.annotations.NotNull;
 public class CCCommonParseUtil {
   @NonNls @NotNull public static final String OUTPUT_DATE_FORMAT = "yyyyMMdd.HHmmss";
   @NonNls @NotNull private static final String INPUT_DATE_FORMAT = "dd-MMMM-yyyy.HH:mm:ss";
+  @NotNull private static final ThreadLocal<DateFormat> ourDateFormat = new ThreadLocal<DateFormat>() {
+    @Override
+    protected DateFormat initialValue() {
+      return new SimpleDateFormat(INPUT_DATE_FORMAT, Locale.US);
+    }
+  };
 
   public static Date parseDate(final String currentVersion) throws ParseException {
     return getDateFormat().parse(currentVersion);
@@ -46,7 +53,7 @@ public class CCCommonParseUtil {
     }
   }
 
-  public static SimpleDateFormat getDateFormat() {
-    return new SimpleDateFormat(INPUT_DATE_FORMAT, Locale.US);
+  private static DateFormat getDateFormat() {
+    return ourDateFormat.get();
   }
 }
