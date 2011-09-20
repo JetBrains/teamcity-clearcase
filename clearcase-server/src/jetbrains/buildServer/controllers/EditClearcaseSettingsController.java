@@ -39,7 +39,7 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
     
     registerAction(new ControllerAction() {
       
-      public boolean canProcess(HttpServletRequest request) {
+      public boolean canProcess(@NotNull final HttpServletRequest request) {
         final String oldViewPath = request.getParameter("view-path-value");
         return oldViewPath != null && oldViewPath.trim().length() != 0;
       }
