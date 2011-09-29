@@ -16,6 +16,8 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
+import com.intellij.execution.ExecutionException;
+import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,7 +25,6 @@ import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
 import jetbrains.buildServer.Used;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseInteractiveProcessPool.ClearCaseInteractiveProcess;
@@ -33,18 +34,11 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecLoadRule;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
-import jetbrains.buildServer.serverSide.BuildServerAdapter;
-import jetbrains.buildServer.serverSide.BuildServerListener;
-import jetbrains.buildServer.serverSide.BuildStartContext;
-import jetbrains.buildServer.serverSide.BuildStartContextProcessor;
-import jetbrains.buildServer.serverSide.InvalidProperty;
-import jetbrains.buildServer.serverSide.PropertiesProcessor;
-import jetbrains.buildServer.serverSide.SBuild;
-import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.SRunningBuild;
-import jetbrains.buildServer.serverSide.ServerPaths;
-import jetbrains.buildServer.serverSide.TeamCityProperties;
-import jetbrains.buildServer.util.*;
+import jetbrains.buildServer.serverSide.*;
+import jetbrains.buildServer.util.EventDispatcher;
+import jetbrains.buildServer.util.ExceptionUtil;
+import jetbrains.buildServer.util.MultiMap;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.util.filters.Filter;
 import jetbrains.buildServer.util.filters.FilterUtil;
 import jetbrains.buildServer.vcs.*;
@@ -53,13 +47,9 @@ import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import com.intellij.execution.ExecutionException;
-import com.intellij.openapi.util.io.FileUtil;
 
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
                                                                   CollectChangesByIncludeRules, BuildPatchByIncludeRules,
@@ -885,10 +875,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private static interface ConnectionProcessor {
-    void process(@NotNull final ClearCaseConnection connection) throws VcsException;
+    void process(@NotNull ClearCaseConnection connection) throws VcsException;
   }
 
-  public void updateParameters(BuildStartContext context) {
+  public void updateParameters(@NotNull BuildStartContext context) {
     final SRunningBuild build = context.getBuild();
     try {
       //collect all clearcase's roots and populate current ConfigSpecs for each
