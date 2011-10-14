@@ -848,26 +848,32 @@ public class ClearCaseConnection {
   @NotNull
   static String getClearCaseViewRoot(@NotNull final String viewPath) throws VcsException, IOException {
     final String normalPath = CCPathElement.normalizePath(viewPath);
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().createProcess(normalPath);
-    final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
+    final ClearCaseInteractiveProcessPool processPool = ClearCaseInteractiveProcessPool.getDefault();
+    final ClearCaseInteractiveProcess process = processPool.createProcess(normalPath);
     try {
-      final String viewRoot = reader.readLine();
-      if (viewRoot == null || "".equals(viewRoot.trim())) {
-        int offset = 0;
-        if (normalPath.startsWith(UNIX_VIEW_PATH_PREFIX)) {
-          offset = UNIX_VIEW_PATH_PREFIX.length();
+      final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
+      final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+      try {
+        final String viewRoot = reader.readLine();
+        if (viewRoot == null || "".equals(viewRoot.trim())) {
+          int offset = 0;
+          if (normalPath.startsWith(UNIX_VIEW_PATH_PREFIX)) {
+            offset = UNIX_VIEW_PATH_PREFIX.length();
+          }
+          final int sep = normalPath.indexOf(File.separatorChar, offset);
+          if (sep == -1)
+            return normalPath;
+          return normalPath.substring(0, sep);
         }
-        final int sep = normalPath.indexOf(File.separatorChar, offset);
-        if (sep == -1)
-          return normalPath;
-        return normalPath.substring(0, sep);
+        return viewRoot;
       }
-      return viewRoot;
-    } finally {
-      reader.close();
-      process.destroy();
+      finally {
+        reader.close();
+      }
+    }
+    finally {
+      processPool.shutdown(process);
     }
   }
 

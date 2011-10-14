@@ -373,7 +373,7 @@ public class ClearCaseInteractiveProcessPool {
     return new ClearCaseInteractiveProcess(getId(), workingDirectory, process);
   }
 
-  public void dispose(@NotNull final ClearCaseInteractiveProcess process) throws IOException {
+  private void dispose(@NotNull final ClearCaseInteractiveProcess process) throws IOException {
     synchronized (myViewProcesses) {
       ViewPath viewPath = null;
       for (final Map.Entry<ViewPath, ClearCaseInteractiveProcess> entry : myViewProcesses.entrySet()) {
@@ -383,7 +383,7 @@ public class ClearCaseInteractiveProcessPool {
         }
       }
       if (viewPath != null) {
-        process.destroy();
+        shutdown(process);
         myViewProcesses.remove(viewPath);
         LOG.debug(String.format("[%d] Interactive Process of '%s' has been dropt", getId(), viewPath.getWholePath()));
       }
@@ -393,13 +393,17 @@ public class ClearCaseInteractiveProcessPool {
     }
   }
 
+  public void shutdown(@NotNull final ClearCaseInteractiveProcess process) {
+    process.shutdown();
+  }
+
   public void dispose(@NotNull final VcsRoot root) {
     try {
       final ViewPath viewPath = ClearCaseSupport.getViewPath(root);
       synchronized (myViewProcesses) {
         final ClearCaseInteractiveProcess process = myViewProcesses.remove(viewPath);
         if (process != null) {
-          process.shutdown();
+          shutdown(process);
         }
       }
     }
@@ -412,7 +416,7 @@ public class ClearCaseInteractiveProcessPool {
     synchronized (myViewProcesses) {
       for (final ClearCaseInteractiveProcess process : myViewProcesses.values()) {
         try {
-          process.shutdown();
+          shutdown(process);
         }
         catch (final Throwable t) {
           LOG.error(t.getMessage());
