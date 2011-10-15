@@ -189,21 +189,20 @@ public class ClearCaseValidation {
     }
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-      return true;
-//      final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);
-//      try {
-//        if (checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)) {
-//          debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewPathRootPath));
-//          return true;
-//        } else {
-//          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath));
-//          return false;
-//        }
-//      } catch (final IOException e) {
-//        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
-//        debug(String.format(DOUBLLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath, e.getMessage()));
-//        return false;
-//      }
+      final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);
+      try {
+        if (checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)) {
+          debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewPathRootPath));
+          return true;
+        } else {
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath));
+          return false;
+        }
+      } catch (final IOException e) {
+        validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
+        debug(String.format(DOUBLLE_PARAM_VALIDATION_FAILED, ccViewPathRootPath, e.getMessage()));
+        return false;
+      }
     }
 
     private boolean checkClearCaseView(String propertyName, String ccViewPath, Collection<InvalidProperty> result) throws IOException {

@@ -411,12 +411,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @NotNull
   public PropertiesProcessor getVcsPropertiesProcessor() {
     return new AbstractVcsPropertiesProcessor() {
-
       public Collection<InvalidProperty> process(Map<String, String> properties) {
         final ArrayList<InvalidProperty> validationResult = new ArrayList<InvalidProperty>();
         //collect all validation errors 
-        final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.CleartoolValidator(), new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(),
-            new ClearCaseValidation.ClearcaseGlobalLabelingValidator() });
+        final ValidationComposite composite = createValidationComposite(null, null);
         //transform to expected 
         final Map<IValidation, Collection<InvalidProperty>> result = composite.validate(properties);
         for (final Map.Entry<IValidation, Collection<InvalidProperty>> entry : result.entrySet()) {
@@ -498,27 +496,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     try{
       final String[] validationResult = new String[] { "Passed" };
       //validate in general
-      final ValidationComposite composite = new ValidationComposite(new IValidation[] { new ClearCaseValidation.ClearcaseViewRootPathValidator(), new ClearCaseValidation.ClearcaseViewRelativePathValidator(), new ClearCaseValidation.CleartoolValidator(),
-          new ClearCaseValidation.ClearcaseConfigurationValidator(), new ClearCaseValidation.ClearcaseViewValidator(), new ClearCaseValidation.IValidation() {
-        public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
-          try {
-            validationResult[0] = ClearCaseConnection.testConnection(vcsRoot);
-
-          } catch (Exception e) {
-            validationResultBuffer.add(
-                //it fired by "Relative path..." setting because others already checked hard I guess... 
-                new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))); //$NON-NLS-1$
-            LOG.info(e.getMessage());
-            LOG.debug(e);
-            return false;
-          }
-          return true;
-        }
-
-        public String getDescription() {
-          return "Summary functionality check";
-        }
-      } });
+      final ValidationComposite composite = createValidationComposite(vcsRoot, validationResult);
       //fire validation
       final Map<IValidation, Collection<InvalidProperty>> validationErrors = composite.validate(vcsRoot.getProperties());
 
@@ -537,6 +515,39 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     } finally {
       ClearCaseInteractiveProcessPool.getDefault().dispose();
     }
+  }
+
+  @NotNull
+  private ValidationComposite createValidationComposite(@Nullable final VcsRoot vcsRoot, @Nullable final String[] validationResult) {
+    return new ValidationComposite(
+      new ClearCaseValidation.ClearcaseViewRootPathValidator(),
+      new ClearCaseValidation.ClearcaseViewRelativePathValidator(),
+      new ClearCaseValidation.CleartoolValidator(),
+      new ClearCaseValidation.ClearcaseConfigurationValidator(),
+      new ClearCaseValidation.ClearcaseViewValidator(),
+      new IValidation() {
+        public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
+          if (vcsRoot == null || validationResult == null) return true;
+          try {
+            validationResult[0] = ClearCaseConnection.testConnection(vcsRoot);
+          }
+          catch (final Exception e) {
+            validationResultBuffer.add(
+              //it fired by "Relative path..." setting because others already checked hard I guess...
+              new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))
+            );
+            LOG.info(e.getMessage());
+            LOG.debug(e);
+            return false;
+          }
+          return true;
+        }
+
+        public String getDescription() {
+          return "Summary functionality check";
+        }
+      }
+    );
   }
 
   @Nullable
