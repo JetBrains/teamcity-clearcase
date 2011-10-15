@@ -54,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
                                                                   CollectChangesByIncludeRules, BuildPatchByIncludeRules,
                                                                   TestConnectionSupport, BuildStartContextProcessor,
-                                                                  VcsRootBasedMappingProvider {
+                                                                  VcsRootBasedMappingProvider, CollectChangesBetweenRoots {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
@@ -841,6 +841,39 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       LOG.error(e.getMessage(), e);
     }
     return false;
+  }
+
+  @NotNull
+  public List<ModificationData> collectChanges(@NotNull final VcsRoot fromRoot,
+                                               @NotNull final String fromVersion,
+                                               @NotNull final VcsRoot toRoot,
+                                               @Nullable final String toVersion,
+                                               @NotNull final CheckoutRules checkoutRules) throws VcsException {
+    return getViewPath(fromRoot).equals(getViewPath(toRoot))
+           ? collectChanges(toRoot, fromVersion, toVersion, checkoutRules)
+           : Collections.<ModificationData>emptyList();
+  }
+
+  @NotNull
+  public List<ModificationData> collectChanges(@NotNull final VcsRoot root,
+                                               @NotNull final String fromVersion,
+                                               @Nullable final String toVersion,
+                                               @NotNull final CheckoutRules checkoutRules) throws VcsException {
+    final IncludeRuleChangeCollector collector = getChangeCollector(root, fromVersion, toVersion);
+    try {
+      //noinspection deprecation
+      return VcsSupportUtil.collectBuildChanges(root, fromVersion, toVersion, checkoutRules, new jetbrains.buildServer.CollectChangesByIncludeRule() {
+        public List<ModificationData> collectBuildChanges(final VcsRoot root,
+                                                          final String fromVersion,
+                                                          final String toVersion,
+                                                          final IncludeRule includeRule) throws VcsException {
+          return collector.collectChanges(includeRule);
+        }
+      });
+    }
+    finally {
+      collector.dispose();
+    }
   }
 
   @NotNull
