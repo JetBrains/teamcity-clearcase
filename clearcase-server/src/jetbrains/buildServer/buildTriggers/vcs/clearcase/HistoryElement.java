@@ -21,23 +21,12 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
-import jetbrains.buildServer.vcs.clearcase.Constants;
-
 import org.apache.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class HistoryElement {
   private static final Logger LOG = Logger.getLogger(HistoryElement.class);
-
-  private static final Pattern CC_LSHISTORY_VPATH_PATTERN = Pattern.compile("(.*?)[/\\\\](\\d*)[/\\\\](.*?)[/\\\\](.*)");
-  private static final Pattern CC_LSHISTORY_VFILE_PATTERN = Pattern.compile("(.*?)[/\\\\](\\d*)[/\\\\](.*)");
-  private static final Pattern CC_LSHISTORY_VEND_PATTERN =  Pattern.compile("(.*?)[/\\\\](.*?)[/\\\\](\\d*)");
 
   private final String myUser;
   private final String myDateString;
@@ -74,7 +63,7 @@ public class HistoryElement {
     myUser = user;
     myDateString = dateString;
     myDate = ourDateFormat.get().parse(dateString);
-    myObjectName = normalizeLsHistoryFileName(objectName);
+    myObjectName = objectName;
     myObjectKind = objectKind;
     myObjectVersion = objectVersion;
     myOperation = operation;
@@ -209,78 +198,4 @@ public class HistoryElement {
   public String toString() {
     return String.format("%s: %s(%s)=>%s", getEventID(), getObjectName(), getOperation(), getEvent());
   }
-
-  public static String normalizeLsHistoryFileName(final @NotNull String lsHistoryFileName, boolean dropVersions) {
-    if (!TeamCityProperties.getBoolean(Constants.TEAMCITY_PROPERTY_DISABLE_HISTORY_ELEMENT_TRANSFORMATION)) {
-      final StringBuffer out = new StringBuffer();
-      final int vsepPos = lsHistoryFileName.indexOf(CCParseUtil.CC_VERSION_SEPARATOR);
-      if (vsepPos != -1) {
-        //looking for expected separator
-        final String targetPathSeparator;
-        if (lsHistoryFileName.indexOf("/") != -1) {
-          targetPathSeparator = "/";
-        } else {
-          targetPathSeparator = "\\";
-        }
-        //split...
-        String head = lsHistoryFileName.substring(0, vsepPos);
-        String tail = lsHistoryFileName.substring(vsepPos + 3, lsHistoryFileName.length());//exclude @@ and next slash
-        //drop versions
-        out.append(head);
-        Matcher matcher;
-        while (true) {
-          matcher = CC_LSHISTORY_VPATH_PATTERN.matcher(tail);
-          if (matcher.matches()) {
-            //branch=matcher.group(1)
-            //version=matcher.group(2)
-            final String pathElement = matcher.group(3);
-            tail = matcher.group(4);
-            if (dropVersions) {
-              out.append(targetPathSeparator).append(pathElement);
-            } else {
-              out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append(targetPathSeparator).append(matcher.group(1)).append(targetPathSeparator).append(matcher.group(2)).append(targetPathSeparator).append(pathElement);
-            }
-            continue;
-
-          } else {
-            matcher = CC_LSHISTORY_VFILE_PATTERN.matcher(tail);
-            if (matcher.matches()) {
-              //branch=matcher.group(1)
-              //version=matcher.group(2)
-              final String fileElement = matcher.group(3);
-              if (dropVersions) {
-                out.append(targetPathSeparator).append(fileElement);
-              } else {
-                out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append(targetPathSeparator).append(matcher.group(1)).append(targetPathSeparator).append(matcher.group(2)).append(targetPathSeparator).append(fileElement);
-              }
-
-            } else {
-              matcher = CC_LSHISTORY_VEND_PATTERN.matcher(tail);
-              if (matcher.matches()) {
-                if (!dropVersions) {
-                  out.append(out.charAt(out.length() - 1) == '@' ? "" : "@@").append("/").append(tail);
-                }
-              }
-            }
-          }
-          break;
-        }
-        final String processed = out.toString().trim();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(String.format("Path element transformed: \"%s\"->\"%s\"", lsHistoryFileName, processed));
-        }
-        return processed;
-      }
-    }
-    return lsHistoryFileName;
-  }
-
-  /**
-   * according to TW-13359 the file name element can include versions segments if a change came from another branch.
-   * must drop its see also: TW-14378
-   */
-  public static String normalizeLsHistoryFileName(final @NotNull String lsHistoryFileName) {
-    return normalizeLsHistoryFileName(lsHistoryFileName, false);
-  }
-
 }

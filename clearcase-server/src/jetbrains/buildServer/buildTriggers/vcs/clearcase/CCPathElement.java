@@ -30,25 +30,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CCPathElement {
+  public static final String MAIN = "main";
 
   private final String myPathElement;
-  private String myVersion = null;
+  private String myVersion;
 
-  private boolean myIsFromViewPath;
+  private boolean myIsFromViewPath = false;
 
-  private CCPathElement(final String pathElement, String fromViewPath, final boolean hasVersion) {
-    this(pathElement, pathElement.equals(fromViewPath), hasVersion);
-  }
-
-  public CCPathElement(final String pathElement, final boolean isFromViewPath, final boolean hasVersion) {
+  public CCPathElement(final String pathElement, final boolean hasVersion) {
     myPathElement = pathElement;
-    myIsFromViewPath = isFromViewPath;
-    if (hasVersion) {
-      myVersion = CCParseUtil.CC_VERSION_SEPARATOR;
-    }
+    myVersion = hasVersion ? CCParseUtil.CC_VERSION_SEPARATOR : null;
   }
 
-  private void appendVersion(String version) {
+  private void appendVersion(final String version) {
     if (myVersion == null) {
       myVersion = CCParseUtil.CC_VERSION_SEPARATOR;
     }
@@ -77,7 +71,7 @@ public class CCPathElement {
     return myIsFromViewPath;
   }
 
-  public static boolean isInsideView(String objectName, String viewPath) {
+  public static boolean isInsideView(final String objectName, final String viewPath) {
     final List<CCPathElement> pathElements = splitIntoPathElements(objectName);
     final List<String> viewPathElements = createViewPathElementList(viewPath, pathElements);
 
@@ -105,7 +99,7 @@ public class CCPathElement {
     return viewPathElements;
   }
 
-  public static List<CCPathElement> splitIntoPathAntVersions(String objectName, String viewPath, final int skipAtBeginCount) {
+  public static List<CCPathElement> splitIntoPathAntVersions(final String objectName, final String viewPath, final int skipAtBeginCount) {
     List<CCPathElement> result = splitIntoPathElements(objectName);
 
     setInViewAttributes(result, viewPath, skipAtBeginCount);
@@ -114,77 +108,29 @@ public class CCPathElement {
 
   }
   
-  public static List<CCPathElement> splitIntoPathElements(String objectName) {
-    if(useLegacySplitter()){
-      return split_Legacy(objectName);
-    }
-    return split_Treat_Main_As_Version_Selector(objectName);
-  }
-  
-  private static boolean useLegacySplitter() {
-    return !TeamCityProperties.getBoolean(Constants.TEAMCITY_PROPERTY_TREAT_MAIN_AS_VERSION_IDENTIFIER);
-  }
-
-  static List<CCPathElement> split_Legacy(String objectName) {
-    List<CCPathElement> result = new ArrayList<CCPathElement>();
-
-    List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
-
-    for (int i = 0; i < subNames.size(); i++) {
-
-      String currentViewPath = null;
-
-      final String subName = subNames.get(i);
-      final boolean beginOfVersion = subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR);
-
-      if (beginOfVersion) {
-        final CCPathElement currentPair =
-          new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
-
-        result.add(currentPair);
-
-        for (i += 1; i < subNames.size(); i++) {
-          currentPair.appendVersion(subNames.get(i));
-          try {
-            Integer.parseInt(subNames.get(i));
-            break;
-          } catch (NumberFormatException e) {
-            //ignore
-          }
-        }
-      } else {
-        result.add(new CCPathElement(subName, currentViewPath, false));
-      }
-    }
-    return removeDots(result);
-  }
-
-  public/*just for testing*/static List<CCPathElement> split_Treat_Main_As_Version_Selector(String objectName) {
-
+  public static List<CCPathElement> splitIntoPathElements(final String objectName) {
     final List<CCPathElement> result = new ArrayList<CCPathElement>();
 
-    final List<String> subNames = StringUtil.split(objectName, false, File.separatorChar);
+    boolean hadVersionSeparator = false;
+    boolean treatMainAsVersionId = !TeamCityProperties.getBoolean(Constants.TEAMCITY_PROPERTY_DO_NOT_TREAT_MAIN_AS_VERSION_IDENTIFIER);
 
+    final List<String> subNames = StringUtil.split(normalizeSeparators(objectName), false, File.separatorChar);
     for (int i = 0, size = subNames.size(); i < size; i++) {
-
-      String currentViewPath = null;
-
       final String subName = subNames.get(i);
 
       if (subName.endsWith(CCParseUtil.CC_VERSION_SEPARATOR)) {
-        final CCPathElement currentPair = new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), currentViewPath, true);
-
+        final CCPathElement currentPair = new CCPathElement(subName.substring(0, subName.length() - CCParseUtil.CC_VERSION_SEPARATOR.length()), true);
         result.add(currentPair);
-
         i = processVersion(currentPair, i, subNames);
-      } else if (i + 1 < size && "main".equalsIgnoreCase(subNames.get(i + 1))) {
-        final CCPathElement currentPair = new CCPathElement(subName, currentViewPath, true);
-
+        hadVersionSeparator = true;
+      }
+      else if (hadVersionSeparator && treatMainAsVersionId && i + 1 < size && MAIN.equalsIgnoreCase(subNames.get(i + 1))) {
+        final CCPathElement currentPair = new CCPathElement(subName, true);
         result.add(currentPair);
-
         i = processVersion(currentPair, i, subNames);
-      } else {
-        result.add(new CCPathElement(subName, currentViewPath, false));
+      }
+      else {
+        result.add(new CCPathElement(subName, false));
       }
     }
 
@@ -197,9 +143,7 @@ public class CCPathElement {
       try {
         Integer.parseInt(subNames.get(i));
         break;
-      } catch (NumberFormatException e) {
-        //ignore
-      }
+      } catch (final NumberFormatException ignore) {}
     }
     return i;
   }
@@ -248,11 +192,19 @@ public class CCPathElement {
     myIsFromViewPath = myPathElement.equals(currentViewPath);
   }
 
-  public static String createPath(final List<CCPathElement> ccPathElements, int length, boolean appentVersion) {
+  public static String createPath(final List<CCPathElement> ccPathElements) {
+    return createPath(ccPathElements, true);
+  }
+
+  public static String createPath(final List<CCPathElement> ccPathElements, final boolean appentVersion) {
+    return createPath(ccPathElements, ccPathElements.size(), appentVersion);
+  }
+
+  public static String createPath(final List<CCPathElement> ccPathElements, final int length, final boolean appentVersion) {
     return createPath(ccPathElements, 0, length, appentVersion);
   }
 
-  public static String createPath(final List<CCPathElement> ccPathElements, final int startIndex, int endIndex, boolean appentVersion) {
+  public static String createPath(final List<CCPathElement> ccPathElements, final int startIndex, final int endIndex, final boolean appentVersion) {
     StringBuffer result = new StringBuffer();
     boolean first = true;
     for (int i = startIndex; i < endIndex; i++) {
@@ -309,7 +261,7 @@ public class CCPathElement {
   public static String replaceLastVersionAndReturnFullPathWithVersions(final String parentDirFullPath, final String viewName, final String version) {
     final List<CCPathElement> pathElements = splitIntoPathAntVersions(parentDirFullPath, viewName, 0);
     pathElements.get(pathElements.size() - 1).setVersion(version);
-    return createPath(pathElements, pathElements.size(), true);
+    return createPath(pathElements);
 
   }
 
@@ -364,13 +316,11 @@ public class CCPathElement {
   }
 
   public static String removeUnneededDots(final String fullPath) {
-    final List<CCPathElement> elementList = splitIntoPathElements(fullPath);
-    return createPath(elementList, elementList.size(), true);
+    return createPath(splitIntoPathElements(fullPath));
   }
   
   @Override
   public String toString(){
     return new StringBuilder().append(getPathElement()).append(getVersion()).toString();
   }
-
 }

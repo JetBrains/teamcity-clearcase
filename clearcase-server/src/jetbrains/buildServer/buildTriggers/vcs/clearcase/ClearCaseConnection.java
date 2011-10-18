@@ -836,7 +836,7 @@ public class ClearCaseConnection {
       lastElement.setVersion(version.getWholeName());
     }
 
-    final String parentPathWithVersion = CCPathElement.createPath(elements, elements.size(), true);
+    final String parentPathWithVersion = CCPathElement.createPath(elements);
 
     if (hasChild(parentPathWithVersion, objectFile.getName(), objectIsFile)) {
       return doFileExistsInParents(parentFile, viewFile, false);
@@ -897,14 +897,14 @@ public class ClearCaseConnection {
       if (version == null)
         continue;
 
-      final CCPathElement dotElement = new CCPathElement(".", false, true);
+      final CCPathElement dotElement = new CCPathElement(".", true);
       dotElement.setVersion(version);
       element.setVersion(null);
 
       filePath.add(i + 1, dotElement);
     }
 
-    return CCPathElement.createPath(filePath, filePath.size(), true);
+    return CCPathElement.createPath(filePath);
   }
 
   String getPreviousVersion(final HistoryElement element, final boolean isDirPath) throws VcsException, IOException {

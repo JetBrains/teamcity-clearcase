@@ -65,9 +65,7 @@ public interface Constants {
   @NonNls
   public static final String TEAMCITY_PROPERTY_AGENT_DISABLE_VALIDATION_ERRORS = "clearcase.agent.checkout.disable.validation.errors"; //$NON-NLS-1$  
   @NonNls
-  public static final String TEAMCITY_PROPERTY_TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.treat.main.as.version.identifier"; //$NON-NLS-1$
-  @NonNls
-  public static final String TEAMCITY_PROPERTY_DISABLE_HISTORY_ELEMENT_TRANSFORMATION = "clearcase.disable.history.transformation"; //$NON-NLS-1$
+  public static final String TEAMCITY_PROPERTY_DO_NOT_TREAT_MAIN_AS_VERSION_IDENTIFIER = "clearcase.do.not.treat.main.as.version.identifier"; //$NON-NLS-1$
   @NonNls
   public static final String TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN = "clearcase.ignore.error.pattern"; //$NON-NLS-1$
 
