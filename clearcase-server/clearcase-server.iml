@@ -28,7 +28,6 @@
     <orderEntry type="module" module-name="server-model" />
     <orderEntry type="library" name="IDEA-openapi" level="project" />
     <orderEntry type="module" module-name="patches" />
-    <orderEntry type="module" module-name="utils" />
     <orderEntry type="module" module-name="web-openapi" />
     <orderEntry type="module" module-name="clearcase-common" />
   </component>
