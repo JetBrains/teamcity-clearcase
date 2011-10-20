@@ -30,63 +30,59 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import com.intellij.openapi.vcs.VcsException;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
-
-  private static final Logger LOG = Logger.getLogger(InteractiveProcess.class);
-
-  private final InputStream myInput;
-  private final OutputStream myOutput;
-
+  @NotNull private static final Logger LOG = Logger.getLogger(InteractiveProcess.class);
   private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
 
-  protected static interface ILineFilter {
-    String apply(final @NotNull String line);
-  }
+  @Nullable private final InputStream myInput;
+  @Nullable private final OutputStream myOutput;
 
-  protected static final ILineFilter ACCEPT_ALL_FILTER = new ILineFilter() {
-    public String apply(final @NotNull String line) {
-      return line;
-    }
-  };
-
-  public InteractiveProcess(final InputStream inputStream, final OutputStream outputStream) {
+  public InteractiveProcess(@Nullable final InputStream inputStream, @Nullable final OutputStream outputStream) {
     myInput = inputStream;
     myOutput = outputStream;
   }
 
   public void destroy() {
     try {
-      myInput.close();
+      if (myInput != null) {
+        myInput.close();
+      }
+      
       quit();
-      myOutput.close();
-
-    } catch (IOException e) {
+      
+      if (myOutput != null) {
+        myOutput.close();
+      }
+    }
+    catch (final IOException e) {
       LOG.warn(e.getMessage(), e);
-
-    } finally {
+    }
+    finally {
       forceDestroy();
     }
   }
 
+  protected abstract void quit() throws IOException;
+
   protected abstract void forceDestroy();
 
-  protected void quit() throws IOException {
-
-  }
-
-  public synchronized InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
+  @NotNull
+  public synchronized InputStream executeAndReturnProcessInput(@NotNull final String[] params) throws IOException {
     cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
     execute(params);
     try {
       return readFromProcessInput(params);
-    } catch (VcsException e) {
-      throw new IOException(e.getLocalizedMessage());
+    }
+    catch (final VcsException e) {
+      throw new IOException(e.getMessage());
     }
   }
 
-  protected void execute(String[] args) throws IOException {
-    for (String arg : args) {
+  protected void execute(@NotNull final String[] args) throws IOException {
+    if (myOutput == null) return;
+    for (final String arg : args) {
       myOutput.write(' ');
       // file path must be quoted for interactive execution if it contains single ' (see http://devnet.jetbrains.net/thread/292758 for details)
       myOutput.write('"');
@@ -97,10 +93,13 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     myOutput.flush();
   }
 
-  private InputStream readFromProcessInput(final String[] params) throws IOException, VcsException {
+  @NotNull
+  private InputStream readFromProcessInput(@NotNull final String[] params) throws IOException, VcsException {
+    if (myInput == null) {
+      return new ByteArrayInputStream("".getBytes());
+    }
     while (true) {
-      if (myInput.available() > 0)
-        break;
+      if (myInput.available() > 0) break;
       if (getErrorStream().available() > 0) {
         final String errorMesage = readError();
         if (errorMesage.trim().length() > 0) {
@@ -109,15 +108,12 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       }
       try {
         Thread.sleep(100);
-      } catch (InterruptedException e) {
-        // do nothing
-      }
+      } catch (final InterruptedException ignore) {}
     }
     final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
-    StringBuilder buffer = new StringBuilder();
+    final StringBuilder buffer = new StringBuilder();
     String line;
     while ((line = reader.readLine()) != null) {
-      //      lineRead(line);
       if (isEndOfCommandOutput(line, params)) {
         final String theRest = getLastOutput();
         if (theRest != null) {
@@ -136,21 +132,22 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       }
     }
     final ByteArrayInputStream out = new ByteArrayInputStream(response.getBytes());
-
     return new InputStream() {
+      @Override
       public int read() throws IOException {
         return out.read();// fileInput.read();
       }
 
+      @Override
       public void close() throws IOException {
         out.close();
       }
     };
   }
 
-  private void cleanStreams(InputStream... streams) throws IOException {
+  private static void cleanStreams(final InputStream... streams) throws IOException {
     for (final InputStream stream : streams) {
-      if (stream.available() > 0) {
+      if (stream != null && stream.available() > 0) {
         while (stream.read() != -1) {
           if (stream.available() == 0) {
             break;
@@ -188,6 +185,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     return getErrorFilter().apply(result.toString());
   }
 
+  @NotNull
   protected abstract InputStream getErrorStream();
 
   @NotNull
@@ -195,4 +193,15 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     return ACCEPT_ALL_FILTER;
   }
 
+  protected static interface ILineFilter {
+    @NotNull
+    String apply(@NotNull final String line);
+  }
+
+  protected static final ILineFilter ACCEPT_ALL_FILTER = new ILineFilter() {
+    @NotNull
+    public String apply(@NotNull final String line) {
+      return line;
+    }
+  };
 }

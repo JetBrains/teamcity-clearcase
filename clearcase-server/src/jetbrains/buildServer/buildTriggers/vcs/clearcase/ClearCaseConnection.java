@@ -32,9 +32,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseInteractiveProcessPool.ClearCaseInteractiveProcess;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcess;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcessPool;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.CacheElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
@@ -99,6 +100,8 @@ public class ClearCaseConnection {
   private final VcsRoot myRoot;
   private final boolean myConfigSpecWasChanged;
 
+  @NotNull private final ClearCaseInteractiveProcess myProcess;
+
   @NotNull
   private final Map<String, List<SimpleDirectoryChildElement>> myDirectoryContentCache = new HashMap<String, List<SimpleDirectoryChildElement>>();
   @NotNull
@@ -109,18 +112,18 @@ public class ClearCaseConnection {
   }
 
   public ClearCaseConnection(ViewPath viewPath, /*boolean ucmSupported, */ClearCaseStructureCache cache, VcsRoot root, final boolean checkCSChange) throws VcsException, IOException {
-
     // Explanation of config specs at:
     // http://www.philforhumanity.com/ClearCase_Support_17.html
+
+    myViewPath = viewPath;
+    myProcess = ClearCaseInteractiveProcessPool.createProcess(this);
 
     myCache = cache;
     myRoot = root;
 
     myUCMSupported = isUCMView(root);//ucmSupported;
 
-    myViewPath = viewPath;
-
-    if (!isClearCaseView(myViewPath.getClearCaseViewPath())) {
+    if (!isClearCaseView(myViewPath.getClearCaseViewPath(), myProcess)) {
       throw new VcsException("Invalid ClearCase view: \"" + myViewPath.getClearCaseViewPath() + "\"");
     }
 
@@ -133,9 +136,11 @@ public class ClearCaseConnection {
       oldConfigSpec = ConfigSpecParseUtil.getConfigSpecFromStream(myViewPath.getClearCaseViewPathFile(), new FileInputStream(configSpecFile), configSpecFile);
     }
 
-    myConfigSpec = checkCSChange && configSpecFile != null ? ConfigSpecParseUtil.getAndSaveConfigSpec(myViewPath, configSpecFile) : ConfigSpecParseUtil.getConfigSpec(myViewPath);
+    myConfigSpec = checkCSChange && configSpecFile != null
+                   ? ConfigSpecParseUtil.getAndSaveConfigSpec(myViewPath, configSpecFile, myProcess)
+                   : ConfigSpecParseUtil.getConfigSpec(myViewPath, myProcess);
 
-    myConfigSpec.setViewIsDynamic(isViewIsDynamic(myViewPath));
+    myConfigSpec.setViewIsDynamic(isViewIsDynamic());
 
     myConfigSpecWasChanged = checkCSChange && configSpecFile != null && !myConfigSpec.equals(oldConfigSpec);
 
@@ -159,7 +164,8 @@ public class ClearCaseConnection {
     return myUCMSupported;
   }
 
-  public void dispose() throws IOException {
+  public void dispose() {
+    myProcess.destroy();
   }
 
   public String getViewWholePath() {
@@ -416,7 +422,7 @@ public class ClearCaseConnection {
   void loadFileContent(final File tempFile, final String line) throws ExecutionException, InterruptedException, IOException, VcsException {
     final String destFileFqn = insertDots(tempFile.getAbsolutePath(), false);
     final String versionFqn = insertDots(line, false);
-    ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(myRoot).copyFileContentTo(versionFqn, destFileFqn);
+    myProcess.copyFileContentTo(versionFqn, destFileFqn);
   }
 
   public void collectChangesToIgnore(final Revision lastVersion) throws VcsException {
@@ -473,35 +479,30 @@ public class ClearCaseConnection {
   }
   
   static String testConnection(final @NotNull VcsRoot vcsRoot) throws IOException, VcsException {
-    final StringBuffer result = new StringBuffer();
-    final String[] params;
-    if (isUCMView(vcsRoot)) {
-      params = new String[] { "lsstream", "-long" };
-    } else {
-      params = new String[] { "describe", insertDots(ClearCaseSupport.getViewPath(vcsRoot).getWholePath(), true) };
-    }
-    final InputStream input = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(vcsRoot).executeAndReturnProcessInput(params);
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-    try {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        result.append(line).append('\n');
+    final String viewPath = ClearCaseSupport.getViewPath(vcsRoot).getWholePath();
+    return ClearCaseInteractiveProcessPool.doWithProcess(viewPath, new ClearCaseInteractiveProcessPool.ProcessComputable<String>() {
+      public String compute(@NotNull final ClearCaseInteractiveProcess process) throws IOException, VcsException {
+        final StringBuffer result = new StringBuffer();
+        final String[] params = isUCMView(vcsRoot) ? new String[] { "lsstream", "-long" } : new String[] { "describe", insertDots(viewPath, true) };
+        final InputStream input = process.executeAndReturnProcessInput(params);
+        final BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+        try {
+          String line;
+          while ((line = reader.readLine()) != null) {
+            result.append(line).append('\n');
+          }
+        }
+        finally {
+          reader.close();
+        }
+        return result.toString();
       }
-    } finally {
-      reader.close();
-    }
-
-    return result.toString();
+    });
   }
 
-  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException, VcsException {
+  private InputStream executeAndReturnProcessInput(final String[] params) throws IOException {
     if (params != null && params.length > 0) {
-      final ClearCaseInteractiveProcess interactiveProcess = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(myRoot);
-      if (interactiveProcess != null) {
-        return interactiveProcess.executeAndReturnProcessInput(params);
-      } else {
-        LOG.warn(String.format("Could not load InteractiveProcessFacade for '%s'", myViewPath.getWholePath()));
-      }
+      return myProcess.executeAndReturnProcessInput(params);
     }
     return new ByteArrayInputStream("".getBytes());
   }
@@ -590,11 +591,9 @@ public class ClearCaseConnection {
 
   }
 
-  protected static boolean isViewIsDynamic(@NotNull final ViewPath viewPath) throws IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
-    final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lsview", "-cview", "-long" });
+  protected boolean isViewIsDynamic() throws IOException {
+    final InputStream inputStream = myProcess.executeAndReturnProcessInput(new String[] { "lsview", "-cview", "-long" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-
     try {
       String line = reader.readLine();
       while (line != null) {
@@ -603,9 +602,9 @@ public class ClearCaseConnection {
         }
         line = reader.readLine();
       }
-    } finally {
+    }
+    finally {
       reader.close();
-      process.destroy();
     }
     return true;
   }
@@ -643,29 +642,22 @@ public class ClearCaseConnection {
     return myViewPath.getClearCaseViewPath();
   }
 
-  public static InputStream getConfigSpecInputStream(@NotNull final ViewPath viewPath) throws IOException {
-    final ClearCaseInteractiveProcess executor = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
+  public static InputStream getConfigSpecInputStream(@NotNull final ClearCaseInteractiveProcess process) throws IOException {
     try {
-      return executor.executeAndReturnProcessInput(new String[] { "catcs" });
-    } catch (IOException e) {
-      final String tag = getViewTag(viewPath);
+      return process.executeAndReturnProcessInput(new String[] { "catcs" });
+    }
+    catch (final IOException e) {
+      final String tag = getViewTag(process);
       if (tag != null) {
-
-        final InputStream stream = executor.executeAndReturnProcessInput(new String[] { "catcs", "-tag", tag });
-        if (stream != null)
-          return stream;
+        return process.executeAndReturnProcessInput(new String[] { "catcs", "-tag", tag });
       }
       throw e;
-    } finally {
-      executor.destroy();
     }
   }
 
   @Nullable
-  protected static String getViewTag(@NotNull final ViewPath viewPath) throws IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
-    final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lsview", "-cview" });
-    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+  protected static String getViewTag(@NotNull final ClearCaseInteractiveProcess process) throws IOException {
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(process.executeAndReturnProcessInput(new String[] { "lsview", "-cview" })));
     try {
       String line = reader.readLine().trim();
       if (line != null) {
@@ -678,9 +670,9 @@ public class ClearCaseConnection {
         }
       }
       return line;
-    } finally {
+    }
+    finally {
       reader.close();
-      process.destroy();
     }
   }
 
@@ -847,40 +839,54 @@ public class ClearCaseConnection {
 
   @NotNull
   static String getClearCaseViewRoot(@NotNull final String viewPath) throws VcsException, IOException {
-    final String normalPath = CCPathElement.normalizePath(viewPath);
-    final ClearCaseInteractiveProcessPool processPool = ClearCaseInteractiveProcessPool.getDefault();
-    final ClearCaseInteractiveProcess process = processPool.createProcess(normalPath);
-    try {
-      final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
-      final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+    return ClearCaseInteractiveProcessPool.doWithProcess(viewPath, new ClearCaseInteractiveProcessPool.ProcessComputable<String>() {
+      public String compute(@NotNull final ClearCaseInteractiveProcess process) throws IOException, VcsException {
+        return getClearCaseViewRoot(viewPath, process);
+      }
+    });
+  }
 
-      try {
-        final String viewRoot = reader.readLine();
-        if (viewRoot == null || "".equals(viewRoot.trim())) {
-          int offset = 0;
-          if (normalPath.startsWith(UNIX_VIEW_PATH_PREFIX)) {
-            offset = UNIX_VIEW_PATH_PREFIX.length();
-          }
-          final int sep = normalPath.indexOf(File.separatorChar, offset);
-          if (sep == -1)
-            return normalPath;
-          return normalPath.substring(0, sep);
+  @NotNull
+  static String getClearCaseViewRoot(@NotNull final String viewPath, @NotNull final ClearCaseInteractiveProcess process) throws VcsException, IOException {
+    final String normalPath = CCPathElement.normalizePath(viewPath);
+    final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "pwv", "-root" });
+    final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+    try {
+      final String viewRoot = reader.readLine();
+      if (viewRoot == null || "".equals(viewRoot.trim())) {
+        int offset = 0;
+        if (normalPath.startsWith(UNIX_VIEW_PATH_PREFIX)) {
+          offset = UNIX_VIEW_PATH_PREFIX.length();
         }
-        return viewRoot;
+        final int sep = normalPath.indexOf(File.separatorChar, offset);
+        if (sep == -1)
+          return normalPath;
+        return normalPath.substring(0, sep);
       }
-      finally {
-        reader.close();
-      }
+      return viewRoot;
     }
     finally {
-      processPool.shutdown(process);
+      reader.close();
     }
   }
 
   static boolean isClearCaseView(@NotNull final String ccViewPath) throws IOException {
     try {
+      return ClearCaseInteractiveProcessPool.doWithProcess(ccViewPath, new ClearCaseInteractiveProcessPool.ProcessComputable<Boolean>() {
+        public Boolean compute(@NotNull final ClearCaseInteractiveProcess process) throws IOException {
+          return isClearCaseView(ccViewPath, process);
+        }
+      });
+    }
+    catch (final VcsException e) {
+      throw new IOException(e);
+    }
+  }
+
+  static boolean isClearCaseView(@NotNull final String ccViewPath, @NotNull final ClearCaseInteractiveProcess process) throws IOException {
+    try {
       final String normalPath = CCPathElement.normalizePath(ccViewPath);
-      return normalPath.equalsIgnoreCase(getClearCaseViewRoot(normalPath));
+      return normalPath.equalsIgnoreCase(getClearCaseViewRoot(normalPath, process));
     } catch (VcsException ignored) {
       return false;
     }
@@ -960,21 +966,20 @@ public class ClearCaseConnection {
     return subfiles;
   }
 
-  protected static boolean isLabelExists(@NotNull final ViewPath viewPath, @NotNull final String label) throws /*Vcs*/IOException {
-    final ClearCaseInteractiveProcess process = ClearCaseInteractiveProcessPool.getDefault().getOrCreateProcess(viewPath);
+  protected static boolean isLabelExists(@NotNull final ClearCaseInteractiveProcess process, @NotNull final String label) throws IOException {
     final InputStream inputStream = process.executeAndReturnProcessInput(new String[] { "lstype", "-kind", "lbtype", "-short" });
     final BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-    String line;
     try {
+      String line;
       while ((line = reader.readLine()) != null) {
         if (line.equals(label)) {
           return true;
         }
       }
       return false;
-    } finally {
+    }
+    finally {
       reader.close();
-      process.destroy();
     }
   }
 

@@ -128,19 +128,20 @@ public class CacheElement {
     }
     else {
 */
-      return loadChangesWithConnection(nearestCache, myParentSupport.createConnection(myRoot, myIncludeRule, null));
+    final ClearCaseConnection connection = myParentSupport.createConnection(myRoot, myIncludeRule, null);
+    try {
+      return loadChangesWithConnection(nearestCache, connection);
+    }
+    finally {
+      connection.dispose();
+    }
 //    }
   }
 
   private List<ChangedElementInfo> loadChangesWithConnection(CacheElement nearestCache, ClearCaseConnection tempConnection) throws VcsException, IOException {
-    try {
-      final CollectingChangedFilesProcessor processor = new CollectingChangedFilesProcessor(tempConnection);
-      CCParseUtil.processChangedFiles(tempConnection, nearestCache.getVersion(), myVersion, processor);
-      return processor.getChanges();
-    }
-    finally {
-      tempConnection.dispose();
-    }
+    final CollectingChangedFilesProcessor processor = new CollectingChangedFilesProcessor(tempConnection);
+    CCParseUtil.processChangedFiles(tempConnection, nearestCache.getVersion(), myVersion, processor);
+    return processor.getChanges();
   }
 
   public DateRevision getVersion() {

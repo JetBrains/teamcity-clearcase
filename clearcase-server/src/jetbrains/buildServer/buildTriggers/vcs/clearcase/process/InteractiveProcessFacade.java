@@ -18,11 +18,11 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
 import java.io.IOException;
 import java.io.InputStream;
+import org.jetbrains.annotations.NotNull;
 
 public interface InteractiveProcessFacade {
-  
+  @NotNull
+  InputStream executeAndReturnProcessInput(@NotNull String[] params) throws IOException;
+
   void destroy();
-
-  InputStream executeAndReturnProcessInput(final String[] params) throws IOException;
-
 }
