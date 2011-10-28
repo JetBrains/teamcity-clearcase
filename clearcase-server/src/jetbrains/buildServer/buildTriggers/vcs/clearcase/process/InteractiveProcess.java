@@ -46,12 +46,12 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   public void destroy() {
     try {
+      quit();
+      
       if (myInput != null) {
         myInput.close();
       }
-      
-      quit();
-      
+
       if (myOutput != null) {
         myOutput.close();
       }
