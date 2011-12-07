@@ -17,11 +17,7 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
@@ -31,16 +27,19 @@ import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Util;
 
+import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ConfigSpecStandardRule {
+  @NonNls @NotNull private static final String ELLIPSIS = "...";
   private final ScopeType myScopeType;
   protected final Pattern myScopePattern;
   protected final Pattern myBranchPattern;
   protected final String myVersion;
   private final String myMkBranchOption;
   private final boolean myIsLabelSelector;
+  @Nullable private String myPrimaryBranch;
 
   public ResultType isVersionIsInsideView(final Version version) {
     final String versionFullName = version.getWholeName();
@@ -213,12 +212,30 @@ public class ConfigSpecStandardRule {
     myMkBranchOption = getMkBranchOption(versionSelectorWithOptions.substring(versionSelector.length()).trim());
     final String normalizedVersionSelector = CCPathElement.normalizeSeparators(versionSelector.trim());
     int lastSeparatorPos = normalizedVersionSelector.lastIndexOf(File.separatorChar);
-    myBranchPattern = lastSeparatorPos == -1 ? Pattern.compile(".*") : createPattern(normalizedVersionSelector.substring(0, lastSeparatorPos), true);
+    if (lastSeparatorPos == -1) {
+      myBranchPattern = Pattern.compile(".*");
+    }
+    else {
+      final String branchPathSelector = normalizedVersionSelector.substring(0, lastSeparatorPos);
+      myBranchPattern = createPattern(branchPathSelector, true);
+      detectPrimaryBranch(branchPathSelector);
+    }
     myVersion = normalizedVersionSelector.substring(lastSeparatorPos + 1);
     if (myVersion.startsWith("{")) {
       //todo
     }
     myIsLabelSelector = isLabelBasedSelector();
+  }
+
+  // todo maybe set primary branch to null for rule "/main/0"? or for any rule with version == "0"?
+  private void detectPrimaryBranch(@NotNull final String branchPathSelector) {
+    final String[] branches = branchPathSelector.split(escapeBackSlash(File.separator));
+    if (branches.length > 0) {
+      final String primaryBranchCandidate = branches[branches.length - 1];
+      if (!StringUtil.isEmptyOrSpaces(primaryBranchCandidate) && !ELLIPSIS.equals(primaryBranchCandidate)) {
+        myPrimaryBranch = primaryBranchCandidate;
+      }
+    }
   }
 
   private boolean isLabelBasedSelector() {
@@ -268,8 +285,8 @@ public class ConfigSpecStandardRule {
       result = "(.*" + escapedSeparator + ")?" + result;
     }
 
-    result = result.replace(escapedSeparator + "...", "(" + escapedSeparator + "[^" + escapedSeparator + "]+)*");
-    result = result.replace("..." + escapedSeparator, "([^" + escapedSeparator + "]+" + escapedSeparator + ")*");
+    result = result.replace(escapedSeparator + ELLIPSIS, "(" + escapedSeparator + "[^" + escapedSeparator + "]+)*");
+    result = result.replace(ELLIPSIS + escapedSeparator, "([^" + escapedSeparator + "]+" + escapedSeparator + ")*");
 
     return result;
   }
@@ -284,7 +301,7 @@ public class ConfigSpecStandardRule {
           i++;
         }
         else {
-          sb.append("...");
+          sb.append(ELLIPSIS);
           i += 3;
         }
       }
@@ -357,4 +374,9 @@ public class ConfigSpecStandardRule {
 	public boolean isLabelBasedVersionSelector() {
 		return myIsLabelSelector;
 	}
+
+  @Nullable
+  public String getPrimaryBranch() {
+    return myPrimaryBranch;
+  }
 }

@@ -531,7 +531,9 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @Nullable
   public Map<String, String> getDefaultVcsProperties() {
-    return new HashMap<String, String>();
+    return new HashMap<String, String>() {{
+      put(Constants.BRANCH_PROVIDER, Constants.BRANCH_PROVIDER_AUTO);
+    }};
   }
 
   public Collection<VcsClientMapping> getClientMapping(@NotNull final VcsRoot vcsRoot) throws VcsException {
@@ -893,6 +895,15 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @Override
   public TestConnectionSupport getTestConnectionSupport() {
     return this;
+  }
+
+  @NotNull
+  public static SortedSet<String> detectBranches(@NotNull final ViewPath viewPath) throws VcsException, IOException {
+    return ClearCaseInteractiveProcessPool.doWithProcess(viewPath.getWholePath(), new ClearCaseInteractiveProcessPool.ProcessComputable<SortedSet<String>>() {
+      public SortedSet<String> compute(@NotNull final ClearCaseInteractiveProcess process) throws IOException, VcsException {
+        return ConfigSpecParseUtil.getConfigSpec(viewPath, process).getBranches();
+      }
+    });
   }
 
   private static interface ConnectionProcessor {

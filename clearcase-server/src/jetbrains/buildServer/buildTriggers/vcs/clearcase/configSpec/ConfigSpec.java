@@ -18,6 +18,7 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.SortedSet;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
@@ -43,4 +44,7 @@ public interface ConfigSpec {
    * @return true if Version Selector of any Rule refers to a Label 
    */
   boolean hasLabelBasedVersionSelector();
+
+  @NotNull
+  SortedSet<String> getBranches();
 }

@@ -16,12 +16,14 @@
 
 package jetbrains.buildServer.controllers;
 
+import java.util.SortedSet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
 import jetbrains.buildServer.log.Loggers;
+import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.web.openapi.ControllerAction;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
@@ -35,15 +37,13 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
   public EditClearcaseSettingsController(@NotNull final WebControllerManager controllerManager) {
     super(controllerManager);
     
-    controllerManager.registerController("/admin/convertOldCCSettings.html", this);
+    controllerManager.registerController("/admin/clearCaseSettings.html", this);
     
     registerAction(new ControllerAction() {
-      
       public boolean canProcess(@NotNull final HttpServletRequest request) {
-        final String oldViewPath = request.getParameter("view-path-value");
-        return oldViewPath != null && oldViewPath.trim().length() != 0;
+        return "convertOldSettings".equals(request.getParameter("action")) && !StringUtil.isEmptyOrSpaces(request.getParameter("view-path-value"));
       }
-      
+
       public void process(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @Nullable Element ajaxResponse) {
         if (ajaxResponse == null) {
           Loggers.SERVER.debug("Error: ajaxResponse is null");
@@ -58,7 +58,7 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
 
           final Element relPath = new Element("rel-path");
           relPath.addContent(viewPath.getRelativePathWithinTheView());
-          
+
           ajaxResponse.addContent(ccViewPath);
           ajaxResponse.addContent(relPath);
         } catch (VcsException e) {
@@ -68,6 +68,52 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
         }
       }
     });
-  }
 
+    registerAction(new ControllerAction() {
+      public boolean canProcess(@NotNull final HttpServletRequest request) {
+        return "detectBranches".equals(request.getParameter("action"));
+      }
+
+      public void process(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @Nullable Element ajaxResponse) {
+        if (ajaxResponse == null) {
+          Loggers.SERVER.debug("Error: ajaxResponse is null");
+          return;
+        }
+
+        try {
+          final String ccViewPath = request.getParameter("cc-view-path");
+          final String relPath = request.getParameter("rel-path");
+          final String viewPathValue = request.getParameter("view-path-value");
+
+          final ViewPath viewPath;
+          if (!StringUtil.isEmptyOrSpaces(ccViewPath) && !StringUtil.isEmptyOrSpaces(relPath)) {
+            viewPath = new ViewPath(ccViewPath, relPath);
+          }
+          else if (!StringUtil.isEmptyOrSpaces(viewPathValue)) {
+            viewPath = ClearCaseSupport.getViewPath(viewPathValue);
+          }
+          else {
+            throw new VcsException("view path is not specified");
+          }
+
+          final Element result = new Element("result");
+          result.addContent(createContent(ClearCaseSupport.detectBranches(viewPath)));
+          ajaxResponse.addContent(result);
+        }
+        catch (final Exception e) {
+          final Element error = new Element("error");
+          error.addContent(e.getLocalizedMessage());
+          ajaxResponse.addContent(error);
+        }
+      }
+
+      @NotNull
+      private String createContent(@NotNull final SortedSet<String> branches) {
+        if (branches.isEmpty()) {
+          return "No branches detected";
+        }
+        return "Following branches were detected: " + StringUtil.join(branches, ", ");
+      }
+    });
+  }
 }

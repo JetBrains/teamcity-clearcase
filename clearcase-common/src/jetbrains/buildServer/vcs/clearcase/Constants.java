@@ -30,6 +30,12 @@ public interface Constants {
   @NonNls
   public static final String RELATIVE_PATH = "rel-path"; //$NON-NLS-1$
   @NonNls
+  public static final String BRANCH_PROVIDER = "branch-provider"; //$NON-NLS-1$
+  @NonNls
+  public static final String BRANCH_PROVIDER_AUTO = "auto"; //$NON-NLS-1$
+  @NonNls
+  public static final String BRANCH_PROVIDER_CUSTOM = "custom"; //$NON-NLS-1$
+  @NonNls
   public static final String BRANCHES = "branches"; //$NON-NLS-1$
   @NonNls
   public static final String TYPE = "TYPE"; //$NON-NLS-1$

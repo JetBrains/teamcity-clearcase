@@ -18,8 +18,7 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
@@ -207,5 +206,17 @@ public class ConfigSpecImpl implements ConfigSpec {
       }
     }
     return false;
+  }
+
+  @NotNull
+  public SortedSet<String> getBranches() {
+    final SortedSet<String> branches = new TreeSet<String>();
+    for (final ConfigSpecStandardRule rule : myStandardRules) {
+      final String primaryBranch = rule.getPrimaryBranch();
+      if (primaryBranch != null) {
+        branches.add(primaryBranch);
+      }
+    }
+    return branches;
   }
 }

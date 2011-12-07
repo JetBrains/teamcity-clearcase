@@ -22,10 +22,12 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcess;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.VcsException;
+import org.jetbrains.annotations.Nullable;
 
 public class ConfigSpecParseUtil {
   public static ConfigSpec getAndSaveConfigSpec(final ViewPath viewPath, final File outputConfigSpecFile, final ClearCaseInteractiveProcess process) throws VcsException, IOException {
     clearOldSavedVersion(outputConfigSpecFile);
+    //noinspection ResultOfMethodCallIgnored
     outputConfigSpecFile.createNewFile();
 
     return doGetConfigSpecFromStream(viewPath.getClearCaseViewPathFile(), ClearCaseConnection.getConfigSpecInputStream(process), null,
@@ -48,15 +50,15 @@ public class ConfigSpecParseUtil {
 
   public static ConfigSpec getConfigSpecFromStream(final File viewRoot,
                                                    final InputStream configSpecInputStream,
-                                                   final File inputConfigSpecFile) throws VcsException {
+                                                   @Nullable final File inputConfigSpecFile) throws VcsException {
     return doGetConfigSpecFromStream(viewRoot, configSpecInputStream, inputConfigSpecFile, null, null);
   }
 
   private static ConfigSpec doGetConfigSpecFromStream(final File viewRoot,
                                                       final InputStream configSpecInputStream,
-                                                      final File inputConfigSpecFile,
-                                                      final OutputStream configSpecOutputStream,
-                                                      final File outputConfigSpecFile) throws VcsException {
+                                                      @Nullable final File inputConfigSpecFile,
+                                                      @Nullable final OutputStream configSpecOutputStream,
+                                                      @Nullable final File outputConfigSpecFile) throws VcsException {
     final ConfigSpecBuilder builder = new ConfigSpecBuilder(viewRoot);
 
     readConfigSpecFromStream(builder, configSpecInputStream, inputConfigSpecFile, configSpecOutputStream, outputConfigSpecFile, 0);
@@ -66,9 +68,9 @@ public class ConfigSpecParseUtil {
 
   private static int readConfigSpecFromStream(final ConfigSpecRulesProcessor processor,
                                               final InputStream configSpecInputStream,
-                                              final File inputConfigSpecFile,
-                                              final OutputStream configSpecOutputStream,
-                                              final File outputConfigSpecFile,
+                                              @Nullable final File inputConfigSpecFile,
+                                              @Nullable final OutputStream configSpecOutputStream,
+                                              @Nullable final File outputConfigSpecFile,
                                               final int configSpecIncludesIndex) throws VcsException {
     BufferedReader reader = null;
     BufferedWriter writer = null;
@@ -110,8 +112,8 @@ public class ConfigSpecParseUtil {
 
   private static int processLine(final ConfigSpecRulesProcessor processor,
                                   final String line,
-                                  final File inputConfigSpecFile,
-                                  final File outputConfigSpecFile,
+                                  @Nullable final File inputConfigSpecFile,
+                                  @Nullable final File outputConfigSpecFile,
                                   final int configSpecIncludesIndex) throws VcsException, IOException {
     String[] lines = line.split(";");
     int result = configSpecIncludesIndex;
@@ -127,8 +129,8 @@ public class ConfigSpecParseUtil {
   private static int doProcessLine(final ConfigSpecRulesProcessor processor,
                                     final String line,
                                     final boolean lineIsBlockRuleEnd,
-                                    final File inputConfigSpecFile,
-                                    final File outputConfigSpecFile,
+                                    @Nullable final File inputConfigSpecFile,
+                                    @Nullable final File outputConfigSpecFile,
                                     final int configSpecIncludesIndex) throws VcsException, IOException {
     String firstWord = extractFirstWord(line), trimmedfirstWord = trimQuotes(firstWord.trim());
     String rule = line.substring(firstWord.length()).trim();
@@ -157,6 +159,7 @@ public class ConfigSpecParseUtil {
       if (outputConfigSpecFile != null) {
         final File outputFile = new File(outputConfigSpecFile.getAbsolutePath() + "." + includesIndex);
         if (!outputFile.exists()) {
+          //noinspection ResultOfMethodCallIgnored
           outputFile.createNewFile();
         }
         outputStream = new FileOutputStream(outputFile);

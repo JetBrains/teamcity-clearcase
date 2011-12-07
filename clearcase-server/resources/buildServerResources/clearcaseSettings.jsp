@@ -17,13 +17,100 @@
 <%@include file="/include.jsp"%>
 <%@ taglib prefix="props" tagdir="/WEB-INF/tags/props" %>
 <%@ taglib prefix="bs" tagdir="/WEB-INF/tags" %>
-<%@ page import="jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport" %>
 <%@ page import="jetbrains.buildServer.vcs.clearcase.Constants" %>
 
 <jsp:useBean id="propertiesBean" scope="request" type="jetbrains.buildServer.controllers.BasePropertiesBean"/>
 <jsp:useBean id="clearcaseSupport" scope="request" class="jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport" />
 
-<script type="text/javascript" src="/plugins/clearcase/js/clearcaseSettings.js"></script>
+<script type="text/javascript">
+  BS.ClearCaseSettings = {
+    convertSettings: function () {
+      BS.Util.show($('convertSettingsProgressIcon'));
+
+      BS.VcsSettingsForm.clearErrors();
+      BS.VcsSettingsForm.disable();
+
+      BS.ajaxRequest(window['base_uri'] + "/admin/clearCaseSettings.html?action=convertOldSettings", {
+        parameters: {
+          "view-path-value": $("view-path").value
+        },
+
+        onComplete:function (transport) {
+          BS.VcsSettingsForm.enable();
+
+          BS.Util.hide($('convertSettingsProgressIcon'));
+
+          var xml = transport.responseXML;
+
+          if (xml == null) {
+            alert("Error: server response is null");
+            return;
+          }
+
+          var firstChild = xml.documentElement.firstChild;
+
+          if (firstChild.nodeName == 'error') {
+            alert("Error: " + firstChild.textContent);
+            return;
+          }
+
+          $('oldSettingsRow').style.display = "none";
+          $('oldSettingsMessage').style.display = "none";
+
+          var secondChild = firstChild.nextSibling;
+
+          $('view-path').value = "";
+          $('cc-view-path').value = firstChild.textContent;
+          $('rel-path').value = secondChild.textContent;
+        }
+      });
+    },
+
+    detectBranches: function () {
+      $("detectBranchesButton").disabled = true;
+      BS.Util.show($('detectBranchesProgressIcon'));
+
+      BS.ajaxRequest(window['base_uri'] + "/admin/clearCaseSettings.html?action=detectBranches", {
+        parameters: {
+          "cc-view-path": $("cc-view-path").value,
+          "rel-path": $("rel-path").value,
+          "view-path-value": $("view-path") ? $("view-path").value : ""
+        },
+
+        onComplete:function (transport) {
+          BS.Util.hide($('detectBranchesProgressIcon'));
+          $("detectBranchesButton").disabled = false;
+
+          var xml = transport.responseXML;
+          if (xml == null) {
+            $("detectedBranchesErrorSpan").innerHTML = "Error: server is not available";
+            BS.Util.hide("detectedBranchesSpan");
+            BS.Util.show("detectedBranchesErrorSpan");
+            return;
+          }
+
+          var firstChild = xml.documentElement.firstChild;
+
+          if (firstChild.nodeName == 'error') {
+            $("detectedBranchesErrorSpan").innerHTML = "Error: " + firstChild.textContent;
+            BS.Util.hide("detectedBranchesSpan");
+            BS.Util.show("detectedBranchesErrorSpan");
+          }
+          else {
+            $("detectedBranchesSpan").innerHTML = firstChild.textContent;
+            BS.Util.hide("detectedBranchesErrorSpan");
+            BS.Util.show("detectedBranchesSpan");
+          }
+        }
+      });
+    },
+
+    branchProviderChanged: function (auto) {
+      $('branches').disabled = auto;
+      BS.VisibilityHandlers.updateVisibility('branches');
+    }
+  };
+</script>
 
 <c:set var="showClearCaseNotFound" value="${clearcaseSupport.clearCaseClientNotFound}"/>
 <c:set var="clearCaseNotFoundText" value="<%=Constants.CLIENT_NOT_FOUND_MESSAGE%>"/>
@@ -86,18 +173,39 @@
     <span class="error" id="error_cc-view-path"></span></td>
 </tr>
 <tr>
-  <th><label for="rel-path">Relative path within the view: <bs:help file="ClearCase" anchor="relPathOptionDescription"/> <l:star/></label>
+  <th><label for="rel-path">Relative path within the view: <l:star/> <bs:help file="ClearCase" anchor="relPathOptionDescription"/></label>
   </th>
   <td><props:textProperty name="rel-path" className="longField" />
     <span class="error" id="error_rel-path"></span></td>
 </tr>
 <tr>
-  <th><label for="branch">Branches: <bs:help file="ClearCase" anchor="branchesOptionDescription"/></label>
-  </th>
-  <td><props:textProperty name="branches" className="longField" />
+  <th>Branches: <bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
+  <td>
+    <props:radioButtonProperty name="branch-provider"
+                               onclick="BS.ClearCaseSettings.branchProviderChanged(true);"
+                               value="auto"
+                               id="branchAutoProvider"
+                               checked='${empty propertiesBean.properties["branch-provider"] or (propertiesBean.properties["branch-provider"] eq "auto")}'/>
+    <label for="branchAutoProvider">detect automatically</label>
+    <input type="button" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
+    <forms:saving id="detectBranchesProgressIcon" style="float: none;"/>
+    <br/>
+    <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
+  </td>
+</tr>
+<tr>
+  <th>&nbsp;</th>
+  <td>
+    <props:radioButtonProperty name="branch-provider"
+                               onclick="BS.ClearCaseSettings.branchProviderChanged(false);"
+                               value="custom"
+                               id="branchCustomProvider"/>
+    <label for="branchCustomProvider">use custom:</label>
+    <c:set var="disabled"><c:out value="${propertiesBean.properties['branch-provider'] ne 'custom'}"/></c:set>
+    <props:textProperty name="branches" className="longField" disabled="${disabled}"/>
     <span class="error" id="error_branches"></span>
     <div class="smallNote" style="margin-left: 0;">
-      The branches you specify in this field will be used in "-branch" parameter for "lshistory" command. This field is optional but can significally improve the performance so it is recommended to specify it.
+      You can leave this field blank or specify several branches separated by spaces, commas or semicolons.
     </div>
   </td>
 </tr>

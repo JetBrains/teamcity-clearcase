@@ -23,12 +23,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
@@ -58,6 +53,8 @@ import org.jetbrains.annotations.Nullable;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
+
+import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 
 public class ClearCaseConnection {
   @NonNls
@@ -356,9 +353,9 @@ public class ClearCaseConnection {
 
   @NotNull
   private List<String> applyBranches(@NotNull final List<String> baseOptionsList) {
-    final List<String> branches = StringUtil.split(StringUtil.emptyIfNull(myRoot.getProperty(Constants.BRANCHES)));
+    final Collection<String> branches = collectBranches();
     if (branches.isEmpty()) {
-      LOG.debug("There are no branches specified for \"lshistory\".");
+      LOG.debug("There are no branches detected/specified for \"lshistory\".");
       return baseOptionsList;
     }
     else {
@@ -370,6 +367,18 @@ public class ClearCaseConnection {
         }
       }
       return options;
+    }
+  }
+
+  @NotNull
+  private Collection<String> collectBranches() {
+    if (BRANCH_PROVIDER_CUSTOM.equals(myRoot.getProperty(BRANCH_PROVIDER, BRANCH_PROVIDER_AUTO))) {
+      LOG.debug("Using custom branches for \"lshistory\".");
+      return StringUtil.split(StringUtil.emptyIfNull(myRoot.getProperty(BRANCHES)));
+    }
+    else {
+      LOG.debug("Detecting branches for \"lshistory\" automatically.");
+      return myConfigSpec.getBranches();
     }
   }
 
