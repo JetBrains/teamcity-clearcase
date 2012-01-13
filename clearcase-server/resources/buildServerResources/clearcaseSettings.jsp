@@ -25,7 +25,7 @@
 <script type="text/javascript">
   BS.ClearCaseSettings = {
     convertSettings: function () {
-      BS.Util.show($('convertSettingsProgressIcon'));
+      BS.Util.show('convertSettingsProgressIcon');
 
       BS.VcsSettingsForm.clearErrors();
       BS.VcsSettingsForm.disable();
@@ -38,7 +38,7 @@
         onComplete:function (transport) {
           BS.VcsSettingsForm.enable();
 
-          BS.Util.hide($('convertSettingsProgressIcon'));
+          BS.Util.hide('convertSettingsProgressIcon');
 
           var xml = transport.responseXML;
 
@@ -68,7 +68,7 @@
 
     detectBranches: function () {
       $("detectBranchesButton").disabled = true;
-      BS.Util.show($('detectBranchesProgressIcon'));
+      BS.Util.show('detectBranchesProgressIcon');
 
       BS.ajaxRequest(window['base_uri'] + "/admin/clearCaseSettings.html?action=detectBranches", {
         parameters: {
@@ -78,7 +78,7 @@
         },
 
         onComplete:function (transport) {
-          BS.Util.hide($('detectBranchesProgressIcon'));
+          BS.Util.hide('detectBranchesProgressIcon');
           $("detectBranchesButton").disabled = false;
 
           var xml = transport.responseXML;
@@ -221,7 +221,7 @@
 <tr>
   <th><label for="use-global-label">Global labeling:</label></th>
   <td>
-    <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility($('mainContent'));" />
+    <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility('mainContent');" />
     <label for="use-global-label">Use global labels</label>
   </td>
 </tr>
