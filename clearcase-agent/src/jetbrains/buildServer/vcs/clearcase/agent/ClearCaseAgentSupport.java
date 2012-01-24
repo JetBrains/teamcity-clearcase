@@ -128,7 +128,7 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       if (preparedToVersion == null) return;
       final ISourceProvider delegate = new RuleBasedSourceProvider();
       delegate.validate(build.getCheckoutDirectory(), root, rules);
-      LOG.debug(String.format("Passed paremeters accepted by '%s' for checkout", delegate.getClass().getSimpleName()));
+      LOG.debug(String.format("Passed parameters accepted by '%s' for checkout", delegate.getClass().getSimpleName()));
       LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));
       delegate.updateSources(root, rules, preparedToVersion, checkoutDirectory, build, cleanCheckoutRequested);
     }
