@@ -878,12 +878,15 @@ public class CTool {
     final File cffile = new File(String.format("config_specs_%s", System.currentTimeMillis()));
     try {
       final FileWriter writer = new FileWriter(cffile);
-      for (String spec : configSpecs) {
-        writer.write(spec);
-        writer.write("\n");
+      try {
+        for (String spec : configSpecs) {
+          writer.write(spec);
+          writer.write("\n");
+        }
+        writer.flush();
+      } finally {
+        FileUtil.close(writer);
       }
-      writer.flush();
-      writer.close();
       /**
        * set NOTE: must be executed under root hierarchy of Snapshot View
        */
