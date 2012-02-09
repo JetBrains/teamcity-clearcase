@@ -145,7 +145,7 @@
     <td colspan="2">
       <div class="attentionComment">
       <font color='red'>${clearCaseNotFoundText}</font><br/>
-      See online documentation for more detail<bs:help file="ClearCase#ClearCase"/><br/>
+      See online documentation for more details<bs:help file="ClearCase#ClearCase"/><br/>
       </div>
     </td>
   </tr>
