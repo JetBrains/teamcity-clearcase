@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-
 import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildProgressLogger;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.VcsRootEntry;
-import jetbrains.buildServer.vcs.clearcase.CCDelta;
-import jetbrains.buildServer.vcs.clearcase.CCException;
-import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
-import jetbrains.buildServer.vcs.clearcase.Constants;
-import jetbrains.buildServer.vcs.clearcase.Util;
-
+import jetbrains.buildServer.vcs.clearcase.*;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 

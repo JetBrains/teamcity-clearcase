@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package jetbrains.buildServer.vcs.clearcase.agent;
 import java.io.File;
 import java.text.ParseException;
 import java.util.regex.Pattern;
-
 import jetbrains.buildServer.TextLogger;
 import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
@@ -34,7 +33,6 @@ import jetbrains.buildServer.vcs.VcsRoot;
 import jetbrains.buildServer.vcs.clearcase.CTool;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

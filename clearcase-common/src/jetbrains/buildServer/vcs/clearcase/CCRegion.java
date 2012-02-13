@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package jetbrains.buildServer.vcs.clearcase;
 
 import java.util.ArrayList;
-
 import jetbrains.buildServer.vcs.clearcase.CTool.StorageParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import jetbrains.buildServer.vcs.clearcase.CTool.VobParser;

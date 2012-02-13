@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,12 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-
+import com.intellij.openapi.vcs.VcsException;
+import java.io.*;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.clearcase.Util;
-
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-
-import com.intellij.openapi.vcs.VcsException;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {

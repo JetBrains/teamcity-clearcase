@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,13 @@
  */
 package jetbrains.buildServer.vcs.clearcase;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-
 import jetbrains.buildServer.util.FileUtil;
-import jetbrains.buildServer.vcs.clearcase.CTool.ChangeParser;
-import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
-import jetbrains.buildServer.vcs.clearcase.CTool.StreamParser;
-import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
-import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
-
+import jetbrains.buildServer.vcs.clearcase.CTool.*;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

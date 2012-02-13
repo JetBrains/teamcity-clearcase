@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,16 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
-
+import java.util.List;
+import java.util.SortedSet;
+import java.util.Stack;
+import java.util.TreeSet;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.CCPathElement;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Branch;
 import jetbrains.buildServer.vcs.VcsException;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;

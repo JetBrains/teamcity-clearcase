@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2011 JetBrains s.r.o.
+ * Copyright 2000-2012 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,12 @@ import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-
-import org.apache.log4j.Logger;
-
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsSupportUtil;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 public class CCPatchProvider {
