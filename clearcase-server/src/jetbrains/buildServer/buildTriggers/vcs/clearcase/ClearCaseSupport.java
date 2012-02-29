@@ -17,7 +17,6 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
-import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -35,10 +34,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseIntera
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcessPool;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
 import jetbrains.buildServer.serverSide.*;
-import jetbrains.buildServer.util.EventDispatcher;
-import jetbrains.buildServer.util.ExceptionUtil;
-import jetbrains.buildServer.util.MultiMap;
-import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.util.*;
 import jetbrains.buildServer.util.filters.Filter;
 import jetbrains.buildServer.util.filters.FilterUtil;
 import jetbrains.buildServer.vcs.*;
@@ -546,38 +542,57 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
     try {
       viewPath = getViewPath(rootEntry.getVcsRoot());
-    } catch (VcsException e) {
+    }
+    catch (final VcsException e) {
       LOG.debug("CC.MapFullPath: View path not defined: " + e.getLocalizedMessage());
       return Collections.emptySet();
     }
 
-    final String serverViewRelativePath = cutOffVobsDir(viewPath.getRelativePathWithinTheView().replace("\\", "/"));
+    final File viewPathFile = cutOffVobsDir(viewPath.getWholePath(), viewPath);
+    if (viewPathFile == null) { // actually impossible
+      LOG.debug("CC.MapFullPath: Unknown error");
+      return Collections.emptySet();
+    }
 
-    final String normFullPath = cutOffVobsDir(fullPath.replace("\\", "/"));
+    final File fullPathFile = cutOffVobsDir(fullPath, viewPath);
+    if (fullPathFile == null) {
+      LOG.debug("CC.MapFullPath: File \"" + fullPath + "\" is not under view \"" + viewPath.getWholePath() + "\"");
+      return Collections.emptySet();
+    }
 
-    if (isAncestor(serverViewRelativePath, normFullPath)) {
-      String result = normFullPath.substring(serverViewRelativePath.length());
-      if (result.startsWith("/") || result.startsWith("\\")) {
-        result = result.substring(1);
-      }
-
-      LOG.debug("CC.MapFullPath: File " + normFullPath + " is under " + serverViewRelativePath + " result is " + result);
-      return Collections.singleton(result);
-    } else {
-      LOG.debug("CC.MapFullPath: File " + normFullPath + " is not under " + serverViewRelativePath);
+    final String relativePath = getRelativePathIfAncestor(viewPathFile, fullPathFile);
+    if (relativePath != null) {
+      LOG.debug("CC.MapFullPath: File \"" + fullPathFile.getAbsolutePath() + "\" is under \"" + viewPathFile.getAbsolutePath() + "\" result is \"" + relativePath + "\"");
+      return Collections.singleton(relativePath);
+    }
+    else {
+      LOG.debug("CC.MapFullPath: File \"" + fullPathFile.getAbsolutePath() + "\" is not under \"" + viewPathFile.getAbsolutePath() + "\"");
       return Collections.emptySet();
     }
   }
 
-  private String cutOffVobsDir(String serverViewRelativePath) {
-    if (StringUtil.startsWithIgnoreCase(serverViewRelativePath, Constants.VOBS)) {
-      serverViewRelativePath = serverViewRelativePath.substring(Constants.VOBS.length());
+  @Nullable
+  private static File cutOffVobsDir(@NotNull final String filePath, @NotNull final ViewPath viewPath) {
+    final File clearCaseViewPathFile = viewPath.getClearCaseViewPathFile();
+    final File file = new File(filePath);
+    String relativePath = isAbsolute(file) ? getRelativePathIfAncestor(clearCaseViewPathFile, file) : file.getPath();
+    if (relativePath == null) return null;
+    if (StringUtil.startsWithIgnoreCase(relativePath.replaceFirst("\\\\", "/"), Constants.VOBS)) {
+      relativePath = relativePath.substring(Constants.VOBS.length());
     }
-    return serverViewRelativePath;
+    return new File(clearCaseViewPathFile, relativePath);
   }
 
-  private boolean isAncestor(final String sRelPath, final String relPath) {
-    return sRelPath.equalsIgnoreCase(relPath) || StringUtil.startsWithIgnoreCase(relPath, sRelPath + "/");
+  // File path can be "/bla-bla-bla" when server is on Windows and can be "C:\bla-bla-bla" when server is on Linux/Mac OS - we must handle this
+  private static boolean isAbsolute(@NotNull final File file) {
+    return file.isAbsolute() || file.getPath().startsWith(File.separator) || file.getPath().startsWith(":" + File.separator, 1);
+  }
+
+  @Nullable
+  private static String getRelativePathIfAncestor(@NotNull final File parentFile, @NotNull final File childFile) {
+    return FileUtil.isAncestor(parentFile, childFile, false)
+           ? FileUtil.getRelativePath(parentFile.getAbsolutePath(), childFile.getAbsolutePath(), File.separatorChar)
+           : null;
   }
 
   @Override
