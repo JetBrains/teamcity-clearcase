@@ -116,7 +116,7 @@
 <c:set var="clearCaseNotFoundText" value="<%=Constants.CLIENT_NOT_FOUND_MESSAGE%>"/>
 <c:set var="showOldSettings" value="${propertiesBean.properties['view-path'] != null && not empty propertiesBean.properties['view-path']}"/>
 
-<bs:linkCSS>
+<bs:linkCSS dynamic="${true}">
     /css/main.css
     /css/forms.css
     /css/project.css
