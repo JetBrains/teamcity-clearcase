@@ -124,17 +124,11 @@
 </bs:linkCSS>
 
 <c:if test="${showOldSettings}">
-    <style type="text/css">
-        #oldSettingsMessageInternal {
-            margin: auto;
-            padding: 2px 20px;
-            font-size: 90%;
-            text-align: center;
-            font-weight: bold;
-            background-color: #ffffcc;
-        }
-    </style>
-    <div id="oldSettingsMessage"><div id="oldSettingsMessageInternal">Settings are obsolete. Please click "Convert to new settings..." button or type new settings manually. You can also click "Cancel" link to continue to use obsolete settings.</div><br/></div>
+  <div id="oldSettingsMessage">
+    <div class="successMessage">Settings are obsolete. Please click "Convert to new settings..." button or type new settings manually. You
+      can also click "Cancel" link to continue to use obsolete settings.
+    </div>
+  </div>
 </c:if>
 
 <table class="runnerFormTable">
