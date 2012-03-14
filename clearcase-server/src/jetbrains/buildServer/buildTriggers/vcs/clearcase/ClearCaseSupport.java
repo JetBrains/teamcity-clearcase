@@ -323,9 +323,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     catch (final ExecutionException e) {
       throw new VcsException(e);
     }
-    finally {
-      connection.dispose();
-    }
   }
   
   private byte[] getFileContent(final ClearCaseConnection connection, final String filePath) throws VcsException {
