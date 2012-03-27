@@ -839,6 +839,32 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
+  @Override
+  public Map<String, String> getVcsRepositoryProperties(@NotNull final VcsRoot root) {
+    final Map<String, String> result = new HashMap<String, String>(3);
+
+    try {
+      final ViewPath viewPath = getViewPath(root);
+
+      result.put(Constants.CC_VIEW_PATH, viewPath.getClearCaseViewPath()); // normalized path
+      result.put(Constants.RELATIVE_PATH, viewPath.getRelativePathWithinTheView()); // normalized path
+
+      final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, viewPath);
+      try {
+        result.put(Constants.BRANCHES, StringUtil.join(new TreeSet<String>(connection.collectBranches()), ",")); // join branches in nomalized order
+      }
+      finally {
+        connection.dispose();
+      }
+    }
+    catch (final Exception e) {
+      ExceptionUtil.log(LOG, "Failed to get repository properties", e);
+    }
+
+    return result;
+  }
+
+  @NotNull
   public List<ModificationData> collectChanges(@NotNull final VcsRoot fromRoot,
                                                @NotNull final String fromVersion,
                                                @NotNull final VcsRoot toRoot,

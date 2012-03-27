@@ -362,7 +362,7 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  private Collection<String> collectBranches() {
+  public Collection<String> collectBranches() {
     if (BRANCH_PROVIDER_CUSTOM.equals(myRoot.getProperty(BRANCH_PROVIDER, BRANCH_PROVIDER_AUTO))) {
       LOG.debug("Using custom branches for \"lshistory\".");
       return StringUtil.split(StringUtil.emptyIfNull(myRoot.getProperty(BRANCHES)));
