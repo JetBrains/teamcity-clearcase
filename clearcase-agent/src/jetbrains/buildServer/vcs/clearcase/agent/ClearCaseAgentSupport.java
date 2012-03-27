@@ -46,19 +46,26 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
   public ClearCaseAgentSupport() {
   }
 
+  @NotNull
+  @Override
   public String getName() {
     return Constants.NAME;
   }
 
+  @NotNull
+  @Override
   public AgentVcsSupportCore getCore() {
     return this;
   }
 
+  @NotNull
+  @Override
   public UpdatePolicy getUpdatePolicy() {
     return new SourceProviderFactory();//new RuleBasedSourceProvider();///* new LinkBasedSourceProvider() */new ConvensionBasedSourceProvider();
   }
 
-  public boolean canRun(BuildAgentConfiguration config, TextLogger logger) {
+  @Override
+  public boolean canRun(@NotNull BuildAgentConfiguration config, @NotNull TextLogger logger) {
     if (canRun == null) {
       canRun = canRun(config);
     }
