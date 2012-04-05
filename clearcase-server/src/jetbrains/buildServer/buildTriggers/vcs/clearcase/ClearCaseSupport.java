@@ -682,7 +682,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
     finally {
       LOG.debug("Collecting changes was finished.");
-      connection.dispose();
     }
   }
 
@@ -729,14 +728,14 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   private void doWithConnection(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule, @NotNull final ConnectionProcessor processor) throws VcsException {
-    processConnection(processor, createConnection(root, includeRule, null));
+    processAndCloseConnection(processor, createConnection(root, includeRule, null));
   }
 
   private void doWithRootConnection(@NotNull final VcsRoot root, @NotNull final ConnectionProcessor processor) throws VcsException {
-    processConnection(processor, doCreateConnectionWithViewPath(root, false, getRootPath(root)));
+    processAndCloseConnection(processor, doCreateConnectionWithViewPath(root, false, getRootPath(root)));
   }
 
-  private void processConnection(final ConnectionProcessor processor, final ClearCaseConnection connection) throws VcsException {
+  private void processAndCloseConnection(final ConnectionProcessor processor, final ClearCaseConnection connection) throws VcsException {
     try {
       processor.process(connection);
     }
