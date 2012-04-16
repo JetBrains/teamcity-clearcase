@@ -879,21 +879,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                                @NotNull final String fromVersion,
                                                @Nullable final String toVersion,
                                                @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    final IncludeRuleChangeCollector collector = getChangeCollector(root, fromVersion, toVersion);
-    try {
-      //noinspection deprecation
-      return VcsSupportUtil.collectBuildChanges(root, fromVersion, toVersion, checkoutRules, new jetbrains.buildServer.CollectChangesByIncludeRule() {
-        public List<ModificationData> collectBuildChanges(final VcsRoot root,
-                                                          final String fromVersion,
-                                                          final String toVersion,
-                                                          final IncludeRule includeRule) throws VcsException {
-          return collector.collectChanges(includeRule);
-        }
-      });
-    }
-    finally {
-      collector.dispose();
-    }
+    return VcsSupportUtil.collectBuildChanges(root, fromVersion, toVersion, checkoutRules, this);
   }
 
   @NotNull
