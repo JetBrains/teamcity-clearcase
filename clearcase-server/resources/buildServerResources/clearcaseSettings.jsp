@@ -182,7 +182,7 @@
                                checked='${empty propertiesBean.properties["branch-provider"] or (propertiesBean.properties["branch-provider"] eq "auto")}'/>
     <label for="branchAutoProvider">detect automatically</label>
     <input type="button" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
-    <forms:saving id="detectBranchesProgressIcon" class="progressRingInline"/>
+    <forms:saving id="detectBranchesProgressIcon" className="progressRingInline"/>
     <br/>
     <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
   </td>
