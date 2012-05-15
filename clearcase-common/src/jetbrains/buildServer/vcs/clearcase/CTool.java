@@ -863,7 +863,7 @@ public class CTool {
   }
 
   static ChangeParser[] setConfigSpecs(File myLocalPath, ArrayList<String> configSpecs) throws IOException, InterruptedException {
-    final File cffile = new File(String.format("config_specs_%s", System.currentTimeMillis()));
+    final File cffile = FileUtil.createTempFile("config_spec_", "");
     try {
       final FileWriter writer = new FileWriter(cffile);
       try {
