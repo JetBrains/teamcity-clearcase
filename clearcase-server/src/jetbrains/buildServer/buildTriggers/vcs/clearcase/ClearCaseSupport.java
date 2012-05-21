@@ -325,7 +325,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
   
-  private byte[] getFileContent(final ClearCaseConnection connection, final String filePath) throws VcsException {
+  private static byte[] getFileContent(final ClearCaseConnection connection, final String filePath) throws VcsException {
     try {
       final File tempFile = FileUtil.createTempFile("cc", "tmp");
       FileUtil.delete(tempFile);
@@ -366,13 +366,31 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     final ClearCaseConnection connection = createConnection(versionedRoot, IncludeRule.createDefaultInstance(), null);
     try {
       connection.collectChangesToIgnore(Revision.fromNotNullString(version));
-      String path = new File(connection.getViewWholePath()).getParent() + File.separator + connection.getObjectRelativePathWithVersions(connection.getViewWholePath() + File.separator + preparedPath, true);
-      return getFileContent(connection, path);
-    } catch (final ParseException e) {
+      return doGetContent(preparedPath, connection);
+    }
+    catch (final ParseException e) {
       throw new VcsException(e);
-    } finally {
+    }
+    catch (final VcsException e) { // http://youtrack.jetbrains.com/issue/TW-20973
+      int sepPos = preparedPath.indexOf(File.separator);
+      while (sepPos != -1) {
+        try {
+          return doGetContent(preparedPath.substring(sepPos + 1), connection);
+        } catch (final VcsException ignore) {}
+        sepPos = preparedPath.indexOf(File.separator, sepPos + 1);
+      }
+      throw e;
+    }
+    finally {
       connection.dispose();
     }
+  }
+
+  @NotNull
+  private static byte[] doGetContent(@NotNull final String filePath, @NotNull final ClearCaseConnection connection) throws VcsException {
+    final String path = new File(connection.getViewWholePath()).getParent() + File.separator +
+                        connection.getObjectRelativePathWithVersions(connection.getViewWholePath() + File.separator + filePath, true);
+    return getFileContent(connection, path);
   }
 
   @NotNull
