@@ -835,6 +835,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public boolean sourcesUpdatePossibleIfChangesNotFound(@NotNull final VcsRoot root) {
+    if (TeamCityProperties.getBoolean("clearcase.sources.update.is.not.possible.if.changes.not.found")) {
+      return false;
+    }
+
     try {
       final ViewPath viewPath = getViewPath(root);
       return ClearCaseInteractiveProcessPool.doWithProcess(viewPath.getWholePath(), new ClearCaseInteractiveProcessPool.ProcessComputable<Boolean>() {
