@@ -861,7 +861,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   @Override
-  public Map<String, String> getVcsRepositoryProperties(@NotNull final VcsRoot root) {
+  public Map<String, String> getCheckoutProperties(@NotNull final VcsRoot root) {
     final Map<String, String> result = new HashMap<String, String>(3);
 
     try {
