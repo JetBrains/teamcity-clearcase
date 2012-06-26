@@ -17,6 +17,7 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
+import com.intellij.util.Consumer;
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -46,6 +47,8 @@ import jetbrains.buildServer.vcs.patches.PatchBuilder;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
                                                                   CollectChangesByIncludeRules, BuildPatchByIncludeRules,
@@ -859,24 +862,38 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return false;
   }
 
+  public static void consumeBranches(@NotNull final VcsRoot root, @NotNull final Consumer<Collection<String>> consumer) {
+    if (BRANCH_PROVIDER_CUSTOM.equals(root.getProperty(BRANCH_PROVIDER, BRANCH_PROVIDER_AUTO))) {
+      consumer.consume(StringUtil.split(StringUtil.emptyIfNull(root.getProperty(BRANCHES))));
+    }
+    else {
+      consumer.consume(null);
+    }
+  }
+
+
   @NotNull
   @Override
   public Map<String, String> getCheckoutProperties(@NotNull final VcsRoot root) {
-    final Map<String, String> result = new HashMap<String, String>(3);
+    final Map<String, String> result = new HashMap<String, String>(4);
 
     try {
       final ViewPath viewPath = getViewPath(root);
 
-      result.put(Constants.CC_VIEW_PATH, viewPath.getClearCaseViewPath()); // normalized path
-      result.put(Constants.RELATIVE_PATH, viewPath.getRelativePathWithinTheView()); // normalized path
+      result.put(CC_VIEW_PATH, viewPath.getClearCaseViewPath()); // normalized path
+      result.put(RELATIVE_PATH, viewPath.getRelativePathWithinTheView()); // normalized path
 
-      final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, viewPath);
-      try {
-        result.put(Constants.BRANCHES, StringUtil.join(new TreeSet<String>(connection.collectBranches()), ",")); // join branches in nomalized order
-      }
-      finally {
-        connection.dispose();
-      }
+      consumeBranches(root, new Consumer<Collection<String>>() {
+        public void consume(@Nullable final Collection<String> branches) {
+          if (branches == null) { // auto detecting
+            result.put(BRANCH_PROVIDER, BRANCH_PROVIDER_AUTO);
+          }
+          else {
+            result.put(BRANCH_PROVIDER, BRANCH_PROVIDER_CUSTOM);
+            result.put(BRANCHES, StringUtil.join(new TreeSet<String>(branches), ",")); // join branches in nomalized order
+          }
+        }
+      });
     }
     catch (final Exception e) {
       ExceptionUtil.log(LOG, "Failed to get repository properties", e);

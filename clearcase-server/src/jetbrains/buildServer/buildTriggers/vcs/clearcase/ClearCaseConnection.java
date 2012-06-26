@@ -18,6 +18,7 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.util.Consumer;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +33,6 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.util.MultiMap;
-import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
@@ -44,8 +44,6 @@ import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 
 public class ClearCaseConnection {
   @NonNls
@@ -363,14 +361,20 @@ public class ClearCaseConnection {
 
   @NotNull
   public Collection<String> collectBranches() {
-    if (BRANCH_PROVIDER_CUSTOM.equals(myRoot.getProperty(BRANCH_PROVIDER, BRANCH_PROVIDER_AUTO))) {
-      LOG.debug("Using custom branches for \"lshistory\".");
-      return StringUtil.split(StringUtil.emptyIfNull(myRoot.getProperty(BRANCHES)));
-    }
-    else {
-      LOG.debug("Detecting branches for \"lshistory\" automatically.");
-      return myConfigSpec.getBranches();
-    }
+    final Collection<String> result = new ArrayList<String>();
+    ClearCaseSupport.consumeBranches(myRoot, new Consumer<Collection<String>>() {
+      public void consume(@Nullable final Collection<String> branches) {
+        if (branches == null) { // auto detecting
+          LOG.debug("Detecting branches for \"lshistory\" automatically.");
+          result.addAll(myConfigSpec.getBranches());
+        }
+        else {
+          LOG.debug("Using custom branches for \"lshistory\".");
+          result.addAll(branches);
+        }
+      }
+    });
+    return result;
   }
 
   @NotNull
@@ -504,6 +508,7 @@ public class ClearCaseConnection {
     if (params != null && params.length > 0) {
       return myProcess.executeAndReturnProcessInput(params);
     }
+    //noinspection SSBasedInspection
     return new ByteArrayInputStream("".getBytes());
   }
 
