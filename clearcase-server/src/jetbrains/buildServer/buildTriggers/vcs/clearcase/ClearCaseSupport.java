@@ -34,6 +34,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecPa
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcess;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcessPool;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStructureCache;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.serverSide.*;
 import jetbrains.buildServer.util.*;
 import jetbrains.buildServer.util.filters.Filter;
@@ -53,7 +54,8 @@ import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
                                                                   CollectChangesByIncludeRules, BuildPatchByIncludeRules,
                                                                   TestConnectionSupport, BuildStartContextProcessor,
-                                                                  VcsRootBasedMappingProvider, CollectChangesBetweenRoots {
+                                                                  VcsRootBasedMappingProvider, CollectChangesBetweenRoots,
+                                                                  ListDirectChildrenPolicy {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
 
@@ -957,6 +959,35 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @Override
   public TestConnectionSupport getTestConnectionSupport() {
     return this;
+  }
+
+  @Override
+  public ListFilesPolicy getListFilesPolicy() {
+    return this;
+  }
+
+  @NotNull
+  public Collection<VcsFileData> listFiles(@NotNull final VcsRoot root, @NotNull final String directoryPath) throws VcsException {
+    final String dirFullPath = new File(getViewPath(root).getWholePath(), directoryPath).getAbsolutePath();
+    final ClearCaseConnection connection = createConnection(root, IncludeRule.createDefaultInstance(), null);
+    try{
+      final Version dirVersion = connection.getLastVersion(dirFullPath, false);
+      if (dirVersion == null) {
+        return Collections.emptySet();
+      }
+
+      final String dirPathWithVersion = dirFullPath + CCParseUtil.CC_VERSION_SEPARATOR + dirVersion.getWholeName();
+
+      final Collection<VcsFileData> result = new ArrayList<VcsFileData>();
+      for (final SimpleDirectoryChildElement child : connection.getChildren(dirPathWithVersion)) {
+        result.add(new VcsFileData(child.getName(), child.getType() == SimpleDirectoryChildElement.Type.DIRECTORY));
+      }
+
+      return result;
+    }
+    finally {
+      connection.dispose();
+    }
   }
 
   @NotNull
