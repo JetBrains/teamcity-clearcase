@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseSupport;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import org.apache.log4j.Logger;
@@ -18,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ClearCaseInteractiveProcess extends InteractiveProcess {
   private static final Logger LOG = Logger.getLogger(ClearCaseInteractiveProcess.class);
-  private static int READ_TIMEOUT_SECONDS = 60;
 
   private Process myProcess;
   private String myWorkingDirectory;
@@ -36,11 +36,11 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
 
   //just for testing purpose
   public ClearCaseInteractiveProcess() {
-    super(null, null, READ_TIMEOUT_SECONDS);
+    super(null, null);
   }
 
   public ClearCaseInteractiveProcess(final String workingDirectory, final Process process) {
-    super(process.getInputStream(), process.getOutputStream(), READ_TIMEOUT_SECONDS);
+    super(process.getInputStream(), process.getOutputStream());
     myProcess = process;
     myWorkingDirectory = workingDirectory;
   }
@@ -67,6 +67,11 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
     if (myLastExecutedCommand.size() > 5) {
       myLastExecutedCommand.removeFirst();
     }
+  }
+
+  @Override
+  protected int getReadTimeoutSeconds() {
+    return TeamCityProperties.getInteger("clearcase.cleartool.read.timeout.seconds", 60);
   }
 
   @NotNull

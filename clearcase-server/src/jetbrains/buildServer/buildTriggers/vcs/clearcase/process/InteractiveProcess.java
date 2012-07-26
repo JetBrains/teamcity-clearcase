@@ -31,12 +31,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   @Nullable private final InputStream myInput;
   @Nullable private final OutputStream myOutput;
-  private final int myReadTimeoutSeconds;
 
-  public InteractiveProcess(@Nullable final InputStream inputStream, @Nullable final OutputStream outputStream, final int readTimeoutSeconds) {
+  public InteractiveProcess(@Nullable final InputStream inputStream, @Nullable final OutputStream outputStream) {
     myInput = inputStream;
     myOutput = outputStream;
-    myReadTimeoutSeconds = readTimeoutSeconds;
   }
 
   public void destroy() {
@@ -94,7 +92,8 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       return new ByteArrayInputStream("".getBytes());
     }
 
-    final long deadline = System.currentTimeMillis() + myReadTimeoutSeconds * 1000;
+    final int readTimeoutSeconds = getReadTimeoutSeconds();
+    final long deadline = System.currentTimeMillis() + readTimeoutSeconds * 1000;
 
     while (true) {
       if (myInput.available() > 0) break;
@@ -104,7 +103,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
           throw new VcsException(errorMesage);
         }
       }
-      checkTimeoutAndSleep(deadline, params);
+      checkTimeoutAndSleep(deadline, readTimeoutSeconds, params);
     }
 
     final BufferedReader reader = new BufferedReader(new InputStreamReader(myInput));
@@ -142,10 +141,12 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     };
   }
 
-  private void checkTimeoutAndSleep(final long deadline, @NotNull final String[] params) throws ReadTimeoutException {
+  protected abstract int getReadTimeoutSeconds();
+
+  private void checkTimeoutAndSleep(final long deadline, final int readTimeoutSeconds, @NotNull final String[] params) throws ReadTimeoutException {
     if (System.currentTimeMillis() > deadline) {
       throw new ReadTimeoutException("No output produced by the process in both stdout and stderr for more then " +
-                                     myReadTimeoutSeconds + " seconds: " + createCommandLineString(params));
+                                     readTimeoutSeconds + " seconds: " + createCommandLineString(params));
     }
 
     try {
