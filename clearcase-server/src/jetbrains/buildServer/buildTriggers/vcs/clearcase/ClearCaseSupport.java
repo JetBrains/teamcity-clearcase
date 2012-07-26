@@ -856,10 +856,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       });
     }
     catch (final VcsException e) {
-      LOG.error(e.getMessage(), e);
+      ExceptionUtil.log(LOG, "Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
     }
     catch (final IOException e) {
-      LOG.error(e.getMessage(), e);
+      ExceptionUtil.log(LOG, "Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
     }
     return false;
   }
@@ -1040,7 +1040,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     } catch (Throwable e) {
       LOG.error(e.getMessage(), e);
     }
-
   }
 
   public static String getOriginalViewTagParameterName(VcsRoot root) {

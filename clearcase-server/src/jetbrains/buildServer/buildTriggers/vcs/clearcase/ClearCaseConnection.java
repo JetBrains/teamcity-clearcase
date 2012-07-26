@@ -937,7 +937,7 @@ public class ClearCaseConnection {
   }
 
   @NotNull
-  List<SimpleDirectoryChildElement> getChildren(@NotNull final String dirPathWithVersion) throws VcsException {
+  public List<SimpleDirectoryChildElement> getChildren(@NotNull final String dirPathWithVersion) throws VcsException {
     if (!myDirectoryContentCache.containsKey(dirPathWithVersion)) {
       myDirectoryContentCache.put(dirPathWithVersion, doGetChildren(dirPathWithVersion));
     }

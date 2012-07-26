@@ -19,6 +19,7 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 import com.intellij.openapi.vcs.VcsException;
 import java.io.*;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.ExceptionUtil;
 import jetbrains.buildServer.vcs.clearcase.Util;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -49,7 +50,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       }
     }
     catch (final IOException e) {
-      LOG.warn(e.getMessage(), e);
+      ExceptionUtil.log(LOG, "Failed to destroy process", e);
     }
     finally {
       forceDestroy();
