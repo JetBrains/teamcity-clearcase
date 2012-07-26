@@ -27,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.TestOnly;
 
 public class ClearCaseInteractiveProcessPool {
-  @NotNull private static final Logger LOG = Logger.getLogger(ClearCaseConnection.class);
+  @NotNull private static final Logger LOG = Logger.getLogger(ClearCaseInteractiveProcessPool.class);
 
   @NotNull private static ClearCaseFacade ourProcessExecutor = new ClearCaseFacade() {
     @NotNull

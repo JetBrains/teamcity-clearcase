@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ClearCaseInteractiveProcess extends InteractiveProcess {
   private static final Logger LOG = Logger.getLogger(ClearCaseInteractiveProcess.class);
+  private static int READ_TIMEOUT_SECONDS = 60;
 
   private Process myProcess;
   private String myWorkingDirectory;
@@ -35,11 +36,11 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
 
   //just for testing purpose
   public ClearCaseInteractiveProcess() {
-    super(null, null);
+    super(null, null, READ_TIMEOUT_SECONDS);
   }
 
   public ClearCaseInteractiveProcess(final String workingDirectory, final Process process) {
-    super(process.getInputStream(), process.getOutputStream());
+    super(process.getInputStream(), process.getOutputStream(), READ_TIMEOUT_SECONDS);
     myProcess = process;
     myWorkingDirectory = workingDirectory;
   }
@@ -59,22 +60,30 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
   @Override
   protected void execute(@NotNull final String[] args) throws IOException {
     super.execute(args);
-    final StringBuffer commandLine = new StringBuffer();
-    commandLine.append("cleartool");
-    for (String arg : args) {
-      commandLine.append(' ');
-      if (arg.contains(" ")) {
-        commandLine.append("'").append(arg).append("'");
-      } else {
-        commandLine.append(arg);
-      }
-    }
-    LOG.debug("interactive execute: " + commandLine.toString());
+    final String commandLineString = createCommandLineString(args);
+    LOG.debug("interactive execute: " + commandLineString);
     //cache last
-    myLastExecutedCommand.add(commandLine.toString());
+    myLastExecutedCommand.add(commandLineString);
     if (myLastExecutedCommand.size() > 5) {
       myLastExecutedCommand.removeFirst();
     }
+  }
+
+  @NotNull
+  @Override
+  protected String createCommandLineString(@NotNull final String[] args) {
+    final StringBuffer commandLine = new StringBuffer();
+    commandLine.append("cleartool");
+    for (final String arg : args) {
+      commandLine.append(' ');
+      if (arg.contains(" ")) {
+        commandLine.append("'").append(arg).append("'");
+      }
+      else {
+        commandLine.append(arg);
+      }
+    }
+    return commandLine.toString();
   }
 
   @NotNull private static final Pattern END_OF_COMMAND = Pattern.compile("(.*)Command (\\d*) returned status (\\d*)(.*)", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
