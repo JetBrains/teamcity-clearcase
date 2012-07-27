@@ -893,14 +893,15 @@ public class CTool {
 
       } catch (Exception e) {
         // as far setcs writes log file name to stderr have to catch the issue
-        String message = e.getMessage().trim();
-        if (message.startsWith("Log has been written to")) {
-          int firstQuotaIdx = message.indexOf("\"");
+        final String message = e.getMessage().trim();
+        final int pos = message.indexOf("Log has been written to");
+        if (pos != -1) {
+          int firstQuotaIdx = message.indexOf("\"", pos);
           int secondQuotaIdx = message.indexOf("\"", firstQuotaIdx + 1);
           final String absolutePath = message.substring(firstQuotaIdx + 1, secondQuotaIdx);
           return parseUpdateOut(new FileInputStream(absolutePath));
-
-        } else {
+        }
+        else {
           throw new IOException(e.getMessage());
         }
       }
