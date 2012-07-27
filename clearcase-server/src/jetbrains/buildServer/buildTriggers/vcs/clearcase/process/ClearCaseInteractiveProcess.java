@@ -19,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ClearCaseInteractiveProcess extends InteractiveProcess {
   private static final Logger LOG = Logger.getLogger(ClearCaseInteractiveProcess.class);
+  @NotNull public static final String READ_TIMEOUT_PROPERTY_NAME = "clearcase.cleartool.read.timeout.seconds";
 
   private Process myProcess;
   private String myWorkingDirectory;
@@ -71,7 +72,7 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
 
   @Override
   protected int getReadTimeoutSeconds() {
-    return TeamCityProperties.getInteger("clearcase.cleartool.read.timeout.seconds", 60);
+    return TeamCityProperties.getInteger(READ_TIMEOUT_PROPERTY_NAME, 300); // 5 minutes
   }
 
   @NotNull

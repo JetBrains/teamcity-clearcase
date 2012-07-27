@@ -145,8 +145,12 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   private void checkTimeoutAndSleep(final long deadline, final int readTimeoutSeconds, @NotNull final String[] params) throws ReadTimeoutException {
     if (System.currentTimeMillis() > deadline) {
-      throw new ReadTimeoutException("No output produced by the process in both stdout and stderr for more then " +
-                                     readTimeoutSeconds + " seconds: " + createCommandLineString(params));
+      throw new ReadTimeoutException(String.format(
+        "No output produced by the process in both stdout and stderr for more then %d seconds (set \"%s\" internal property to change this timeout): %s",
+        readTimeoutSeconds,
+        ClearCaseInteractiveProcess.READ_TIMEOUT_PROPERTY_NAME,
+        createCommandLineString(params)
+      ));
     }
 
     try {
