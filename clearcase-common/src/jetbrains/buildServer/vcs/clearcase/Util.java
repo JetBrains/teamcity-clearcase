@@ -75,12 +75,11 @@ public class Util {
     LOG.debug(String.format("Executing command: \"%s\" in %s", command, dir));
     try {
       Process process = Runtime.getRuntime().exec(makeArguments(command), envp, dir);
-      if(input == null){
-        process.getOutputStream().close();
-      } else {
+      if (input != null) {
         process.getOutputStream().write(input.getBytes());
         process.getOutputStream().flush();
       }
+      process.getOutputStream().close();
       final StringBuffer errBuffer = new StringBuffer();
       final StringBuffer outBuffer = new StringBuffer();
       final Thread errReader = pipe(process.getErrorStream(), null, errBuffer);
