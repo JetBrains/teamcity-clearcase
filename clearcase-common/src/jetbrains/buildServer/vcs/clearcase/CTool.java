@@ -86,8 +86,9 @@ public class CTool {
   
   //Executor's part
   public static interface ICommandExecutor {
-    String[] execAndWait(final @NotNull String command) throws IOException;
-    String[] execAndWait(final @NotNull String command, final @NotNull File workingDirectory) throws IOException; 
+    String[] execAndWait(@NotNull String command) throws IOException;
+    String[] execAndWait(@NotNull String command, @NotNull File workingDirectory) throws IOException;
+    String[] execAndWait(@NotNull String command, @NotNull String input, @NotNull File workingDirectory) throws IOException;
   }
   
   private static ICommandExecutor ourCommandExecutor = new ICommandExecutor() {
@@ -97,6 +98,10 @@ public class CTool {
 
     public String[] execAndWait(final String command, final File path) throws IOException {
       return Util.execAndWait(command, path);
+    }
+
+    public String[] execAndWait(@NotNull final String command, @NotNull final String input, @NotNull final File path) throws IOException {
+      return Util.execAndWait(command, input, null, path);
     }
   };
   
@@ -883,7 +888,7 @@ public class CTool {
       // cffile.getAbsolutePath());
       final String command = String.format(CMD_SETCS, getCleartoolExecutable(), cffile.getAbsolutePath());
       try {
-        getCommandExecutor().execAndWait(command, myLocalPath);
+        getCommandExecutor().execAndWait(command, "yes", myLocalPath);
         return new ChangeParser[0];// should not reach there
 
       } catch (Exception e) {
