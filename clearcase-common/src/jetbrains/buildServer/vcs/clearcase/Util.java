@@ -99,7 +99,7 @@ public class Util {
         throw new IOException(String.format("%s: command: {\"%s\" in: \"%s\"}", errBuffer.toString().trim(), command.trim(), dir.getAbsolutePath()));
       }
       if (outBuffer.toString().trim().length() > 0) {
-        return outBuffer.toString().split("\n+");
+        return trimElements(outBuffer.toString().trim().split("\n+"));
       }
       return new String[0];
 
@@ -114,6 +114,13 @@ public class Util {
       throw new IOException(e.getMessage());
 
     }
+  }
+
+  private static String[] trimElements(final String[] strings) {
+    for (int i = 0; i < strings.length; i++) {
+      strings[i] = strings[i].trim();
+    }
+    return strings;
   }
 
   public static boolean isExecutableNotFoundException(final @NotNull Exception e) {
