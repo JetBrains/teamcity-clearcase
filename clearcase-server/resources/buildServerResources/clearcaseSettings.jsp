@@ -150,7 +150,7 @@
         <th><label for="view-path" style="text-decoration: line-through">View path:</label>
         </th>
         <td>
-            <input style="float: right;" type="button" value="Convert to new settings..." onclick="BS.ClearCaseSettings.convertSettings();"/>
+            <input style="float: right;" type="button" class="btn btn_mini" value="Convert to new settings..." onclick="BS.ClearCaseSettings.convertSettings();"/>
             <forms:saving id="convertSettingsProgressIcon"/>
             <props:textProperty name="view-path" className="longField" />
             <span class="error" id="error_view-path"></span>
@@ -181,7 +181,7 @@
                                id="branchAutoProvider"
                                checked='${empty propertiesBean.properties["branch-provider"] or (propertiesBean.properties["branch-provider"] eq "auto")}'/>
     <label for="branchAutoProvider">detect automatically</label>
-    <input type="button" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
+    <input type="button" class="btn btn_mini" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
     <forms:saving id="detectBranchesProgressIcon" className="progressRingInline"/>
     <br/>
     <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
