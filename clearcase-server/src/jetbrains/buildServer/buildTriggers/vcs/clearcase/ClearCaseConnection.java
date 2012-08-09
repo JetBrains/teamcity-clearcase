@@ -260,11 +260,35 @@ public class ClearCaseConnection {
   @NotNull
   protected HistoryElementIterator getChangesIterator(@NotNull final Revision fromVersion) throws IOException, VcsException {
     final List<String> lsHistoryOptions = getLSHistoryOptions();
-    HistoryElementIterator iterator = new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions.get(0)));
+    HistoryElementIterator iterator = doGetChangesIterator(fromVersion, lsHistoryOptions.get(0));
     for (int i = 1; i < lsHistoryOptions.size(); i++) {
-      iterator = new HistoryElementMerger(iterator, new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions.get(i))));
+      iterator = new HistoryElementMerger(iterator, doGetChangesIterator(fromVersion, lsHistoryOptions.get(i)));
     }
     return iterator;
+  }
+
+  private HistoryElementIterator doGetChangesIterator(@NotNull final Revision fromVersion,
+                                                      @NotNull final String lsHistoryOptions) throws IOException, VcsException {
+    try {
+      return new HistoryElementProvider(getChanges(fromVersion, lsHistoryOptions));
+    }
+    catch (final IOException e) {
+      if (isBranchTypeNotFoundException(e)) {
+        return HistoryElementIterator.EMPTY;
+      }
+      throw e;
+    }
+    catch (final VcsException e) {
+      if (isBranchTypeNotFoundException(e)) {
+        return HistoryElementIterator.EMPTY;
+      }
+      throw e;
+    }
+  }
+
+  private static boolean isBranchTypeNotFoundException(@NotNull final Throwable e) {
+    final String message = e.getMessage();
+    return message != null && message.contains("Branch type not found");
   }
 
   @NotNull

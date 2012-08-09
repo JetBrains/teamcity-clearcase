@@ -26,4 +26,17 @@ public interface HistoryElementIterator {
   boolean hasNext();
 
   void close() throws IOException;
+
+  @NotNull HistoryElementIterator EMPTY = new HistoryElementIterator() {
+    @NotNull
+    public HistoryElement next() {
+      throw new UnsupportedOperationException();
+    }
+
+    public boolean hasNext() {
+      return false;
+    }
+
+    public void close() {}
+  };
 }
