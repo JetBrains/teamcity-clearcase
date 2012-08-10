@@ -35,7 +35,8 @@ public class CCPatchProvider {
 	
   private File myTempFile;
   private final ClearCaseConnection myConnection;
-  private static final boolean CC_OPTIMIZE_CHECKOUT = TeamCityProperties.getBoolean("clearcase.optimize.initial.checkout");
+  public static final String CLEARCASE_OPTIMIZE_INITIAL_CHECKOUT_PROPERTY_NAME = "clearcase.optimize.initial.checkout";
+  private static final boolean CC_OPTIMIZE_CHECKOUT = TeamCityProperties.getBoolean(CLEARCASE_OPTIMIZE_INITIAL_CHECKOUT_PROPERTY_NAME);
   private static final String EXECUTABLE_ATTR = "ugo+x";
   private final boolean myUseCCCache;
 
@@ -49,6 +50,8 @@ public class CCPatchProvider {
     try {
       if (fromVersion == null) {
         if (CC_OPTIMIZE_CHECKOUT) {
+          LOG.warn("Exporting files from disk and ignoring the revision to checkout. Can result in inconsistent checkout on wrong revision. " +
+                   "Remove internal property '" + CLEARCASE_OPTIMIZE_INITIAL_CHECKOUT_PROPERTY_NAME + "' to disable this optimization.");
           VcsSupportUtil.exportFilesFromDisk(builder, new File(myConnection.getViewWholePath()));
         }
         else {
