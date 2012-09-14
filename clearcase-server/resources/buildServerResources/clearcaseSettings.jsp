@@ -48,9 +48,10 @@
           }
 
           var firstChild = xml.documentElement.firstChild;
+          var firstChildText = firstChild.textContent || firstChild.text;
 
           if (firstChild.nodeName == 'error') {
-            alert("Error: " + firstChild.textContent);
+            alert("Error: " + firstChildText);
             return;
           }
 
@@ -60,8 +61,8 @@
           var secondChild = firstChild.nextSibling;
 
           $('view-path').value = "";
-          $('cc-view-path').value = firstChild.textContent;
-          $('rel-path').value = secondChild.textContent;
+          $('cc-view-path').value = firstChildText;
+          $('rel-path').value = secondChild.textContent || secondChild.text;
         }
       });
     },
@@ -90,14 +91,15 @@
           }
 
           var firstChild = xml.documentElement.firstChild;
+          var text = firstChild.textContent || firstChild.text;
 
           if (firstChild.nodeName == 'error') {
-            $("detectedBranchesErrorSpan").innerHTML = "Error: " + firstChild.textContent;
+            $("detectedBranchesErrorSpan").innerHTML = "Error: " + text;
             BS.Util.hide("detectedBranchesSpan");
             BS.Util.show("detectedBranchesErrorSpan");
           }
           else {
-            $("detectedBranchesSpan").innerHTML = firstChild.textContent;
+            $("detectedBranchesSpan").innerHTML = text;
             BS.Util.hide("detectedBranchesErrorSpan");
             BS.Util.show("detectedBranchesSpan");
           }
