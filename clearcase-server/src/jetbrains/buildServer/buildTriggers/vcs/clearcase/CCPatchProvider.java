@@ -17,12 +17,12 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
-import com.intellij.openapi.util.io.FileUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsSupportUtil;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;

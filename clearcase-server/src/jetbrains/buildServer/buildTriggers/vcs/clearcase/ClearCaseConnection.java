@@ -17,7 +17,6 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
-import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.util.Consumer;
 import java.io.*;
 import java.util.*;
@@ -32,6 +31,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.structure.ClearCaseStru
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.Version;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.versionTree.VersionTree;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.util.MultiMap;
 import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
