@@ -156,7 +156,7 @@
             <forms:saving id="convertSettingsProgressIcon"/>
             <props:textProperty name="view-path" className="longField" />
             <span class="error" id="error_view-path"></span>
-            <div class="smallNote" style="margin-left: 0;">
+            <div class="grayNote">
               Obsolete setting. Please see the message above.
             </div>
         </td>
@@ -200,7 +200,7 @@
     <c:set var="disabled"><c:out value="${propertiesBean.properties['branch-provider'] ne 'custom'}"/></c:set>
     <props:textProperty name="branches" className="longField" disabled="${disabled}"/>
     <span class="error" id="error_branches"></span>
-    <div class="smallNote" style="margin-left: 0;">
+    <div class="grayNote">
       You can leave this field blank or specify several branches separated by spaces, commas or semicolons.
     </div>
   </td>
@@ -226,7 +226,7 @@
   <td>
     <props:textProperty name="global-labels-vob" className="longField" disabled="${propertiesBean.properties['use-global-label'] != 'true'}"/>
     <span class="error" id="error_global-labels-vob"></span>
-    <div class="smallNote" style="margin-left: 0;">
+    <div class="grayNote">
       Pathname of the VOB tag (whether or not the VOB is mounted) or of any file system object within the VOB (if the VOB is mounted)
     </div>
   </td>
