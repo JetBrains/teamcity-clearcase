@@ -647,7 +647,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public List<ModificationData> collectChanges(final VcsRoot root, final Revision fromVersion, final Revision currentVersion, final IncludeRule includeRule) throws VcsException {
-    LOG.debug(String.format("Attempt connect to '%s'", root.convertToPresentableString()));
+    LOG.debug(String.format("Attempt connect to '%s'", root.describe(true)));
     final ClearCaseConnection connection = createConnection(root, includeRule, null);
     try {
       return collectChangesWithConnection(root, fromVersion, currentVersion, connection);
