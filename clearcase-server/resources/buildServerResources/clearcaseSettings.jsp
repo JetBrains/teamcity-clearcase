@@ -119,11 +119,18 @@
 <c:set var="showOldSettings" value="${propertiesBean.properties['view-path'] != null && not empty propertiesBean.properties['view-path']}"/>
 
 <bs:linkCSS dynamic="${true}">
-    /css/main.css
-    /css/forms.css
-    /css/project.css
-    /css/admin/adminMain.css
+  /css/FontAwesome/css/font-awesome.min.css
+  /css/main.css
+  /css/forms.css
+  /css/project.css
+  /css/admin/adminMain.css
 </bs:linkCSS>
+
+<!--[if IE 7]>
+<style type="text/css">
+@import <c:url value='/css/FontAwesome/css/font-awesome-ie7.min.css'/>;
+</style>
+<![endif]-->
 
 <c:if test="${showOldSettings}">
   <div id="oldSettingsMessage">
