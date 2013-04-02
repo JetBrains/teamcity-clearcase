@@ -6,7 +6,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="IDEA-openapi" level="project" />
+    <orderEntry type="module" module-name="idea-obsolete-openapi" />
     <orderEntry type="module" module-name="common" />
   </component>
 </module>
