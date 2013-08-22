@@ -708,6 +708,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
+  @NotNull
   public String label(@NotNull final String label, @NotNull final String version, @NotNull final VcsRoot root, @NotNull final CheckoutRules checkoutRules) throws VcsException {
     try {
       final Revision revision = Revision.fromNotNullString(version);
