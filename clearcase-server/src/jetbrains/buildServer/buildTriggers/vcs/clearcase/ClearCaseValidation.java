@@ -310,7 +310,7 @@ public class ClearCaseValidation {
   }
 
   private static void debug(Throwable t) {
-    LOG.debug(t);
+    LOG.debug(t.getMessage(), t);
   }
 
   private static String trim(String val) {

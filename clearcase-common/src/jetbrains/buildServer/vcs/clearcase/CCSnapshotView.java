@@ -295,7 +295,7 @@ public class CCSnapshotView {
       CTool.lsView(getTag());
       return true;
     } catch (Exception e) {
-      LOG.debug(e);
+      LOG.debug(e.getMessage(), e);
       return false;
     }
   }
@@ -305,7 +305,7 @@ public class CCSnapshotView {
       CTool.lsView(getLocalPath());
       return true;
     } catch (Exception e) {
-      LOG.debug(e);
+      LOG.debug(e.getMessage(), e);
       return false;
     }
   }

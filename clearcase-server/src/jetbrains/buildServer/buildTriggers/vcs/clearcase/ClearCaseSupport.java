@@ -532,7 +532,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))
             );
             LOG.info(e.getMessage());
-            LOG.debug(e);
+            LOG.debug(e.getMessage(), e);
             return false;
           }
           return true;

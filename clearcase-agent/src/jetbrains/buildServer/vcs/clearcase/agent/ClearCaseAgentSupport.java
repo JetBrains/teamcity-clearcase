@@ -88,7 +88,6 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_PROP, config.getBuildParameters().getSystemProperties().get(CTool.CLEARTOOL_EXEC_PATH_PROP)));
       LOG.debug(String.format("%s: %s", CTool.CLEARTOOL_EXEC_PATH_ENV, config.getBuildParameters().getEnvironmentVariables().get(CTool.CLEARTOOL_EXEC_PATH_ENV)));
       LOG.debug(e.getMessage(), e);
-      LOG.debug(e);
       return false;
     }
 

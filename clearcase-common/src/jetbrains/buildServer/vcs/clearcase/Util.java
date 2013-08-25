@@ -51,7 +51,7 @@ public class Util {
       execAndWait(executable);
       return true;
     } catch (Throwable e) {
-      LOG.debug(e);
+      LOG.debug(e.getMessage(), e);
       if(e instanceof ExecutableNotFoundException){
         return false;
       }
