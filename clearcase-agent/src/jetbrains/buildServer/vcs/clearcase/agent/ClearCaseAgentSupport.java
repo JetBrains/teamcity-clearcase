@@ -27,6 +27,7 @@ import jetbrains.buildServer.agent.vcs.UpdateByCheckoutRules2;
 import jetbrains.buildServer.agent.vcs.UpdatePolicy;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.DateRevision;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
+import jetbrains.buildServer.util.Dates;
 import jetbrains.buildServer.vcs.CheckoutRules;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
@@ -141,7 +142,8 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
     private static String prepareVersion(@NotNull final String toVersion) throws VcsException {
       try {
         final DateRevision revision = Revision.fromNotNullString(toVersion).getDateRevision();
-        return revision == null ? null : revision.getDateString();
+        if (revision == null) return null;
+        return Revision.fromDate(Dates.after(revision.getDate(), Dates.ONE_SECOND)).getDateString(); // add one second to not miss the change with exactly the same date
       }
       catch (final ParseException e) {
         throw new VcsException(e);
