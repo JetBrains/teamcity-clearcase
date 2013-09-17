@@ -531,8 +531,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
               //it fired by "Relative path..." setting because others already checked hard I guess...
               new InvalidProperty(Constants.RELATIVE_PATH, String.format(Messages.getString("ClearCaseSupport.clearcase_view_relative_path_is_not_under_configspec_loading_rules"), e.getMessage()))
             );
-            LOG.info(e.getMessage());
-            LOG.debug(e.getMessage(), e);
+            LOG.info(e.toString());
+            LOG.debug(e.toString(), e);
             return false;
           }
           return true;
@@ -1077,7 +1077,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
           try {
             patterns.add(Pattern.compile(pstr, Pattern.DOTALL | Pattern.MULTILINE));
           } catch (PatternSyntaxException e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.toString());
           }
         }
       }
