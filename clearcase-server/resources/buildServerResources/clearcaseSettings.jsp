@@ -181,7 +181,7 @@
   <td><props:textProperty name="rel-path" className="longField" />
     <span class="error" id="error_rel-path"></span></td>
 </tr>
-<tr>
+<tr class="advancedSetting">
   <th>Branches: <bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
   <td>
     <props:radioButtonProperty name="branch-provider"
@@ -196,7 +196,7 @@
     <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
   </td>
 </tr>
-<tr>
+<tr class="advancedSetting">
   <th>&nbsp;</th>
   <td>
     <props:radioButtonProperty name="branch-provider"
@@ -212,7 +212,7 @@
     </div>
   </td>
 </tr>
-<tr>
+<tr class="advancedSetting">
   <th class="noBorder"><label for="TYPE">Use ClearCase:</label></th>
   <td class="noBorder"><props:selectProperty name="TYPE">
         <props:option value="UCM">UCM</props:option>
@@ -220,15 +220,15 @@
       </props:selectProperty></td>
 </tr>
 </l:settingsGroup>
-<l:settingsGroup title="Labling settings">
-<tr>
+<l:settingsGroup title="Labling settings" className="advancedSetting">
+<tr class="advancedSetting">
   <th><label for="use-global-label">Global labeling:</label></th>
   <td>
     <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility('mainContent');" />
     <label for="use-global-label">Use global labels</label>
   </td>
 </tr>
-<tr>
+<tr class="advancedSetting">
   <th><label for="global-labels-vob">Global labels VOB:</label></th>
   <td>
     <props:textProperty name="global-labels-vob" className="longField" disabled="${propertiesBean.properties['use-global-label'] != 'true'}"/>
