@@ -42,9 +42,9 @@ public class Util {
    */
   private static long ourTotalSleepTime;
 
-  private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();
+  private static final HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();
 
-  private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2(.*)");
+  private static final Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2(.*)");
 
   public static boolean canRun(String executable) {
     try {
@@ -777,8 +777,8 @@ public class Util {
   @SuppressWarnings("serial")
   public static class ExecutableNotFoundException extends RuntimeException {
 
-    private String myExecutable;
-    private String myCommand;
+    private final String myExecutable;
+    private final String myCommand;
 
     private String extractExecutable(@NotNull String command) {
       command = command.trim();

@@ -20,10 +20,10 @@ public class CCStorage {
   public static final String VOB = "VOB";
   public static final String View = "View";  
 
-  private String myTag;
-  private String myGlobalPath;
-  private String myServerHost;
-  private String myType;
+  private final String myTag;
+  private final String myGlobalPath;
+  private final String myServerHost;
+  private final String myType;
 
   CCStorage(final String serverHost, final String type, final String tag, final String globalPath) {
     myType = type;

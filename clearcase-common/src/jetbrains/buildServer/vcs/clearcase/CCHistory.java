@@ -7,17 +7,17 @@ import jetbrains.buildServer.vcs.clearcase.CTool.HistoryParser;
 
 public class CCHistory {
 
-  private CCSnapshotView myView;
+  private final CCSnapshotView myView;
 
   private Kind myKind;
 
-  private Date myDate;
+  private final Date myDate;
 
-  private File myFile;
+  private final File myFile;
 
-  private String myVersion;
+  private final String myVersion;
 
-  private String myComment;
+  private final String myComment;
   
   public CCHistory(CCSnapshotView view, File file, Kind kind, Date date, String version, String comment) {
     myView = view;

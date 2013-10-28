@@ -413,7 +413,7 @@ public class CTool {
 
     private String myHostLocalPath;
     private String myGlobalPath;
-    private String[] myStdOut;
+    private final String[] myStdOut;
 
     VobObjectParser(String[] stdout) {
       myStdOut = stdout;
@@ -451,7 +451,7 @@ public class CTool {
 
   static abstract class AbstractCCParser implements ICCOutputParser {
 
-    private String[] myStdOut;
+    private final String[] myStdOut;
 
     protected AbstractCCParser(String[] stdout) {
       myStdOut = stdout;
@@ -475,7 +475,7 @@ public class CTool {
     //    static final String OUTPUT_FORMAT =                "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%Nc#--#%[activity]p\\n";    
     static final String OUTPUT_FORMAT_WITHOUT_COMMENTS = "%Nd#--#%En#--#%m#--#%Vn#--#%o#--#%e#--#%[activity]p\\n";
     //private static Pattern PATTERN = Pattern.compile("(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)\\.(\\d\\d)(\\d\\d)(\\d\\d)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)#--#(.*)");
-    private static Pattern PATTERN_WITHOUT_COMMENTS = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
+    private static final Pattern PATTERN_WITHOUT_COMMENTS = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
     //private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");
     //    private static Pattern PATTERN = Pattern.compile("(\\d*)\\.(\\d*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)#--#(.*?)");    
     //    private static Pattern ACTIVITY_PATTERN = Pattern.compile("(.*)#--#(.*)");
@@ -552,7 +552,7 @@ public class CTool {
 
     private boolean isAddition;
 
-    private String myLocalPath;
+    private final String myLocalPath;
 
     private String myVersionBefor;
 

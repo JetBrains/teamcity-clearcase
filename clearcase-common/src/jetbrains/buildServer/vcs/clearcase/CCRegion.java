@@ -22,7 +22,7 @@ import jetbrains.buildServer.vcs.clearcase.CTool.VobParser;
 
 public class CCRegion {
 
-  private String myTag;
+  private final String myTag;
 
   public CCRegion() {
     this("any");

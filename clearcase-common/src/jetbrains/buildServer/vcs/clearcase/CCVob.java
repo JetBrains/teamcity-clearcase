@@ -19,7 +19,7 @@ import jetbrains.buildServer.vcs.clearcase.CTool.VobObjectParser;
 
 public class CCVob {
 
-  private String myTag;
+  private final String myTag;
   private String myGlobalPath;
   private String myRegion;
   private String myServerHost;

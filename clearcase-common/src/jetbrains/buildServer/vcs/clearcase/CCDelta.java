@@ -18,15 +18,15 @@ package jetbrains.buildServer.vcs.clearcase;
 
 public class CCDelta {
   
-  private CCSnapshotView myView;
+  private final CCSnapshotView myView;
   
-  private Kind myKind;
+  private final Kind myKind;
   
-  private String myPath;
+  private final String myPath;
 
-  private String myRevBefor;
+  private final String myRevBefor;
 
-  private String myRevAfter;  
+  private final String myRevAfter;
   
   
   CCDelta(CCSnapshotView view, boolean isAddition, boolean isChange, boolean isDeletion, String path, String revBefor, String revAfter){

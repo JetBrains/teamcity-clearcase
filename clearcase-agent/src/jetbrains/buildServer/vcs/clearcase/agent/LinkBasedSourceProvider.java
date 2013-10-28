@@ -32,11 +32,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class LinkBasedSourceProvider extends AbstractSourceProvider {
 
-  private static HashMap<String, Collection<PublishingRequest>> requestsMap = new HashMap<String, Collection<PublishingRequest>>();
+  private static final HashMap<String, Collection<PublishingRequest>> requestsMap = new HashMap<String, Collection<PublishingRequest>>();
 
   static final Logger LOG = Logger.getLogger(LinkBasedSourceProvider.class);
 
-  private boolean isWindows;
+  private final boolean isWindows;
 
   public LinkBasedSourceProvider() {
     isWindows = System.getProperty("os.name").toLowerCase().contains("windows");

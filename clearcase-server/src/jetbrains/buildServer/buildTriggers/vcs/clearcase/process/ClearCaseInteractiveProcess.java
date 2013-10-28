@@ -23,7 +23,7 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
 
   private Process myProcess;
   private String myWorkingDirectory;
-  private LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
+  private final LinkedList<String> myLastExecutedCommand = new LinkedList<String>();
   private ILineFilter myErrorFilter;
   private String myLastOutput;
 
