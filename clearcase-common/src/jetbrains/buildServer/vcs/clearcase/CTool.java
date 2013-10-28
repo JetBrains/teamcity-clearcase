@@ -239,9 +239,7 @@ public class CTool {
     for (Map.Entry<String, String> sysEnvp : System.getenv().entrySet()) {
       out.add(String.format("%s=%s", sysEnvp.getKey(), sysEnvp.getValue()));
     }
-    for (String extraEnv : extraEnvp) {
-      out.add(extraEnv);
-    }
+    Collections.addAll(out, extraEnvp);
     return out.toArray(new String[out.size()]);
   }
 

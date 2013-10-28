@@ -17,6 +17,7 @@ package jetbrains.buildServer.vcs.clearcase.agent;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildProgressLogger;
@@ -281,9 +282,7 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   protected CCDelta[] setupConfigSpec(CCSnapshotView targetView, String[] sourceSpecs, String toDate) throws CCException {
     final ArrayList<String> timedSpesc = new ArrayList<String>(sourceSpecs.length + 2);
     timedSpesc.add(String.format("time %s", toDate)); //$NON-NLS-1$
-    for (String spec : sourceSpecs) {
-      timedSpesc.add(spec);
-    }
+    Collections.addAll(timedSpesc, sourceSpecs);
     timedSpesc.add("end time"); //$NON-NLS-1$
     return targetView.setConfigSpec(timedSpesc);
   }
