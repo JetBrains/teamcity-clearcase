@@ -381,10 +381,10 @@ public class Util {
                 for (DirectoryInfo directoryInfo : directoryInfos) {
                   List<File> files = directoryInfo.getFiles();
                   for (File file : files) {
-                    errorMessage.append("  " + file.getPath());
+                    errorMessage.append("  ").append(file.getPath());
                   }
                 }
-                errorMessage.append(" destination: " + destinationFile.getPath());
+                errorMessage.append(" destination: ").append(destinationFile.getPath());
                 throw new IOException(errorMessage.toString());
               }
             }
