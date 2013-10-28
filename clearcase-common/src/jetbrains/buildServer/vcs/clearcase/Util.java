@@ -42,7 +42,7 @@ public class Util {
    */
   private static long ourTotalSleepTime;
 
-  private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();;
+  private static HashMap<String, Long> ourClassesSleepTime = new HashMap<String, Long>();
 
   private static Pattern EXE_NOT_FOUND_PATTERN = Pattern.compile("(.*)error=2(.*)");
 
