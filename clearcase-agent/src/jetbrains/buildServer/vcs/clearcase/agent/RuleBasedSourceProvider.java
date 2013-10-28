@@ -58,8 +58,7 @@ public class RuleBasedSourceProvider extends CheckoutDirectoryBasedSourceProvide
 
   @Override
   protected File getCCRootDirectory(final @NotNull AgentRunningBuild build, final @NotNull VcsRoot vcsRoot, final @NotNull File checkoutRoot, final @NotNull CheckoutRules rules) throws VcsValidationException {
-    final File relativeDirectory = getRelativeClearCaseVievRootDirectory(vcsRoot, checkoutRoot, rules.getIncludeRules().get(0));
-    return relativeDirectory;
+    return getRelativeClearCaseVievRootDirectory(vcsRoot, checkoutRoot, rules.getIncludeRules().get(0));
   }
 
   protected File getRelativeClearCaseVievRootPath(final @NotNull File checkoutRoot, final @NotNull File ruleToPath, final @NotNull File relativePathWitninAView) throws VcsValidationException {

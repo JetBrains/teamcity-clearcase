@@ -332,8 +332,6 @@ public abstract class AbstractSourceProvider implements ISourceProvider {
   }
 
   protected static File getRelativePathWithinAView(final @NotNull VcsRoot vcsRoot) {
-    final File file = new File(vcsRoot.getProperty(Constants.RELATIVE_PATH));
-    return file;
+    return new File(vcsRoot.getProperty(Constants.RELATIVE_PATH));
   }
-
 }
