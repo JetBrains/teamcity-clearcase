@@ -1053,7 +1053,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public Collection<String> getParametersAvailableOnAgent(@NotNull SBuild build) {
-    return Collections.<String> emptyList();
+    return Collections.emptyList();
   }
 
   static String trim(String string) {

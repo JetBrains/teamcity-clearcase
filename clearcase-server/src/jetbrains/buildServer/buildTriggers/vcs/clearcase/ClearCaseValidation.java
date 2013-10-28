@@ -208,7 +208,7 @@ public class ClearCaseValidation {
     }
 
     public Collection<InvalidProperty> process(Map<String, String> properties) {
-      return Collections.<InvalidProperty> emptyList();
+      return Collections.emptyList();
     }
 
   }
@@ -252,7 +252,7 @@ public class ClearCaseValidation {
     }
 
     public Collection<InvalidProperty> process(Map<String, String> properties) {
-      return Collections.<InvalidProperty> emptyList();
+      return Collections.emptyList();
     }
 
   }
@@ -300,7 +300,7 @@ public class ClearCaseValidation {
     }
 
     public Collection<InvalidProperty> process(Map<String, String> properties) {
-      return Collections.<InvalidProperty> emptyList();
+      return Collections.emptyList();
     }
 
   }
