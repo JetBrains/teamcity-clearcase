@@ -47,7 +47,7 @@ public class LinkBasedSourceProvider extends AbstractSourceProvider {
   }
 
   public void publish(AgentRunningBuild build, CCSnapshotView ccview, CCDelta[] changes, File publishTo, String pathWithinView, BuildProgressLogger logger) throws CCException {
-    try {
+    //try {
       //schedule publish
       Collection<PublishingRequest> requests = requestsMap.get(build.getBuildTypeId());
       if (requests == null) {
@@ -74,10 +74,10 @@ public class LinkBasedSourceProvider extends AbstractSourceProvider {
       //      LOG.info(String.format("Publish: view=\"%s\", publishTo=\"%s\", pathWithinView=\"%s\"", ccview, publishTo, pathWithinView));
       //      discardLinks(ccview);
       //      publishLinks(ccview, publishTo, pathWithinView, logger);
-    } finally {
+    //} finally {
 
       //      if(counter == build.get)
-    }
+    //}
   }
 
   private int getCCRootsCount(AgentRunningBuild build) {
