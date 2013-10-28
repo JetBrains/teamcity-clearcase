@@ -727,9 +727,9 @@ public class Util {
     ourTotalSleepTime += delay;
     final Long classCounter = ourClassesSleepTime.get(sleepClass);
     if (classCounter == null) {
-      ourClassesSleepTime.put(sleepClass, new Long(delay));
+      ourClassesSleepTime.put(sleepClass, delay);
     } else {
-      ourClassesSleepTime.put(sleepClass, new Long(delay + classCounter));
+      ourClassesSleepTime.put(sleepClass, delay + classCounter);
     }
     Thread.sleep(delay);
   }
