@@ -60,7 +60,8 @@ public class CCSnapshotView {
   }
   
   CCSnapshotView(final @NotNull ViewParser parser) {
-    this(parser.getRegion(), parser.getServerHost(), parser.getTag(), parser.getGlobalPath(), parser.getAttributes() != null ? parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM) : false, parser.getOwner());
+    this(parser.getRegion(), parser.getServerHost(), parser.getTag(), parser.getGlobalPath(),
+         parser.getAttributes() != null && parser.getAttributes().contains(ViewParser.ATTRIBUTE_UCM), parser.getOwner());
   }
   
   CCSnapshotView(final String region, final String server, final String tag, final String glolbalPath, final boolean isUcm, String owner) {

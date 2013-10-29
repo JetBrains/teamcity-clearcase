@@ -430,7 +430,6 @@ public class CTool {
           if (!(myGlobalPath.endsWith(".vws") || myGlobalPath.endsWith(".vbs"))) {
             throw new RuntimeException(String.format("Wrong Global Path parsing: %s", myGlobalPath));
           }
-          continue;
         }
       }
     }
@@ -784,7 +783,6 @@ public class CTool {
         final Matcher attributeMatcher = VIEW_ATTRIBUTES_PATTERN.matcher(line.trim());
         if (attributeMatcher.matches()) {
           myAttributes = attributeMatcher.group(1);
-          continue;
         }
       }
     }
@@ -834,7 +832,6 @@ public class CTool {
         final Matcher projectMatcher = STREAM_PROJECT_PATTERN.matcher(line.trim());
         if (projectMatcher.matches()) {
           myProject = projectMatcher.group(1).split(" ")[0];//annotation can be here
-          continue;
         }
       }
     }
