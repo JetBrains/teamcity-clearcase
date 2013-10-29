@@ -123,11 +123,7 @@ public class Util {
   }
 
   public static boolean isExecutableNotFoundException(final @NotNull Exception e) {
-    final Matcher matcher = EXE_NOT_FOUND_PATTERN.matcher(e.getMessage().trim());
-    if (matcher.matches()) {
-      return true;
-    }
-    return false;
+    return EXE_NOT_FOUND_PATTERN.matcher(e.getMessage().trim()).matches();
   }
 
   public static String[] makeArguments(final @NotNull String command) {
