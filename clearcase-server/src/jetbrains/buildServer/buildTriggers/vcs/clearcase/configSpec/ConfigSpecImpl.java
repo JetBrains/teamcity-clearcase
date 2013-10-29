@@ -188,10 +188,7 @@ public class ConfigSpecImpl implements ConfigSpec {
 
     final ConfigSpecImpl that = (ConfigSpecImpl)o;
 
-    if (!myLoadRules.equals(that.myLoadRules)) return false;
-    if (!myStandardRules.equals(that.myStandardRules)) return false;
-
-    return true;
+    return myLoadRules.equals(that.myLoadRules) && myStandardRules.equals(that.myStandardRules);
   }
 
   @Override

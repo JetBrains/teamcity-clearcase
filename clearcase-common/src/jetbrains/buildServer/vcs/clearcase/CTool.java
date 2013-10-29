@@ -559,10 +559,7 @@ public class CTool {
 
     static boolean accept(String line) {
       line = line.trim();
-      if (line.startsWith(UPDATED_TOKEN) || line.startsWith(NEW_TOKEN) || line.startsWith(UNLOADED_DELETED_TOKEN)) {
-        return true;
-      }
-      return false;
+      return line.startsWith(UPDATED_TOKEN) || line.startsWith(NEW_TOKEN) || line.startsWith(UNLOADED_DELETED_TOKEN);
     }
 
     protected ChangeParser(String line) {
@@ -921,11 +918,7 @@ public class CTool {
       cmd = "%s lscheckout -long %s";
     }
     final String[] response = getCommandExecutor().execAndWait(String.format(cmd, getCleartoolExecutable(), file.getAbsolutePath()), root);
-    if (response.length == 0 || (response.length == 1 && response[0].trim().length() == 0)) {
-      return false;
-    } else {
-      return true;
-    }
+    return !(response.length == 0 || (response.length == 1 && response[0].trim().length() == 0));
   }
 
   static void checkout(File root, File file, String reason) throws IOException, InterruptedException {

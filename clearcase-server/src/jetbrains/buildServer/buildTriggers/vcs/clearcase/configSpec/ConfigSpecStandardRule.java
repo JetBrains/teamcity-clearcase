@@ -326,12 +326,10 @@ public class ConfigSpecStandardRule {
 
     final ConfigSpecStandardRule that = (ConfigSpecStandardRule)o;
 
-    if (!myBranchPattern.pattern().equals(that.myBranchPattern.pattern())) return false;
-    if (!myScopePattern.pattern().equals(that.myScopePattern.pattern())) return false;
-    if (myScopeType != that.myScopeType) return false;
-    if (!myVersion.equals(that.myVersion)) return false;
-
-    return true;
+    return myBranchPattern.pattern().equals(that.myBranchPattern.pattern()) &&
+           myScopePattern.pattern().equals(that.myScopePattern.pattern()) &&
+           myScopeType == that.myScopeType &&
+           myVersion.equals(that.myVersion);
   }
 
   @Override

@@ -44,9 +44,7 @@ public class ConfigSpecLoadRule {
 
     final ConfigSpecLoadRule that = (ConfigSpecLoadRule)o;
 
-    if (!myFile.equals(that.myFile)) return false;
-
-    return true;
+    return myFile.equals(that.myFile);
   }
 
   @Override
