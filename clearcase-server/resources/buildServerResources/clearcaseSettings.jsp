@@ -141,102 +141,109 @@
 </c:if>
 
 <table class="runnerFormTable">
-<l:settingsGroup title="ClearCase Settings">
+  <l:settingsGroup title="ClearCase Settings">
+    <c:if test="${showClearCaseNotFound}">
+      <tr>
+        <td colspan="2">
+          <div class="attentionComment">
+          <font color='red'>${clearCaseNotFoundText}</font><br/>
+          See online documentation for more details<bs:help file="ClearCase#ClearCase"/><br/>
+          </div>
+        </td>
+      </tr>
+    </c:if>
 
-<c:if test="${showClearCaseNotFound}">
-  <tr>
-    <td colspan="2">
-      <div class="attentionComment">
-      <font color='red'>${clearCaseNotFoundText}</font><br/>
-      See online documentation for more details<bs:help file="ClearCase#ClearCase"/><br/>
-      </div>
-    </td>
-  </tr>
-</c:if>
-
-<c:if test="${showOldSettings}">
-    <tr id="oldSettingsRow">
+    <c:if test="${showOldSettings}">
+      <tr id="oldSettingsRow">
         <th><label for="view-path" style="text-decoration: line-through">View path:</label>
         </th>
         <td>
-            <input style="float: right;" type="button" class="btn btn_mini" value="Convert to new settings..." onclick="BS.ClearCaseSettings.convertSettings();"/>
-            <forms:saving id="convertSettingsProgressIcon"/>
-            <props:textProperty name="view-path" className="longField" />
-            <span class="error" id="error_view-path"></span>
-            <div class="grayNote">
-              Obsolete setting. Please see the message above.
-            </div>
+          <input style="float: right;" type="button" class="btn btn_mini" value="Convert to new settings..." onclick="BS.ClearCaseSettings.convertSettings();"/>
+          <forms:saving id="convertSettingsProgressIcon"/>
+          <props:textProperty name="view-path" className="longField" />
+          <span class="error" id="error_view-path"></span>
+          <div class="grayNote">
+            Obsolete setting. Please see the message above.
+          </div>
         </td>
+      </tr>
+    </c:if>
+
+    <tr>
+      <th><label for="cc-view-path">ClearCase view path: <l:star/></label>
+      </th>
+      <td><props:textProperty name="cc-view-path" className="longField"/>
+        <span class="error" id="error_cc-view-path"></span></td>
     </tr>
-</c:if>
-<tr>
-  <th><label for="cc-view-path">ClearCase view path: <l:star/></label>
-  </th>
-  <td><props:textProperty name="cc-view-path" className="longField" />
-    <span class="error" id="error_cc-view-path"></span></td>
-</tr>
-<tr>
-  <th><label for="rel-path">Relative path within the view: <l:star/> <bs:help file="ClearCase" anchor="relPathOptionDescription"/></label>
-  </th>
-  <td><props:textProperty name="rel-path" className="longField" />
-    <span class="error" id="error_rel-path"></span></td>
-</tr>
-<tr class="advancedSetting">
-  <th>Branches: <bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
-  <td>
-    <props:radioButtonProperty name="branch-provider"
-                               onclick="BS.ClearCaseSettings.branchProviderChanged(true);"
-                               value="auto"
-                               id="branchAutoProvider"
-                               checked='${empty propertiesBean.properties["branch-provider"] or (propertiesBean.properties["branch-provider"] eq "auto")}'/>
-    <label for="branchAutoProvider">detect automatically</label>
-    <input type="button" class="btn btn_mini" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
-    <forms:saving id="detectBranchesProgressIcon" className="progressRingInline"/>
-    <br/>
-    <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
-  </td>
-</tr>
-<tr class="advancedSetting">
-  <th>&nbsp;</th>
-  <td>
-    <props:radioButtonProperty name="branch-provider"
-                               onclick="BS.ClearCaseSettings.branchProviderChanged(false);"
-                               value="custom"
-                               id="branchCustomProvider"/>
-    <label for="branchCustomProvider">use custom:</label>
-    <c:set var="disabled"><c:out value="${propertiesBean.properties['branch-provider'] ne 'custom'}"/></c:set>
-    <props:textProperty name="branches" className="longField" disabled="${disabled}"/>
-    <span class="error" id="error_branches"></span>
-    <div class="grayNote">
-      You can leave this field blank or specify several branches separated by spaces, commas or semicolons.
-    </div>
-  </td>
-</tr>
-<tr class="advancedSetting">
-  <th class="noBorder"><label for="TYPE">Use ClearCase:</label></th>
-  <td class="noBorder"><props:selectProperty name="TYPE">
-        <props:option value="UCM">UCM</props:option>
-        <props:option value="BASE">BASE</props:option>
-      </props:selectProperty></td>
-</tr>
-</l:settingsGroup>
-<l:settingsGroup title="Labling settings" className="advancedSetting">
-<tr class="advancedSetting">
-  <th><label for="use-global-label">Global labeling:</label></th>
-  <td>
-    <props:checkboxProperty name="use-global-label" onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility('mainContent');" />
-    <label for="use-global-label">Use global labels</label>
-  </td>
-</tr>
-<tr class="advancedSetting">
-  <th><label for="global-labels-vob">Global labels VOB:</label></th>
-  <td>
-    <props:textProperty name="global-labels-vob" className="longField" disabled="${propertiesBean.properties['use-global-label'] != 'true'}"/>
-    <span class="error" id="error_global-labels-vob"></span>
-    <div class="grayNote">
-      Pathname of the VOB tag (whether or not the VOB is mounted) or of any file system object within the VOB (if the VOB is mounted)
-    </div>
-  </td>
-</tr>
-</l:settingsGroup>
+    <tr>
+      <th><label for="rel-path">Relative path within the view: <l:star/> <bs:help file="ClearCase" anchor="relPathOptionDescription"/></label>
+      </th>
+      <td><props:textProperty name="rel-path" className="longField"/>
+        <span class="error" id="error_rel-path"></span></td>
+    </tr>
+    <tr class="advancedSetting">
+      <th><label>Branches:</label> <bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
+      <td>
+        <props:radioButtonProperty name="branch-provider"
+                                   onclick="BS.ClearCaseSettings.branchProviderChanged(true);"
+                                   value="auto"
+                                   id="branchAutoProvider"
+                                   checked='${empty propertiesBean.properties["branch-provider"] or (propertiesBean.properties["branch-provider"] eq "auto")}'/>
+        <label for="branchAutoProvider">detect automatically</label>
+        <input type="button" class="btn btn_mini" value="Detect now" id="detectBranchesButton" onclick="BS.ClearCaseSettings.detectBranches();"/>
+        <forms:saving id="detectBranchesProgressIcon" className="progressRingInline"/>
+        <br/>
+        <span id="detectedBranchesSpan" style="display: none;"></span><span class="error" id="detectedBranchesErrorSpan" style="display: none;"></span>
+      </td>
+    </tr>
+    <tr class="advancedSetting">
+      <th>&nbsp;</th>
+      <td>
+        <props:radioButtonProperty name="branch-provider"
+                                   onclick="BS.ClearCaseSettings.branchProviderChanged(false);"
+                                   value="custom"
+                                   id="branchCustomProvider"/>
+        <label for="branchCustomProvider">custom:</label>
+        <div>
+          <c:set var="disabled"><c:out value="${propertiesBean.properties['branch-provider'] ne 'custom'}"/></c:set>
+          <props:textProperty name="branches" className="mediumField" disabled="${disabled}"/>
+          <span class="error" id="error_branches"></span>
+        </div>
+        <div class="grayNote">
+          You can leave this field blank or specify several branches separated by spaces, commas or semicolons.
+        </div>
+      </td>
+    </tr>
+    <tr class="advancedSetting">
+      <th class="noBorder"><label for="TYPE">Use ClearCase:</label></th>
+      <td class="noBorder">
+        <props:selectProperty name="TYPE" enableFilter="true" className="mediumField">
+          <props:option value="UCM">UCM</props:option>
+          <props:option value="BASE">BASE</props:option>
+        </props:selectProperty>
+      </td>
+    </tr>
+  </l:settingsGroup>
+
+  <l:settingsGroup title="Labling settings" className="advancedSetting">
+    <tr class="advancedSetting">
+      <th><label for="use-global-label">Global labeling:</label></th>
+      <td>
+        <props:checkboxProperty name="use-global-label"
+                                onclick="$('global-labels-vob').disabled = this.checked ? '' : 'disabled'; BS.VisibilityHandlers.updateVisibility('mainContent');"/>
+        <label for="use-global-label">Use global labels</label>
+      </td>
+    </tr>
+    <tr class="advancedSetting">
+      <th><label for="global-labels-vob">Global labels VOB:</label></th>
+      <td>
+        <props:textProperty name="global-labels-vob" className="longField" disabled="${propertiesBean.properties['use-global-label'] != 'true'}"/>
+        <span class="error" id="error_global-labels-vob"></span>
+
+        <div class="grayNote">
+          Pathname of the VOB tag (whether or not the VOB is mounted) or of any file system object within the VOB (if the VOB is mounted)
+        </div>
+      </td>
+    </tr>
+  </l:settingsGroup>
 </table>
