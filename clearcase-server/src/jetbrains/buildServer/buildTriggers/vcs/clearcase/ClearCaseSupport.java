@@ -483,7 +483,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public String describeVcsRoot(VcsRoot vcsRoot) {
+  public String describeVcsRoot(@NotNull VcsRoot vcsRoot) {
     try {
       return "clearcase: " + getViewPath(vcsRoot).getWholePath();
     } catch (VcsException e) {
