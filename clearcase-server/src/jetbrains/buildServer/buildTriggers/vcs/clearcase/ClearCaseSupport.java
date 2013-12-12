@@ -54,7 +54,8 @@ import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
                                                                   CollectSingleStateChangesByIncludeRules, BuildPatchByIncludeRules,
                                                                   TestConnectionSupport, BuildStartContextProcessor,
-                                                                  VcsRootBasedMappingProvider, CollectChangesBetweenRoots,
+                                                                  VcsRootBasedMappingProvider,
+                                                                  CollectSingleStateChangesBetweenRoots,
                                                                   ListDirectChildrenPolicy {
 
   private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
