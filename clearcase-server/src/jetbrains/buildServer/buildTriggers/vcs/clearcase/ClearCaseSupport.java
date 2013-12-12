@@ -62,8 +62,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
 
-  private @Nullable
-  ClearCaseStructureCache myCache;
+  private @Nullable ClearCaseStructureCache myCache;
 
   private static ClearCaseSupport ourDefault;
 
@@ -909,22 +908,14 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public List<ModificationData> collectChanges(@NotNull final VcsRoot fromRoot,
+  public List<ModificationData> collectChanges(@Nullable final VcsRoot fromRoot,
                                                @NotNull final String fromVersion,
                                                @NotNull final VcsRoot toRoot,
                                                @Nullable final String toVersion,
                                                @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    return getViewPath(fromRoot).equals(getViewPath(toRoot))
-           ? collectChanges(toRoot, fromVersion, toVersion, checkoutRules)
+    return fromRoot == null || getViewPath(fromRoot).equals(getViewPath(toRoot))
+           ? VcsSupportUtil.collectBuildChanges(toRoot, fromVersion, toVersion, checkoutRules, this)
            : Collections.<ModificationData>emptyList();
-  }
-
-  @NotNull
-  public List<ModificationData> collectChanges(@NotNull final VcsRoot root,
-                                               @NotNull final String fromVersion,
-                                               @Nullable final String toVersion,
-                                               @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    return VcsSupportUtil.collectBuildChanges(root, fromVersion, toVersion, checkoutRules, this);
   }
 
   @NotNull
