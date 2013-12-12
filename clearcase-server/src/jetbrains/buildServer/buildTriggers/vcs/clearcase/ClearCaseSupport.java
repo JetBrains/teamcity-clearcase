@@ -52,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
 import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 
 public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSupport, LabelingSupport, VcsFileContentProvider,
-                                                                  CollectChangesByIncludeRules, BuildPatchByIncludeRules,
+                                                                  CollectSingleStateChangesByIncludeRules, BuildPatchByIncludeRules,
                                                                   TestConnectionSupport, BuildStartContextProcessor,
                                                                   VcsRootBasedMappingProvider, CollectChangesBetweenRoots,
                                                                   ListDirectChildrenPolicy {
@@ -432,6 +432,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
+  @Override
+  @SuppressWarnings("deprecation")
   public String getCurrentVersion(@NotNull final VcsRoot root) throws VcsException {
     final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getViewPath(root));
     try {
