@@ -225,7 +225,7 @@
     </tr>
   </l:settingsGroup>
 
-  <l:settingsGroup title="Labling settings" className="advancedSetting">
+  <l:settingsGroup title="Labeling settings" className="advancedSetting">
     <tr class="advancedSetting">
       <th><label for="use-global-label">Global labeling:</label></th>
       <td>
