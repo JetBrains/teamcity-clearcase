@@ -10,4 +10,4 @@ build.properties  - Property file to store location of TeamCity distribution
 To build the plugin download TeamCity .tar.gz distribution, unpack it and modify build.properties file to store the location.
 Run "ant -f build.xml" to build and package the plugin into "dist\clearcase.zip".
 
-More information on TeamCity: http://www.jetbrains.net/confluence/display/TW
+More information on TeamCity: http://confluence.jetbrains.com/display/TW/
