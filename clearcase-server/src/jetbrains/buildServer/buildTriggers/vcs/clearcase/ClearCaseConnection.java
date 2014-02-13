@@ -97,13 +97,16 @@ public class ClearCaseConnection {
     return myConfigSpecWasChanged;
   }
 
-  public ClearCaseConnection(ViewPath viewPath, /*boolean ucmSupported, */ClearCaseStructureCache cache, VcsRoot root, final boolean checkCSChange) throws VcsException, IOException {
+  public ClearCaseConnection(final ViewPath viewPath, /*boolean ucmSupported, */
+                             @NotNull final ClearCaseInteractiveProcess process,
+                             final ClearCaseStructureCache cache,
+                             final VcsRoot root,
+                             final boolean checkCSChange) throws VcsException, IOException {
     // Explanation of config specs at:
     // http://www.philforhumanity.com/ClearCase_Support_17.html
 
     myViewPath = viewPath;
-    myProcess = ClearCaseInteractiveProcessPool.createProcess(this);
-
+    myProcess = process;
     myCache = cache;
     myRoot = root;
 
@@ -148,10 +151,6 @@ public class ClearCaseConnection {
 
   protected boolean isUCM() {
     return myUCMSupported;
-  }
-
-  public void dispose() {
-    myProcess.destroy();
   }
 
   public String getViewWholePath() {

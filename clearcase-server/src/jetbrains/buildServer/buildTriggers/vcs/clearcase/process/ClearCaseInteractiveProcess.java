@@ -52,14 +52,23 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
   }
 
   //just for testing purpose
-  public ClearCaseInteractiveProcess() {
-    super(null, null);
+  public ClearCaseInteractiveProcess(final InputStream errorStream) {
+    super(null, errorStream, null);
   }
 
   public ClearCaseInteractiveProcess(final String workingDirectory, final Process process) {
-    super(process.getInputStream(), process.getOutputStream());
+    super(process.getInputStream(), process.getErrorStream(), process.getOutputStream());
     myProcess = process;
     myWorkingDirectory = workingDirectory;
+    LOG.debug(String.format("Creating new ClearCaseInteractiveProcess in '%s'...", workingDirectory));
+    LOG.trace(String.format("Creating new ClearCaseInteractiveProcess in '%s' (hash: %d)...", workingDirectory, hashCode()), new Exception());
+  }
+
+  @Override
+  public void destroy() {
+    LOG.debug("Destroying process...");
+    LOG.trace(String.format("Destroying process (hash: %d)...", hashCode()), new Exception());
+    super.destroy();
   }
 
   /**
@@ -141,12 +150,6 @@ public class ClearCaseInteractiveProcess extends InteractiveProcess {
     final String out = myLastOutput;
     myLastOutput = null;
     return out;
-  }
-
-  @NotNull
-  @Override
-  protected InputStream getErrorStream() {
-    return myProcess.getErrorStream();
   }
 
   @Override

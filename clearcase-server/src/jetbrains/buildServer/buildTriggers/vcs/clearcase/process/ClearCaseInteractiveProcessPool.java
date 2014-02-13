@@ -18,17 +18,14 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import java.io.IOException;
-import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
+import jetbrains.buildServer.buildTriggers.vcs.clearcase.ViewPath;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.TestOnly;
 
 public class ClearCaseInteractiveProcessPool {
-  @NotNull private static final Logger LOG = Logger.getLogger(ClearCaseInteractiveProcessPool.class);
-
   @NotNull private static ClearCaseFacade ourProcessExecutor = new ClearCaseFacade() {
     @NotNull
     public ClearCaseInteractiveProcess createProcess(@NotNull final String workingDirectory, @NotNull final GeneralCommandLine generalCommandLine) throws ExecutionException {
@@ -54,13 +51,8 @@ public class ClearCaseInteractiveProcessPool {
     ourProcessExecutor = executor;
   }
 
-  @NotNull
-  public static ClearCaseInteractiveProcess createProcess(@NotNull final ClearCaseConnection connection) throws IOException { // must be called from ClearCaseConnection constructor only
-    final String viewWholePath = connection.getViewWholePath();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(String.format("Creating new ClearCaseInteractiveProcess for '%s'...", viewWholePath));
-    }
-    return createProcess(viewWholePath);
+  public static void doWithProcess(@NotNull final ViewPath viewPath, @NotNull final ProcessRunnable runnable) throws IOException, VcsException {
+    doWithProcess(viewPath.getWholePath(), runnable);
   }
   
   public static void doWithProcess(@NotNull final String workingDirectory, @NotNull final ProcessRunnable runnable) throws IOException, VcsException {

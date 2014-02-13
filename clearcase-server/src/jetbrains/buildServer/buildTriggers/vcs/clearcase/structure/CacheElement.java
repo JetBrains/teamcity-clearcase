@@ -16,6 +16,7 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 
+import com.intellij.openapi.util.Ref;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,6 +28,7 @@ import jetbrains.buildServer.vcs.IncludeRule;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.VcsRoot;
 import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class CacheElement {
   private static final Logger LOG = Logger.getLogger(CacheElement.class);
@@ -122,19 +124,23 @@ public class CacheElement {
       }
       Set<ChangedElementInfo> set = new HashSet<ChangedElementInfo>();
       for (ConfigSpecLoadRule loadRule : loadRules) {
-         set.addAll(loadChangesWithConnection(nearestCache, myParentSupport.createConnection(myRoot, myIncludeRule, loadRule)));
+         withConnection(myRoot, myIncludeRule, loadRule, new ClearCaseSupport.ConnectionProcessor() {
+           public void process(@NotNull final ClearCaseConnection connection) throws VcsException, IOException {
+             set.addAll(loadChangesWithConnection(nearestCache, connection));
+           }
+         })
       }
       return Collections.list(Collections.enumeration(set));
     }
     else {
 */
-    final ClearCaseConnection connection = myParentSupport.createConnection(myRoot, myIncludeRule, null);
-    try {
-      return loadChangesWithConnection(nearestCache, connection);
-    }
-    finally {
-      connection.dispose();
-    }
+    final Ref<List<ChangedElementInfo>> result = new Ref<List<ChangedElementInfo>>();
+    myParentSupport.withConnection(myRoot, myIncludeRule, null, new ClearCaseSupport.ConnectionProcessor() {
+      public void process(@NotNull final ClearCaseConnection connection) throws VcsException, IOException {
+        result.set(loadChangesWithConnection(nearestCache, connection));
+      }
+    });
+    return result.get();
 //    }
   }
 

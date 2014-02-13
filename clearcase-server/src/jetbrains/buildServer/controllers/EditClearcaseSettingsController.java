@@ -59,7 +59,7 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
 
           ajaxResponse.addContent(ccViewPath);
           ajaxResponse.addContent(relPath);
-        } catch (VcsException e) {
+        } catch (Exception e) {
           final Element error = new Element("error");
           error.addContent(e.getLocalizedMessage());
           ajaxResponse.addContent(error);

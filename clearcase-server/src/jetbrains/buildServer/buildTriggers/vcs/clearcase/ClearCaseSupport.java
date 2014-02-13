@@ -17,6 +17,7 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
+import com.intellij.openapi.util.Ref;
 import com.intellij.util.Consumer;
 import java.io.File;
 import java.io.IOException;
@@ -98,7 +99,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public static ViewPath getViewPath(@NotNull final VcsRoot vcsRoot) throws VcsException {
+  public static ViewPath getViewPath(@NotNull final VcsRoot vcsRoot) throws VcsException, IOException {
     final String viewPath = vcsRoot.getProperty(Constants.VIEW_PATH);
     if (viewPath != null && trim(viewPath).length() != 0) {
       return getViewPath(viewPath);
@@ -107,7 +108,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public static ViewPath getRootPath(@NotNull final VcsRoot vcsRoot) throws VcsException {
+  public static ViewPath getRootPath(@NotNull final VcsRoot vcsRoot) throws VcsException, IOException {
     final ViewPath viewPath = getViewPath(vcsRoot);
     final String vobRelativePath;
     final String relativePath = viewPath.getRelativePathWithinTheView();
@@ -126,13 +127,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @NotNull
-  public static ViewPath getViewPath(@NotNull final String viewPath) throws VcsException {
-    final String ccViewRoot;
-    try {
-      ccViewRoot = ClearCaseConnection.getClearCaseViewRoot(viewPath);
-    } catch (IOException e) {
-      throw new VcsException(e);
-    }
+  public static ViewPath getViewPath(@NotNull final String viewPath) throws VcsException, IOException {
+    final String ccViewRoot = ClearCaseConnection.getClearCaseViewRoot(viewPath);
     return new ViewPath(ccViewRoot, getRelativePath(new File(ccViewRoot), new File(viewPath)));
   }
 
@@ -159,28 +155,31 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     return sb.toString();
   }
 
-  public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
-    return createConnection/*doCreateConnection*/(root, includeRule, false, loadRule);
+  public void withConnection(final VcsRoot root,
+                             final FileRule includeRule,
+                             @Nullable final ConfigSpecLoadRule loadRule,
+                             @NotNull final ConnectionProcessor processor) throws VcsException, IOException {
+    withConnection(root, includeRule, false, loadRule, processor);
   }
 
-  public ClearCaseConnection createConnection(final VcsRoot root, final FileRule includeRule, final boolean checkCSChange, @Nullable final ConfigSpecLoadRule loadRule) throws VcsException {
+  public void withConnection(final VcsRoot root,
+                             final FileRule includeRule,
+                             final boolean checkCSChange,
+                             @Nullable final ConfigSpecLoadRule loadRule,
+                             @NotNull final ConnectionProcessor processor) throws VcsException, IOException {
     final ViewPath viewPath = getViewPath(root);
     if (includeRule.getFrom().length() > 0) {
       viewPath.setIncludeRuleFrom(includeRule);
     }
-    return doCreateConnectionWithViewPath(root, checkCSChange, viewPath);
+    doWithConnection(viewPath, root, checkCSChange, processor);
   }
 
-  private ClearCaseConnection doCreateConnectionWithViewPath(final VcsRoot root, final boolean checkCSChange, final ViewPath viewPath) throws VcsException {
-    try {
-      return new ClearCaseConnection(viewPath, /*isUCM, */myCache, root, checkCSChange);
-    } catch (Exception e) {
-      if (e instanceof VcsException) {
-        throw (VcsException) e;
-      } else {
-        throw new VcsException(e);
+  public void doWithConnection(final ViewPath viewPath, final VcsRoot root, final boolean checkCSChange, final ConnectionProcessor processor) throws IOException, VcsException {
+    ClearCaseInteractiveProcessPool.doWithProcess(viewPath, new ClearCaseInteractiveProcessPool.ProcessRunnable() {
+      public void run(@NotNull final ClearCaseInteractiveProcess process) throws IOException, VcsException {
+        processor.process(new ClearCaseConnection(viewPath, process, myCache, root, checkCSChange));
       }
-    }
+    });
   }
 
   private ChangedFilesProcessor createCollectingChangesFileProcessor(final MultiMap<CCModificationKey, VcsChange> key2changes, final Set<String> addFileActivities, final Set<VcsChange> zeroToOneChangedFiles, final ClearCaseConnection connection) {
@@ -310,14 +309,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
-  public void buildPatch(VcsRoot root, Revision fromVersion, Revision toVersion, PatchBuilder builder, final IncludeRule includeRule) throws IOException, VcsException {
-    final ClearCaseConnection connection = createConnection(root, includeRule, true, null);
-    try {
-      buildPatchForConnection(builder, fromVersion, toVersion, connection);
-    }
-    finally {
-      connection.dispose();
-    }
+  public void buildPatch(final VcsRoot root, final Revision fromVersion, final Revision toVersion, final PatchBuilder builder, final IncludeRule includeRule) throws IOException, VcsException {
+    withConnection(root, includeRule, true, null, new ConnectionProcessor() {
+      public void process(@NotNull final ClearCaseConnection connection) throws VcsException, IOException {
+        buildPatchForConnection(builder, fromVersion, toVersion, connection);
+      }
+    });
   }
 
   private void buildPatchForConnection(PatchBuilder builder, Revision fromVersion, Revision toVersion, ClearCaseConnection connection) throws IOException, VcsException {
@@ -355,40 +352,54 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public byte[] getContent(@NotNull final VcsModification vcsModification, @NotNull final VcsChangeInfo change, @NotNull final VcsChangeInfo.ContentType contentType, @NotNull final VcsRoot vcsRoot) throws VcsException {
-    final ClearCaseConnection connection = createConnection(vcsRoot, IncludeRule.createDefaultInstance(), null);
-    try{
-      final String filePath = new File(connection.getViewWholePath()).getParent() + File.separator + (contentType == VcsChangeInfo.ContentType.BEFORE_CHANGE ? change.getBeforeChangeRevisionNumber() : change.getAfterChangeRevisionNumber());
-      return getFileContent(connection, filePath);
+    final Ref<byte[]> result = new Ref<byte[]>();
+    try {
+      withConnection(vcsRoot, IncludeRule.createDefaultInstance(), null, new ConnectionProcessor() {
+        public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
+          final String filePath = new File(connection.getViewWholePath()).getParent() + File.separator + (contentType == VcsChangeInfo.ContentType.BEFORE_CHANGE ? change.getBeforeChangeRevisionNumber() : change.getAfterChangeRevisionNumber());
+          result.set(getFileContent(connection, filePath));
+        }
+      });
     }
-    finally {
-      connection.dispose();
+    catch (IOException e) {
+      throw new VcsException(e);
     }
+    return result.get();
   }
 
   @NotNull
   public byte[] getContent(@NotNull final String filePath, @NotNull final VcsRoot versionedRoot, @NotNull final String version) throws VcsException {
-    final String preparedPath = CCPathElement.normalizeSeparators(filePath);
-    final ClearCaseConnection connection = createConnection(versionedRoot, IncludeRule.createDefaultInstance(), null);
+    final Ref<byte[]> result = new Ref<byte[]>();
     try {
-      connection.collectChangesToIgnore(Revision.fromNotNullString(version));
-      return doGetContent(preparedPath, connection);
+      withConnection(versionedRoot, IncludeRule.createDefaultInstance(), null, new ConnectionProcessor() {
+        public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
+          final String preparedPath = CCPathElement.normalizeSeparators(filePath);
+          try {
+            connection.collectChangesToIgnore(Revision.fromNotNullString(version));
+            result.set(doGetContent(preparedPath, connection));
+          }
+          catch (final ParseException e) {
+            throw new VcsException(e);
+          }
+          catch (final VcsException e) { // http://youtrack.jetbrains.com/issue/TW-20973
+            int sepPos = preparedPath.indexOf(File.separator);
+            while (sepPos != -1) {
+              try {
+                result.set(doGetContent(preparedPath.substring(sepPos + 1), connection));
+                return;
+              }
+              catch (final VcsException ignore) {}
+              sepPos = preparedPath.indexOf(File.separator, sepPos + 1);
+            }
+            throw e;
+          }
+        }
+      });
     }
-    catch (final ParseException e) {
+    catch (IOException e) {
       throw new VcsException(e);
     }
-    catch (final VcsException e) { // http://youtrack.jetbrains.com/issue/TW-20973
-      int sepPos = preparedPath.indexOf(File.separator);
-      while (sepPos != -1) {
-        try {
-          return doGetContent(preparedPath.substring(sepPos + 1), connection);
-        } catch (final VcsException ignore) {}
-        sepPos = preparedPath.indexOf(File.separator, sepPos + 1);
-      }
-      throw e;
-    }
-    finally {
-      connection.dispose();
-    }
+    return result.get();
   }
 
   @NotNull
@@ -435,16 +446,18 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @Override
   @SuppressWarnings("deprecation")
   public String getCurrentVersion(@NotNull final VcsRoot root) throws VcsException {
-    final ClearCaseConnection connection = doCreateConnectionWithViewPath(root, false, getViewPath(root));
+    final Ref<String> result = new Ref<String>();
     try {
-      return connection.getCurrentRevision().asString();
+      withConnection(root, IncludeRule.createDefaultInstance(), null, new ConnectionProcessor() {
+        public void process(@NotNull final ClearCaseConnection connection) throws VcsException, IOException {
+          result.set(connection.getCurrentRevision().asString());
+        }
+      });
     }
-    catch (final IOException e) {
+    catch (IOException e) {
       throw new VcsException(e);
     }
-    finally {
-      connection.dispose();
-    }
+    return result.get();
   }
 
   @Override
@@ -487,8 +500,9 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   @NotNull
   public String describeVcsRoot(@NotNull VcsRoot vcsRoot) {
     try {
-      return "clearcase: " + getViewPath(vcsRoot).getWholePath();
-    } catch (VcsException e) {
+      return Constants.NAME + ": " + getViewPath(vcsRoot).getWholePath();
+    }
+    catch (Exception e) {
       return Constants.NAME;
     }
   }
@@ -555,7 +569,12 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   public Collection<VcsClientMapping> getClientMapping(@NotNull final VcsRoot vcsRoot) throws VcsException {
-    return Collections.singleton(new VcsClientMapping(getViewPath(vcsRoot).getWholePath(), ""));
+    try {
+      return Collections.singleton(new VcsClientMapping(getViewPath(vcsRoot).getWholePath(), ""));
+    }
+    catch (IOException e) {
+      throw new VcsException(e);
+    }
   }
 
   @NotNull
@@ -565,7 +584,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     try {
       viewPath = getViewPath(rootEntry.getVcsRoot());
     }
-    catch (final VcsException e) {
+    catch (final Exception e) {
       LOG.debug("CC.MapFullPath: View path not defined: " + e.getLocalizedMessage());
       return Collections.emptySet();
     }
@@ -650,17 +669,24 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   public List<ModificationData> collectChanges(final VcsRoot root, final Revision fromVersion, final Revision currentVersion, final IncludeRule includeRule) throws VcsException {
     LOG.debug(String.format("Attempt connect to '%s'", root.describe(true)));
-    final ClearCaseConnection connection = createConnection(root, includeRule, null);
+    final Ref<List<ModificationData>> result = new Ref<List<ModificationData>>();
     try {
-      return collectChangesWithConnection(root, fromVersion, currentVersion, connection);
+      withConnection(root, includeRule, null, new ConnectionProcessor() {
+        public void process(@NotNull final ClearCaseConnection connection) throws VcsException {
+          try {
+            result.set(collectChangesWithConnection(root, fromVersion, currentVersion, connection));
+          }
+          catch (VcsException e) {
+            LOG.debug(String.format("Could not establish connection: %s", e.getMessage()));
+            throw e;
+          }
+        }
+      });
     }
-    catch (VcsException e) {
-      LOG.debug(String.format("Could not establish connection: %s", e.getMessage()));
-      throw e;
+    catch (IOException e) {
+      throw new VcsException(e);
     }
-    finally {
-      connection.dispose();
-    }
+    return result.get();
   }
 
   private List<ModificationData> collectChangesWithConnection(VcsRoot root, Revision fromVersion, Revision currentVersion, ClearCaseConnection connection) throws VcsException {
@@ -721,20 +747,28 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       final ConnectionProcessor childrenProcessor = getChildrenProcessor(revision, labeler);
 
       for (IncludeRule includeRule : checkoutRules.getRootIncludeRules()) {
-        doWithConnection(root, includeRule, childrenProcessor);
-        doWithRootConnection(root, getParentsProcessor(revision, labeler, createPath(root, includeRule)));
+        withConnection(root, includeRule, null, childrenProcessor);
+        withRootConnection(root, getParentsProcessor(revision, labeler, createPath(root, includeRule)));
       }
       return label;
     }
-    catch (final ParseException e) {
+    catch (ParseException e) {
+      throw new VcsException(e);
+    }
+    catch (IOException e) {
       throw new VcsException(e);
     }
   }
 
   private String createPath(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule) throws VcsException {
-    final ViewPath viewPath = getViewPath(root);
-    viewPath.setIncludeRuleFrom(includeRule);
-    return viewPath.getWholePath();
+    try {
+      final ViewPath viewPath = getViewPath(root);
+      viewPath.setIncludeRuleFrom(includeRule);
+      return viewPath.getWholePath();
+    }
+    catch (IOException e) {
+      throw new VcsException(e);
+    }
   }
 
   private ConnectionProcessor getParentsProcessor(final Revision version, final VersionProcessor labeler, final String path) {
@@ -753,21 +787,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     };
   }
 
-  private void doWithConnection(@NotNull final VcsRoot root, @NotNull final IncludeRule includeRule, @NotNull final ConnectionProcessor processor) throws VcsException {
-    processAndCloseConnection(processor, createConnection(root, includeRule, null));
-  }
-
-  private void doWithRootConnection(@NotNull final VcsRoot root, @NotNull final ConnectionProcessor processor) throws VcsException {
-    processAndCloseConnection(processor, doCreateConnectionWithViewPath(root, false, getRootPath(root)));
-  }
-
-  private void processAndCloseConnection(final ConnectionProcessor processor, final ClearCaseConnection connection) throws VcsException {
-    try {
-      processor.process(connection);
-    }
-    finally {
-      connection.dispose();
-    }
+  private void withRootConnection(@NotNull final VcsRoot root, @NotNull final ConnectionProcessor processor) throws VcsException, IOException {
+    doWithConnection(getRootPath(root), root, false, processor);
   }
 
   private VersionProcessor getClearCaseLabeler(@NotNull final String label) {
@@ -913,9 +934,14 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                                @NotNull final VcsRoot toRoot,
                                                @Nullable final String toVersion,
                                                @NotNull final CheckoutRules checkoutRules) throws VcsException {
-    return fromRoot == null || getViewPath(fromRoot).equals(getViewPath(toRoot))
-           ? VcsSupportUtil.collectBuildChanges(toRoot, fromVersion, toVersion, checkoutRules, this)
-           : Collections.<ModificationData>emptyList();
+    try {
+      return fromRoot == null || getViewPath(fromRoot).equals(getViewPath(toRoot))
+             ? VcsSupportUtil.collectBuildChanges(toRoot, fromVersion, toVersion, checkoutRules, this)
+             : Collections.<ModificationData>emptyList();
+    }
+    catch (IOException e) {
+      throw new VcsException(e);
+    }
   }
 
   @NotNull
@@ -963,26 +989,32 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @NotNull
   public Collection<VcsFileData> listFiles(@NotNull final VcsRoot root, @NotNull final String directoryPath) throws VcsException {
-    final String dirFullPath = new File(getViewPath(root).getWholePath(), directoryPath).getAbsolutePath();
-    final ClearCaseConnection connection = createConnection(root, IncludeRule.createDefaultInstance(), null);
-    try{
-      final Version dirVersion = connection.getLastVersion(dirFullPath, false);
-      if (dirVersion == null) {
-        return Collections.emptySet();
-      }
+    final Ref<Collection<VcsFileData>> result = new Ref<Collection<VcsFileData>>();
+    try {
+      withConnection(root, IncludeRule.createDefaultInstance(), null, new ConnectionProcessor() {
+        public void process(@NotNull final ClearCaseConnection connection) throws VcsException, IOException {
+          final String dirFullPath = new File(getViewPath(root).getWholePath(), directoryPath).getAbsolutePath();
+          final Version dirVersion = connection.getLastVersion(dirFullPath, false);
+          if (dirVersion == null) {
+            result.set(Collections.<VcsFileData>emptySet());
+            return;
+          }
 
-      final String dirPathWithVersion = dirFullPath + CCParseUtil.CC_VERSION_SEPARATOR + dirVersion.getWholeName();
+          final String dirPathWithVersion = dirFullPath + CCParseUtil.CC_VERSION_SEPARATOR + dirVersion.getWholeName();
 
-      final Collection<VcsFileData> result = new ArrayList<VcsFileData>();
-      for (final SimpleDirectoryChildElement child : connection.getChildren(dirPathWithVersion)) {
-        result.add(new VcsFileData(child.getName(), child.getType() == SimpleDirectoryChildElement.Type.DIRECTORY));
-      }
+          final Collection<VcsFileData> files = new ArrayList<VcsFileData>();
+          for (final SimpleDirectoryChildElement child : connection.getChildren(dirPathWithVersion)) {
+            files.add(new VcsFileData(child.getName(), child.getType() == SimpleDirectoryChildElement.Type.DIRECTORY));
+          }
 
-      return result;
+          result.set(files);
+        }
+      });
     }
-    finally {
-      connection.dispose();
+    catch (IOException e) {
+      throw new VcsException(e);
     }
+    return result.get();
   }
 
   @NotNull
@@ -994,8 +1026,8 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     });
   }
 
-  private static interface ConnectionProcessor {
-    void process(@NotNull ClearCaseConnection connection) throws VcsException;
+  public static interface ConnectionProcessor {
+    void process(@NotNull ClearCaseConnection connection) throws VcsException, IOException;
   }
 
   public void updateParameters(@NotNull BuildStartContext context) {

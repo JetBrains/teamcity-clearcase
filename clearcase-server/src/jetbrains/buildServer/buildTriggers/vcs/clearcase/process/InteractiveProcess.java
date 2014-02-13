@@ -30,19 +30,28 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
 
   @Nullable private final InputStream myInput;
+  @Nullable private final InputStream myError;
   @Nullable private final OutputStream myOutput;
 
-  public InteractiveProcess(@Nullable final InputStream inputStream, @Nullable final OutputStream outputStream) {
+  public InteractiveProcess(@Nullable final InputStream inputStream,
+                            @Nullable final InputStream errorStream,
+                            @Nullable final OutputStream outputStream) {
     myInput = inputStream;
+    myError = errorStream;
     myOutput = outputStream;
   }
 
   public void destroy() {
     try {
       quit();
+      cleanStreams();
       
       if (myInput != null) {
         myInput.close();
+      }
+
+      if (myError != null) {
+        myError.close();
       }
 
       if (myOutput != null) {
@@ -63,7 +72,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   @NotNull
   public synchronized InputStream executeAndReturnProcessInput(@NotNull final String[] params) throws IOException {
-    cleanStreams(myInput, getErrorStream()); //discard unread bytes produced by previous command to prevent phantom errors appeariance   
+    cleanStreams();
     execute(params);
     try {
       return readFromProcessInput(params);
@@ -71,6 +80,10 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
     catch (final VcsException e) {
       throw new IOException(e.getMessage());
     }
+  }
+
+  private void cleanStreams() throws IOException {
+    doCleanStreams(myInput, myError); //discard unread bytes produced by previous command to prevent phantom errors appeariance
   }
 
   protected void execute(@NotNull final String[] args) throws IOException {
@@ -88,7 +101,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   @NotNull
   private InputStream readFromProcessInput(@NotNull final String[] params) throws IOException, VcsException {
-    if (myInput == null) {
+    if (myInput == null || myError == null) {
       return new ByteArrayInputStream("".getBytes());
     }
 
@@ -97,7 +110,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
     while (true) {
       if (myInput.available() > 0) break;
-      if (getErrorStream().available() > 0) {
+      if (myError.available() > 0) {
         final String errorMesage = readError();
         if (errorMesage.trim().length() > 0) {
           throw new VcsException(errorMesage);
@@ -161,7 +174,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
   @NotNull
   protected abstract String createCommandLineString(@NotNull String[] params);
 
-  private static void cleanStreams(final InputStream... streams) throws IOException {
+  private static void doCleanStreams(final InputStream... streams) throws IOException {
     for (final InputStream stream : streams) {
       if (stream != null && stream.available() > 0) {
         while (stream.read() != -1) {
@@ -181,13 +194,13 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
 
   @NotNull
   protected String readError() throws IOException {
-    final InputStream errorStream = getErrorStream();
+    if (myError == null) return "";
     final StringBuffer result = new StringBuffer();
-    int available = errorStream.available();
+    int available = myError.available();
     if (available > 0) {
       do {
         final byte[] read = new byte[available];
-        errorStream.read(read);
+        myError.read(read);
         final String line = new String(read);
         result.append(line);
         try {
@@ -195,14 +208,11 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
         } catch (InterruptedException e) {
           //ignore
         }
-        available = errorStream.available();
+        available = myError.available();
       } while (available > 0);
     }
     return getErrorFilter().apply(result.toString());
   }
-
-  @NotNull
-  protected abstract InputStream getErrorStream();
 
   @NotNull
   protected ILineFilter getErrorFilter() {
