@@ -16,7 +16,7 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 
-import com.intellij.util.containers.Stack;
+import java.util.Stack;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.ClearCaseConnection;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.VersionProcessor;
 import jetbrains.buildServer.vcs.VcsException;
