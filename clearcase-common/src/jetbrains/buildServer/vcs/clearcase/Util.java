@@ -24,10 +24,12 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.regex.Matcher;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
-import jetbrains.buildServer.util.NamedThreadFactory;
+import jetbrains.buildServer.util.ExecutorsUtil;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -595,7 +597,7 @@ public class Util {
         sliceStartTime = System.currentTimeMillis();
 
         //TODO: Is that ok to use executor service creation
-        ExecutorService executorService = Executors.newCachedThreadPool(new NamedThreadFactory("Clearcase copy file"));
+        ExecutorService executorService = ExecutorsUtil.newExecutor("Clearcase copy file");
         try {
           ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<Void>(executorService);
           for (Transferrer transferrer : transferrers) {
