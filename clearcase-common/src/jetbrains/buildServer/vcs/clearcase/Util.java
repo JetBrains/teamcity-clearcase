@@ -29,7 +29,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
-import jetbrains.buildServer.util.ExecutorsUtil;
+import jetbrains.buildServer.util.executors.ExecutorsFactory;
 import jetbrains.buildServer.vcs.clearcase.CTool.ViewParser;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -597,7 +597,7 @@ public class Util {
         sliceStartTime = System.currentTimeMillis();
 
         //TODO: Is that ok to use executor service creation
-        ExecutorService executorService = ExecutorsUtil.newExecutor("Clearcase copy file");
+        ExecutorService executorService = ExecutorsFactory.newExecutor("Clearcase copy file");
         try {
           ExecutorCompletionService<Void> completionService = new ExecutorCompletionService<Void>(executorService);
           for (Transferrer transferrer : transferrers) {
