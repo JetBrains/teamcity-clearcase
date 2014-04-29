@@ -258,6 +258,10 @@ public class CCParseUtil {
       currentPath = currentPath.substring(0, currentPath.length() - CC_VERSION_SEPARATOR.length()).trim();
     }
 
+    if (currentPath.startsWith("\"") && currentPath.endsWith("\"")) {
+      currentPath = currentPath.substring(1, currentPath.length() - 1);
+    }
+
     if (type != null) {
       return new SimpleDirectoryChildElement(currentPath, type);
     }
