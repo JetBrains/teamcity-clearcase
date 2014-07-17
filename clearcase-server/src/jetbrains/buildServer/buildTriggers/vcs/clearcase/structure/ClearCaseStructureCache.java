@@ -17,8 +17,6 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 import jetbrains.buildServer.BuildAgent;
@@ -28,8 +26,10 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.DateRevision;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.BuildServerListener;
-import jetbrains.buildServer.serverSide.GeneralDataCleaner;
 import jetbrains.buildServer.serverSide.SBuildServer;
+import jetbrains.buildServer.serverSide.cleanup.CleanupExtension;
+import jetbrains.buildServer.serverSide.cleanup.CleanupExtensionAdapter;
+import jetbrains.buildServer.serverSide.cleanup.CleanupProcessState;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.util.Hash;
@@ -49,8 +49,7 @@ public class ClearCaseStructureCache {
   }
 
   public void register(final @NotNull SBuildServer server, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
-    server.registerExtension(GeneralDataCleaner.class, ClearCaseStructureCache.class.getName(),
-                             new ClearcaseCacheGeneralDataCleaner());
+    server.registerExtension(CleanupExtension.class, ClearCaseStructureCache.class.getName(), new ClearcaseCacheGeneralDataCleaner());
 
     dispatcher.addListener(new BuildServerAdapter() {
       @Override
@@ -200,8 +199,10 @@ public class ClearCaseStructureCache {
     return cacheDir;
   }
 
-  private class ClearcaseCacheGeneralDataCleaner implements GeneralDataCleaner {
-    public void performCleanup(final @NotNull Connection connection) throws SQLException {
+  private class ClearcaseCacheGeneralDataCleaner extends CleanupExtensionAdapter {
+    @Override
+    public void afterCleanup(@NotNull final CleanupProcessState cleanupState) throws Exception {
+      super.afterCleanup(cleanupState);
       cleanup();
     }
   }

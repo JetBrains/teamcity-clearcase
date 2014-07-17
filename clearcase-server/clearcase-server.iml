@@ -28,6 +28,7 @@
     <orderEntry type="module" module-name="patches" />
     <orderEntry type="module" module-name="web-openapi" />
     <orderEntry type="module" module-name="clearcase-common" />
+    <orderEntry type="module" module-name="server" />
   </component>
 </module>
 
