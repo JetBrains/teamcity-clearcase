@@ -16,17 +16,16 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.process;
 
+import com.intellij.openapi.diagnostic.Logger;
 import java.io.*;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
-import jetbrains.buildServer.util.ExceptionUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Util;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class InteractiveProcess implements InteractiveProcessFacade {
-  @NotNull private static final Logger LOG = Logger.getLogger(InteractiveProcess.class);
+  @NotNull private static final Logger LOG = Logger.getInstance(InteractiveProcess.class.getName());
   private static final int ERROR_READING_SLEEP_MILLIS = TeamCityProperties.getInteger("clearcase.error.reading.sleep", 100);
 
   @Nullable private final InputStream myInput;
@@ -59,7 +58,7 @@ public abstract class InteractiveProcess implements InteractiveProcessFacade {
       }
     }
     catch (final IOException e) {
-      ExceptionUtil.log(LOG, "Failed to destroy process", e);
+      LOG.warnAndDebugDetails("Failed to destroy process", e);
     }
     finally {
       forceDestroy();

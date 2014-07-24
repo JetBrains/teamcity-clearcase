@@ -17,6 +17,7 @@
 package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 
 import com.intellij.execution.ExecutionException;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.Ref;
 import com.intellij.util.Consumer;
 import java.io.File;
@@ -46,7 +47,6 @@ import jetbrains.buildServer.vcs.clearcase.CCSnapshotView;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,7 +59,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
                                                                   CollectSingleStateChangesBetweenRoots,
                                                                   ListDirectChildrenPolicy {
 
-  private static final Logger LOG = Logger.getLogger(ClearCaseSupport.class);
+  private static final Logger LOG = Logger.getInstance(ClearCaseSupport.class.getName());
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
 
@@ -880,10 +880,10 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       });
     }
     catch (final VcsException e) {
-      ExceptionUtil.log(LOG, "Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
+      LOG.warnAndDebugDetails("Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
     }
     catch (final IOException e) {
-      ExceptionUtil.log(LOG, "Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
+      LOG.warnAndDebugDetails("Failed to run sourcesUpdatePossibleIfChangesNotFound()", e);
     }
     return false;
   }
@@ -922,7 +922,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
       });
     }
     catch (final Exception e) {
-      ExceptionUtil.log(LOG, "Failed to get repository properties", e);
+      LOG.warnAndDebugDetails("Failed to get repository properties", e);
     }
 
     return result;
