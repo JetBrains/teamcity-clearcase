@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
+import jetbrains.buildServer.parameters.ReferencesResolverUtil;
 import jetbrains.buildServer.serverSide.InvalidProperty;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
@@ -184,6 +185,9 @@ public class ClearCaseValidation {
 
     public boolean validate(Map<String, String> properties, Collection<InvalidProperty> validationResultBuffer) {
       final String ccViewPathRootPath = properties.get(Constants.CC_VIEW_PATH);
+      assert ccViewPathRootPath != null;
+      if (ReferencesResolverUtil.containsReference(ccViewPathRootPath)) return true;
+
       try {
         if (checkClearCaseView(Constants.CC_VIEW_PATH, ccViewPathRootPath, validationResultBuffer)) {
           debug(String.format(SINGLE_PARAM_VALIDATION_PASSED, ccViewPathRootPath));
@@ -230,6 +234,10 @@ public class ClearCaseValidation {
         debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
         return false;
       }
+
+      assert ccViewRootPath != null;
+      if (ReferencesResolverUtil.containsReference(ccViewRootPath)) return true;
+
       //check paths is well formed 
       try {
         CCPathElement.normalizePath(ccViewRootPath);
@@ -274,7 +282,11 @@ public class ClearCaseValidation {
         debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
         return false;
       }
-      //check paths is well formed 
+
+      assert ccViewRelativePath != null;
+      if (ReferencesResolverUtil.containsReference(ccViewRelativePath)) return true;
+
+      //check paths is well formed
       try {
         final String normalizedPath = CCPathElement.normalizePath(ccViewRelativePath);
         if (isEmpty(normalizedPath)) {
@@ -289,7 +301,10 @@ public class ClearCaseValidation {
       }
       //check path is directory? 
       final int countBefore = validationResultBuffer.size();
-      final String pathWithinTheView = new File(trim(properties.get(Constants.CC_VIEW_PATH)), ccViewRelativePath).getAbsolutePath();
+      String viewPath = trim(properties.get(Constants.CC_VIEW_PATH));
+      if (viewPath == null || ReferencesResolverUtil.containsReference(viewPath)) return true;
+
+      final String pathWithinTheView = new File(viewPath, ccViewRelativePath).getAbsolutePath();
       checkDirectoryProperty(Constants.RELATIVE_PATH, pathWithinTheView, validationResultBuffer);
       if (countBefore != validationResultBuffer.size()) {
         debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
