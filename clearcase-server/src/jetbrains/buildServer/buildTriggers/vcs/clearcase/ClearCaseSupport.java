@@ -637,12 +637,6 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   }
 
   @Override
-  @NotNull
-  public VcsSupportCore getCore() {
-    return this;
-  }
-
-  @Override
   public VcsPersonalSupport getPersonalSupport() {
     return this;
   }
