@@ -24,7 +24,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="server-openapi" />
     <orderEntry type="module" module-name="server-model" />
-    <orderEntry type="module" module-name="idea-obsolete-openapi" />
     <orderEntry type="module" module-name="patches" />
     <orderEntry type="module" module-name="web-openapi" />
     <orderEntry type="module" module-name="clearcase-common" />
