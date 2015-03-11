@@ -126,12 +126,6 @@
   /css/admin/adminMain.css
 </bs:linkCSS>
 
-<!--[if IE 7]>
-<style type="text/css">
-@import <c:url value='/css/FontAwesome/css/font-awesome-ie7.min.css'/>;
-</style>
-<![endif]-->
-
 <c:if test="${showOldSettings}">
   <div id="oldSettingsMessage">
     <div class="successMessage">Settings are obsolete. Please click "Convert to new settings..." button or type new settings manually. You
