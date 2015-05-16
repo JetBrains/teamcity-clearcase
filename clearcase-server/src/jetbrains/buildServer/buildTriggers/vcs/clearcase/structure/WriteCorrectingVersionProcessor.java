@@ -16,7 +16,7 @@
 
 package jetbrains.buildServer.buildTriggers.vcs.clearcase.structure;
 
-import com.intellij.util.containers.HashMap;
+import java.util.HashMap;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
