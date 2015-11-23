@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.vcs.clearcase.CTool.*;
 import org.apache.log4j.Logger;
@@ -29,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 public class CCSnapshotView {
 
   private static final Logger LOG = Logger.getLogger(CTool.class);
+  private static final Pattern DOT_COLON_PATTERN = Pattern.compile("[:.]", Pattern.LITERAL);
 
   protected ArrayList<String> myConfigSpecs = new ArrayList<String>();
   protected File myLocalPath;
@@ -322,8 +324,8 @@ public class CCSnapshotView {
         getLocalPath().mkdirs();
       }
       final ViewParser parser = CTool.lsView(getTag());
-      final String viewUuid = parser.getUUID();
-      final String content = String.format("ws_oid:00000000000000000000000000000000 view_uuid:%s", viewUuid.replace(".", "").replace(":", ""));
+      final String viewUuid = DOT_COLON_PATTERN.matcher(parser.getUUID()).replaceAll("");
+      final String content = "ws_oid:00000000000000000000000000000000 view_uuid:" + viewUuid;
       final File datFile = new File(getLocalPath(), "view.dat");
       if (datFile.exists()) {
         FileUtil.delete(datFile);

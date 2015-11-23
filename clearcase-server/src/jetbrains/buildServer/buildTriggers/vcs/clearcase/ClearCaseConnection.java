@@ -22,6 +22,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpec;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.configSpec.ConfigSpecParseUtil;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.process.ClearCaseInteractiveProcess;
@@ -48,6 +50,7 @@ import org.jetbrains.annotations.Nullable;
 public class ClearCaseConnection {
   @NonNls
   private static final String PATH = "%path%";
+  private static final Pattern PATH_PATTERN = Pattern.compile(PATH, Pattern.LITERAL);
 
   private final ViewPath myViewPath;
 
@@ -339,7 +342,7 @@ public class ClearCaseConnection {
 
   @NotNull
   private InputStream getChanges(@Nullable final Revision fromVersion, @NotNull final String options) throws VcsException, IOException {
-    final String preparedOptions = options.replace(PATH, insertDots(getViewWholePath(), true));
+    final String preparedOptions = PATH_PATTERN.matcher(options).replaceAll(Matcher.quoteReplacement(insertDots(getViewWholePath(), true)));
     final ArrayList<String> optionList = new ArrayList<String>();
     optionList.add("lshistory");
     optionList.add("-eventid");

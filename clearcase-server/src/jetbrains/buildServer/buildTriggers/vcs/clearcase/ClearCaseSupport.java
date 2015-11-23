@@ -62,6 +62,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
   private static final Logger LOG = Logger.getInstance(ClearCaseSupport.class.getName());
 
   private static final boolean USE_CC_CACHE = !TeamCityProperties.getBoolean("clearcase.disable.caches");
+  private static final Pattern COLON_OR_SEMICOLON_PATTERN = Pattern.compile("[;:]");
 
   private @Nullable ClearCaseStructureCache myCache;
 
@@ -618,7 +619,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     final File file = new File(filePath);
     String relativePath = isAbsolute(file) ? getRelativePathIfAncestor(clearCaseViewPathFile, file) : file.getPath();
     if (relativePath == null) return null;
-    if (StringUtil.startsWithIgnoreCase(relativePath.replaceFirst("\\\\", "/"), Constants.VOBS)) {
+    if (StringUtil.startsWithIgnoreCase(relativePath.replace('\\','/'), Constants.VOBS)) {
       relativePath = relativePath.substring(Constants.VOBS.length());
     }
     return new File(clearCaseViewPathFile, relativePath);
@@ -1092,7 +1093,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     final ArrayList<Pattern> patterns = new ArrayList<Pattern>();
     final String prop = TeamCityProperties.getPropertyOrNull(Constants.TEAMCITY_PROPERTY_IGNORE_ERROR_PATTERN);
     if (prop != null && prop.trim().length() > 0) {
-      for (String pstr : prop.split("[;:]")) {
+      for (String pstr : COLON_OR_SEMICOLON_PATTERN.split(prop)) {
         if (pstr.trim().length() > 0) {
           try {
             patterns.add(Pattern.compile(pstr, Pattern.DOTALL | Pattern.MULTILINE));
