@@ -19,15 +19,18 @@ package jetbrains.buildServer.buildTriggers.vcs.clearcase;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
+import java.util.regex.Pattern;
 import jetbrains.buildServer.serverSide.TeamCityProperties;
-import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.util.StringUtil;
+import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CCPathElement {
   public static final String MAIN = "main";
+  private static final Pattern PLATFORM_SEPARATOR_REGEXP = Pattern.compile(File.separatorChar == '\\' ? "\\\\" : String.valueOf(File.separatorChar));
 
   private final String myPathElement;
   private String myVersion;
@@ -262,12 +265,30 @@ public class CCPathElement {
 
   }
 
-  public static String normalizeFileName(final String fullFileName) {
-    if (new File(fullFileName).isAbsolute()) {
-      return FileUtil.normalizeAbsolutePath(fullFileName);
-    } else {
-      return FileUtil.normalizeRelativePath(fullFileName);
+  public static String normalizeFileName(final String fullFileName) throws VcsException {
+    final String[] dirs = PLATFORM_SEPARATOR_REGEXP.split(fullFileName);
+    Stack<String> stack = new Stack<String>();
+
+    for (String dir : dirs) {
+      if (".".equals(dir))
+        continue;
+      if ("..".equals(dir)) {
+        if (stack.isEmpty()) {
+          throw new VcsException("Invalid parent links balance: \"" + fullFileName + "\"");
+        }
+        stack.pop();
+      } else {
+        stack.push(dir);
+      }
     }
+
+    StringBuilder sb = new StringBuilder("");
+
+    for (String dir : stack) {
+      sb.append(File.separator).append(dir);
+    }
+
+    return removeFirstSeparatorIfNeeded(sb);
   }
 
   @NotNull
@@ -276,7 +297,7 @@ public class CCPathElement {
   }
 
   @NotNull
-  public static String normalizePath(@Nullable final String path) {
+  public static String normalizePath(@Nullable final String path) throws VcsException {
     return normalizeFileName(removeLastSeparatorIfNeeded(normalizeSeparators(getNotNullString(path).trim())));
   }
 
@@ -290,7 +311,7 @@ public class CCPathElement {
     return path.replace('/', File.separatorChar).replace('\\', File.separatorChar);
   }
 
-  public static boolean areFilesEqual(@NotNull final File file1, @NotNull final File file2) {
+  public static boolean areFilesEqual(@NotNull final File file1, @NotNull final File file2) throws VcsException {
     return normalizePath(file1.getAbsolutePath()).equals(normalizePath(file2.getAbsolutePath()));
   }
 

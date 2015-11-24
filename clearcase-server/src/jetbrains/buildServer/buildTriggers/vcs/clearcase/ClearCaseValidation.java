@@ -21,6 +21,7 @@ import java.util.*;
 import jetbrains.buildServer.buildTriggers.vcs.AbstractVcsPropertiesProcessor;
 import jetbrains.buildServer.parameters.ReferencesResolverUtil;
 import jetbrains.buildServer.serverSide.InvalidProperty;
+import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.vcs.clearcase.Constants;
 import jetbrains.buildServer.vcs.clearcase.Util;
 import org.apache.log4j.Logger;
@@ -100,7 +101,7 @@ public class ClearCaseValidation {
    */
   static class ClearcaseConfigurationValidator implements IValidation {
 
-    static final String UNKNOWN_HOST_PATTERN = "Unknown host"; //$NON-NLS-1$    
+    static final String UNKNOWN_HOST_PATTERN = "Unknown host"; //$NON-NLS-1$
     static final String CANNOT_CONTACT_LICENSE_SERVER_PATTERN = "Unable to contact albd_server on host"; //$NON-NLS-1$
 
     public String getDescription() {
@@ -125,7 +126,7 @@ public class ClearCaseValidation {
           debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, message));
 
         } else {
-          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, message)); //$NON-NLS-1$          
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, message)); //$NON-NLS-1$
           debug(String.format("validation: \"%s\" is not matched, failed", message)); //$NON-NLS-1$
         }
       }
@@ -237,8 +238,16 @@ public class ClearCaseValidation {
       assert ccViewRootPath != null;
       if (ReferencesResolverUtil.containsReference(ccViewRootPath)) return true;
 
-      //check paths is well formed 
-      CCPathElement.normalizePath(ccViewRootPath);
+      //check paths is well formed
+      try {
+        CCPathElement.normalizePath(ccViewRootPath);
+      } catch (VcsException e) {
+        if (!mayContainReference(ccViewRootPath)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.CC_VIEW_PATH, e.getMessage()));
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRootPath));
+          return false;
+        }
+      }
       //check path is directory?
       final int countBefore = validationResultBuffer.size();
       checkDirectoryProperty(Constants.CC_VIEW_PATH, ccViewRootPath, validationResultBuffer);
@@ -278,9 +287,17 @@ public class ClearCaseValidation {
       if (ReferencesResolverUtil.containsReference(ccViewRelativePath)) return true;
 
       //check paths is well formed
-      final String normalizedPath = CCPathElement.normalizePath(ccViewRelativePath);
-      if (isEmpty(normalizedPath)) {
-        validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, Messages.getString("ClearCaseValidation.clearcase_view_relative_path_does_not_point_to_inner_folder"))); //$NON-NLS-1$
+      try {
+        final String normalizedPath = CCPathElement.normalizePath(ccViewRelativePath);
+        if (isEmpty(normalizedPath)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, Messages.getString("ClearCaseValidation.clearcase_view_relative_path_does_not_point_to_inner_folder"))); //$NON-NLS-1$
+        }
+      } catch (VcsException e) {
+        if (!mayContainReference(ccViewRelativePath)) {
+          validationResultBuffer.add(new InvalidProperty(Constants.RELATIVE_PATH, e.getMessage()));
+          debug(String.format(SINGLE_PARAM_VALIDATION_FAILED, ccViewRelativePath));
+          return false;
+        }
       }
       //check path is directory?
       final int countBefore = validationResultBuffer.size();
