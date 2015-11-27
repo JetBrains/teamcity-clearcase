@@ -48,10 +48,10 @@ public class RuleBasedSourceProvider extends CheckoutDirectoryBasedSourceProvide
         return;
 
       } else {
-        LOG.debug(String.format("Checkout Reles Validation failed: From=%s", mainRule.getFrom()));
+        LOG.debug(String.format("Checkout Rules Validation failed: From=%s", mainRule.getFrom()));
       }
     } else {
-      LOG.debug(String.format("Checkout Reles Validation failed: Count=%d", includeRules.size()));
+      LOG.debug(String.format("Checkout Rules Validation failed: Count=%d", includeRules.size()));
     }
     throw new VcsValidationException(VALIDATION_WRONG_CHECKOUT_RULES_MESSAGE);
   }

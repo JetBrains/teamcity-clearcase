@@ -21,10 +21,7 @@ import java.util.regex.Pattern;
 import jetbrains.buildServer.TextLogger;
 import jetbrains.buildServer.agent.AgentRunningBuild;
 import jetbrains.buildServer.agent.BuildAgentConfiguration;
-import jetbrains.buildServer.agent.vcs.AgentVcsSupport;
-import jetbrains.buildServer.agent.vcs.AgentVcsSupportCore;
-import jetbrains.buildServer.agent.vcs.UpdateByCheckoutRules2;
-import jetbrains.buildServer.agent.vcs.UpdatePolicy;
+import jetbrains.buildServer.agent.vcs.*;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.DateRevision;
 import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
 import jetbrains.buildServer.util.Dates;
@@ -71,6 +68,12 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       canRun = canRun(config);
     }
     return canRun;
+  }
+
+  @NotNull
+  @Override
+  public AgentCheckoutAbility canCheckout(@NotNull final VcsRoot vcsRoot, @NotNull final CheckoutRules checkoutRules, @NotNull final AgentRunningBuild build) {
+    return new SourceProviderFactory().canCheckout(vcsRoot, checkoutRules, build);
   }
 
   private boolean canRun(BuildAgentConfiguration config) {
@@ -136,6 +139,16 @@ public class ClearCaseAgentSupport extends AgentVcsSupport {
       LOG.debug(String.format("Passed parameters accepted by '%s' for checkout", delegate.getClass().getSimpleName()));
       LOG.debug(String.format("use '%s' for checkout", delegate.getClass().getSimpleName()));
       delegate.updateSources(root, rules, preparedToVersion, checkoutDirectory, build, cleanCheckoutRequested);
+    }
+
+    @NotNull
+    public AgentCheckoutAbility canCheckout(final VcsRoot root, final CheckoutRules rules, final AgentRunningBuild build) {
+      try {
+        new RuleBasedSourceProvider().validate(build.getCheckoutDirectory(), root, rules);
+      } catch (VcsValidationException e) {
+        return AgentCheckoutAbility.notSupportedCheckoutRules(e.getMessage());
+      }
+      return AgentCheckoutAbility.canCheckout();
     }
 
     @Nullable
