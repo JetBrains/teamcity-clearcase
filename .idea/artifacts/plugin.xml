@@ -3,7 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/plugin</output-path>
     <root id="root">
       <element id="directory" name="agent">
-        <element id="directory" name="clearcase-agent.zip">
+        <element id="archive" name="clearcase-agent.zip">
           <element id="directory" name="clearcase-agent">
             <element id="directory" name="lib">
               <element id="artifact" artifact-name="clearcase-agent" />
