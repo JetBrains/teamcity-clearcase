@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="clearcase-agent">
+    <output-path>$PROJECT_DIR$/out/artifacts/clearcase_agent</output-path>
+    <root id="archive" name="clearcase-agent.jar">
+      <element id="module-output" name="clearcase-agent-standalone" />
+    </root>
+  </artifact>
+</component>
