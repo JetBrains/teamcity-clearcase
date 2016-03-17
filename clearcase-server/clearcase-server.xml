@@ -75,6 +75,7 @@
     </path>
 
     <path id="library.teamcity_openapi.classpath">
+        <pathelement location="${path.variable.teamcitydistribution}/devPackage/serviceMessages.jar"/>
         <pathelement location="${path.variable.teamcitydistribution}/devPackage/common-api.jar"/>
         <pathelement location="${path.variable.teamcitydistribution}/devPackage/server-api.jar"/>
         <pathelement location="${path.variable.teamcitydistribution}/devPackage/agent-api.jar"/>
