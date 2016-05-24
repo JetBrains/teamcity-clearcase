@@ -26,6 +26,7 @@ import jetbrains.buildServer.util.StringUtil;
 import jetbrains.buildServer.vcs.VcsException;
 import jetbrains.buildServer.web.openapi.ControllerAction;
 import jetbrains.buildServer.web.openapi.WebControllerManager;
+import org.jdom.Content;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,12 +58,12 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
           final Element relPath = new Element("rel-path");
           relPath.addContent(viewPath.getRelativePathWithinTheView());
 
-          ajaxResponse.addContent(ccViewPath);
-          ajaxResponse.addContent(relPath);
+          ajaxResponse.addContent((Content) ccViewPath);
+          ajaxResponse.addContent((Content) relPath);
         } catch (Exception e) {
           final Element error = new Element("error");
           error.addContent(e.getLocalizedMessage());
-          ajaxResponse.addContent(error);
+          ajaxResponse.addContent((Content) error);
         }
       }
     });
@@ -96,12 +97,12 @@ public class EditClearcaseSettingsController extends BaseAjaxActionController {
 
           final Element result = new Element("result");
           result.addContent(createContent(ClearCaseSupport.detectBranches(viewPath)));
-          ajaxResponse.addContent(result);
+          ajaxResponse.addContent((Content) result);
         }
         catch (final Exception e) {
           final Element error = new Element("error");
           error.addContent(e.getLocalizedMessage());
-          ajaxResponse.addContent(error);
+          ajaxResponse.addContent((Content) error);
         }
       }
 
