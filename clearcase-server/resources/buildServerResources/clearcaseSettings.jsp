@@ -139,7 +139,7 @@
     <c:if test="${showClearCaseNotFound}">
       <tr>
         <td colspan="2">
-          <div class="attentionComment">
+          <div class="icon_before icon16 attentionComment">
           <font color='red'>${clearCaseNotFoundText}</font><br/>
           See online documentation for more details<bs:help file="ClearCase#ClearCase"/><br/>
           </div>
