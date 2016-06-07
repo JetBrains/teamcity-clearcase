@@ -139,10 +139,10 @@
     <c:if test="${showClearCaseNotFound}">
       <tr>
         <td colspan="2">
-          <div class="icon_before icon16 attentionComment">
+          <forms:attentionComment>
           <font color='red'>${clearCaseNotFoundText}</font><br/>
           See online documentation for more details<bs:help file="ClearCase#ClearCase"/><br/>
-          </div>
+          </forms:attentionComment>
         </td>
       </tr>
     </c:if>
