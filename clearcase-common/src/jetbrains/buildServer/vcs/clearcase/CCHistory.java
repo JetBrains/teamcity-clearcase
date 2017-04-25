@@ -97,11 +97,23 @@ public class CCHistory {
   }
 
   @Override
-  public boolean equals(Object obj) {
-    if(obj instanceof CCHistory){
-      return getFile().equals(((CCHistory) obj).getFile()) && getVersion().equals(((CCHistory) obj).getVersion()); 
-    }
-    return super.equals(obj);
+  public boolean equals(final Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    final CCHistory ccHistory = (CCHistory)o;
+
+    if (myFile != null ? !myFile.equals(ccHistory.myFile) : ccHistory.myFile != null) return false;
+    if (myVersion != null ? !myVersion.equals(ccHistory.myVersion) : ccHistory.myVersion != null) return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = myFile != null ? myFile.hashCode() : 0;
+    result = 31 * result + (myVersion != null ? myVersion.hashCode() : 0);
+    return result;
   }
 
   @Override
