@@ -49,6 +49,7 @@ import jetbrains.buildServer.vcs.clearcase.Util;
 import jetbrains.buildServer.vcs.patches.PatchBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import static jetbrains.buildServer.vcs.clearcase.Constants.*;
 
@@ -84,6 +85,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
     }
   }
 
+  @Autowired
   public ClearCaseSupport(final @NotNull SBuildServer server, final @NotNull ServerPaths serverPaths, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
     this();
     File cachesRootDir = new File(new File(serverPaths.getCachesDir()), "clearCase");
