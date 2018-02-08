@@ -162,19 +162,19 @@
     </c:if>
 
     <tr>
-      <th><label for="cc-view-path">ClearCase view path: <l:star/></label>
+      <th><label for="cc-view-path">ClearCase view path:<l:star/></label>
       </th>
       <td><props:textProperty name="cc-view-path" className="longField"/>
         <span class="error" id="error_cc-view-path"></span></td>
     </tr>
     <tr>
-      <th><label for="rel-path">Relative path within the view: <l:star/> <bs:help file="ClearCase" anchor="relPathOptionDescription"/></label>
+      <th><label for="rel-path">Relative path within the view:<l:star/><bs:help file="ClearCase" anchor="relPathOptionDescription"/></label>
       </th>
       <td><props:textProperty name="rel-path" className="longField"/>
         <span class="error" id="error_rel-path"></span></td>
     </tr>
     <tr class="advancedSetting">
-      <th><label>Branches:</label> <bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
+      <th><label>Branches:</label><bs:help file="ClearCase" anchor="branchesOptionDescription"/></th>
       <td>
         <props:radioButtonProperty name="branch-provider"
                                    onclick="BS.ClearCaseSettings.branchProviderChanged(true);"
