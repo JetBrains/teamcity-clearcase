@@ -202,7 +202,6 @@ public class ClearCaseStructureCache {
   private class ClearcaseCacheGeneralDataCleaner extends CleanupExtensionAdapter {
     @Override
     public void afterCleanup(@NotNull final CleanupProcessState cleanupState) throws Exception {
-      super.afterCleanup(cleanupState);
       cleanup();
     }
   }
