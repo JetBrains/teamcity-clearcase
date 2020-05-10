@@ -282,7 +282,7 @@ public class CCPathElement {
       }
     }
 
-    StringBuilder sb = new StringBuilder("");
+    StringBuilder sb = new StringBuilder();
 
     for (String dir : stack) {
       sb.append(File.separator).append(dir);

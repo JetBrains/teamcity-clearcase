@@ -58,8 +58,8 @@ public class ConfigSpecImpl implements ConfigSpec {
   }
 
   public boolean isVersionIsInsideView(final ClearCaseConnection connection, final List<CCPathElement> pathElements, final boolean isFile) throws VcsException, IOException {
-    StringBuilder filePath = new StringBuilder("");
-    StringBuilder objectPath = new StringBuilder("");
+    StringBuilder filePath = new StringBuilder();
+    StringBuilder objectPath = new StringBuilder();
 
     for (int i = 0; i < pathElements.size(); i++) {
       CCPathElement pathElement = pathElements.get(i);

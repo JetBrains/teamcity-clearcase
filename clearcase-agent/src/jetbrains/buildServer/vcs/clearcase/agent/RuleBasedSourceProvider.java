@@ -77,7 +77,7 @@ public class RuleBasedSourceProvider extends CheckoutDirectoryBasedSourceProvide
       String pathSegment = fullCheckoutFolderPath.substring(0/*checkoutRoot.getPath().length()*/, fullCheckoutFolderPath.length() - relativePathWitninAViewPath.length());
       //drop separator if exists 
       if(pathSegment.startsWith("\\") || pathSegment.startsWith("/")){
-        pathSegment = pathSegment.substring(1, pathSegment.length());
+        pathSegment = pathSegment.substring(1);
       }
       LOG.debug(String.format("pathSegment=%s", pathSegment));
       relativePath = new File(pathSegment);

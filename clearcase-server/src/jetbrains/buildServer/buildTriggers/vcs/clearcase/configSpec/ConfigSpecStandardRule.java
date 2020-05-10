@@ -173,7 +173,7 @@ public class ConfigSpecStandardRule {
   }
 
   private String collectVersions(final Collection<Version> versions) {
-    StringBuilder sb = new StringBuilder("");
+    StringBuilder sb = new StringBuilder();
     for (Version version : versions) {
       sb.append(version.getWholeName()).append("; ");
     }

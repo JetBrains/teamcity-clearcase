@@ -137,7 +137,7 @@ public class ClearCaseSupport extends ServerVcsSupport implements VcsPersonalSup
 
   @Nullable
   private static String getRelativePath(@NotNull final File parent, @NotNull final File subFile) throws VcsException {
-    final StringBuilder sb = new StringBuilder("");
+    final StringBuilder sb = new StringBuilder();
     File file = subFile;
 
     boolean first = true;

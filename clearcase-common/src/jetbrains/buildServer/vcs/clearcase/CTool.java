@@ -367,7 +367,7 @@ public class CTool {
         final String[] elements = line.trim().split(";");
         int sepIndex = elements[1].indexOf("@@");
         myPath = elements[1].substring(0, sepIndex);
-        myVersion = elements[1].substring(sepIndex + 2, elements[1].length());
+        myVersion = elements[1].substring(sepIndex + 2);
         try {
           myCreationDate = new SimpleDateFormat("yyyyMMdd.hhmmss").parse(elements[2]);
 
@@ -461,7 +461,7 @@ public class CTool {
     }
 
     protected String getRest(String trim, String tagToken) {
-      return trim.substring(tagToken.length(), trim.length()).trim();
+      return trim.substring(tagToken.length()).trim();
     }
 
   }
@@ -576,7 +576,7 @@ public class CTool {
         isDeletion = true;
       }
       // extract token
-      line = line.substring(tokenLength, line.length()).trim();
+      line = line.substring(tokenLength).trim();
       // get local path
       int versionBeforStartIdx = 0;
       if (line.startsWith("\"")) {
@@ -593,7 +593,7 @@ public class CTool {
       }
       // discover version part if exists
       if (versionBeforStartIdx != -1) {
-        String versionsPart = line.substring(versionBeforStartIdx + 1, line.length()).trim();
+        String versionsPart = line.substring(versionBeforStartIdx + 1).trim();
         final String[] versions = versionsPart.split("[ +]");
         if (versions.length > 0) {
           myVersionAfter = versions[0];
@@ -847,7 +847,7 @@ public class CTool {
       final int nixSlash = getProject().lastIndexOf("/");
       final int slashIndex = Math.max(winSlash, nixSlash);
       if (slashIndex > -1) {
-        return project.substring(slashIndex + 1, project.length());
+        return project.substring(slashIndex + 1);
       }
       return project;
     }
