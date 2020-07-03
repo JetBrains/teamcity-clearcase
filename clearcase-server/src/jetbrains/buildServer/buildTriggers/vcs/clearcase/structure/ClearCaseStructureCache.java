@@ -199,9 +199,9 @@ public class ClearCaseStructureCache {
     return cacheDir;
   }
 
-  private class ClearcaseCacheGeneralDataCleaner extends CleanupExtensionAdapter {
+  private class ClearcaseCacheGeneralDataCleaner implements CleanupExtension {
     @Override
-    public void afterCleanup(@NotNull final CleanupProcessState cleanupState) throws Exception {
+    public void afterCleanup(@NotNull final CleanupProcessState cleanupState) {
       cleanup();
     }
   }
