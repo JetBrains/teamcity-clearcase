@@ -28,7 +28,6 @@ import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.SBuildServer;
 import jetbrains.buildServer.serverSide.cleanup.CleanupExtension;
-import jetbrains.buildServer.serverSide.cleanup.CleanupExtensionAdapter;
 import jetbrains.buildServer.serverSide.cleanup.CleanupProcessState;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.FileUtil;
