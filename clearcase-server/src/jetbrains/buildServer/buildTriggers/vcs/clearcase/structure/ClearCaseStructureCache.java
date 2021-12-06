@@ -27,7 +27,7 @@ import jetbrains.buildServer.buildTriggers.vcs.clearcase.Revision;
 import jetbrains.buildServer.serverSide.BuildServerAdapter;
 import jetbrains.buildServer.serverSide.BuildServerListener;
 import jetbrains.buildServer.serverSide.SBuildServer;
-import jetbrains.buildServer.serverSide.cleanup.CleanupExtension;
+import jetbrains.buildServer.serverSide.cleanup.AfterBuildsCleanupExtension;
 import jetbrains.buildServer.serverSide.cleanup.CleanupProcessState;
 import jetbrains.buildServer.util.EventDispatcher;
 import jetbrains.buildServer.util.FileUtil;
@@ -48,7 +48,7 @@ public class ClearCaseStructureCache {
   }
 
   public void register(final @NotNull SBuildServer server, final @NotNull EventDispatcher<BuildServerListener> dispatcher) {
-    server.registerExtension(CleanupExtension.class, ClearCaseStructureCache.class.getName(), new ClearcaseCacheGeneralDataCleaner());
+    server.registerExtension(AfterBuildsCleanupExtension.class, ClearCaseStructureCache.class.getName(), new ClearcaseCacheGeneralDataCleaner());
 
     dispatcher.addListener(new BuildServerAdapter() {
       @Override
@@ -198,7 +198,7 @@ public class ClearCaseStructureCache {
     return cacheDir;
   }
 
-  private class ClearcaseCacheGeneralDataCleaner implements CleanupExtension {
+  private class ClearcaseCacheGeneralDataCleaner implements AfterBuildsCleanupExtension {
     @Override
     public void afterCleanup(@NotNull final CleanupProcessState cleanupState) {
       cleanup();
