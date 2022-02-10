@@ -89,7 +89,7 @@
     </path>
 
     <path id="library.log4j.classpath">
-        <pathelement location="${path.variable.teamcitydistribution}/webapps/ROOT/WEB-INF/lib/log4j-1.2.12.jar"/>
+        <pathelement location="${path.variable.teamcitydistribution}/webapps/ROOT/WEB-INF/lib/tc-log4j.jar"/>
     </path>
 
 
