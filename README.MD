@@ -1,3 +1,5 @@
+[![obsolete JetBrains project](https://jb.gg/badges/obsolete-flat-square.svg)](https://github.com/JetBrains#jetbrains-on-github)
+
 This directory contains the source code of TeamCity VCS plugin for ClearCase integration.
 
 The source code is licensed under Apache 2.0 license ( http://www.apache.org/licenses/LICENSE-2.0 )
